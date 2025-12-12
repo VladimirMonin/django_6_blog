@@ -1,0 +1,13 @@
+{# Partial шаблон для HTMX запросов - возвращает карточки + пагинатор #}
+{% load component_tags %}
+
+{% for post in posts %}
+    {% component "post_card" post=post %}{% endcomponent %}
+{% empty %}
+    <div class="col">
+        {% component "alert" message="Постов не найдено." type="warning" %}{% endcomponent %}
+    </div>
+{% endfor %}
+
+{# Out-of-band обновление пагинатора #}
+{% component "paginator" page_obj=page_obj search_query=search_query %}{% endcomponent %}

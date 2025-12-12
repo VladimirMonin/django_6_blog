@@ -1,0 +1,9 @@
+{# Шаблон для режима "Загрузить еще" - возвращает только карточки постов #}
+{% load component_tags %}
+
+{% for post in posts %}
+    {% component "post_card" post=post %}{% endcomponent %}
+{% endfor %}
+
+{# Out-of-band обновление пагинатора #}
+{% component "paginator" page_obj=page_obj search_query=search_query %}{% endcomponent %}
