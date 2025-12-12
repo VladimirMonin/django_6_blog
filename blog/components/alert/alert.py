@@ -14,7 +14,7 @@ from django_components import Component, register
 
 @register("alert")
 class Alert(Component):
-    template_file = "alert/alert.html"
+    template_name = "alert/alert.html"
     
     # Маппинг типов на иконки
     ICON_MAP = {
@@ -39,6 +39,7 @@ class Alert(Component):
         
         # Получаем иконку для типа
         icon = self.ICON_MAP.get(alert_type, "info-circle")
+        icon_class = f"bi bi-{icon}"
         
         # Формируем CSS классы
         css_classes = [f"alert alert-{alert_type}"]
@@ -48,7 +49,7 @@ class Alert(Component):
         return {
             "message": message,
             "css_class": " ".join(css_classes),
-            "icon": icon,
+            "icon_class": icon_class,
             "dismissible": dismissible,
         }
     

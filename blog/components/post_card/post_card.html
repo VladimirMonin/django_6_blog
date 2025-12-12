@@ -12,7 +12,7 @@
             <p class="card-text">
                 {{ post.content|truncatewords:50 }}
             </p>
-            {% component "button" text="Читать далее" url=post.get_absolute_url icon="arrow-right" %}
+            {% component "button" text="Читать далее" url=post.get_absolute_url icon="arrow-right" %}{% endcomponent %}
         </div>
     </div>
 </div>
