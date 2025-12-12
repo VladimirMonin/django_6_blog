@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third-party apps
     "django_components",
+    "django_htmx",
     # Local apps
     "blog",
 ]
@@ -48,6 +49,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "django_htmx.middleware.HtmxMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -59,7 +61,6 @@ TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [BASE_DIR / "templates"],
-        "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
@@ -68,6 +69,16 @@ TEMPLATES = [
             ],
             "builtins": [
                 "django_components.templatetags.component_tags",
+            ],
+            "loaders": [
+                (
+                    "django.template.loaders.cached.Loader",
+                    [
+                        "django.template.loaders.filesystem.Loader",
+                        "django.template.loaders.app_directories.Loader",
+                        "django_components.template_loader.Loader",
+                    ],
+                ),
             ],
         },
     },
@@ -130,3 +141,11 @@ STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
     "django_components.finders.ComponentsFileSystemFinder",
 ]
+
+# Django Components Settings
+COMPONENTS = {
+    "dirs": [
+        BASE_DIR / "blog" / "components",
+    ],
+    "app_dirs": ["components"],
+}
