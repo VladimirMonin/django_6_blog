@@ -7,8 +7,6 @@ URL-маршруты приложения blog.
 from django.urls import path
 from . import views
 
-app_name = 'blog'
-
 urlpatterns = [
     # Главная страница - список постов
     path('', views.post_list, name='post_list'),

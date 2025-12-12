@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ post.title }} — Django 6 Blog{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <article>
+        <header class="mb-4">
+            <h1>{{ post.title }}</h1>
+            <div class="text-muted">
+                <p>
+                    <i class="bi bi-calendar-plus"></i> Создано: {{ post.created_at|date:"d.m.Y H:i" }}
+                </p>
+                {% if post.updated_at != post.created_at %}
+                    <p>
+                        <i class="bi bi-pencil-square"></i> Обновлено: {{ post.updated_at|date:"d.m.Y H:i" }}
+                    </p>
+                {% endif %}
+            </div>
+        </header>
+
+        <div class="post-content">
+            {{ post.content|linebreaks }}
+        </div>
+    </article>
+
+    <hr class="my-5">
+
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'post_list' %}" class="btn btn-dark">
+            <i class="bi bi-arrow-left"></i> Назад к списку
+        </a>
+    </div>
+</div>
+{% endblock %}
