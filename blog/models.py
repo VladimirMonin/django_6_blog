@@ -1,5 +1,5 @@
 from django.db import models
-from django.utils.text import slugify
+from transliterate import slugify
 
 
 class Post(models.Model):
