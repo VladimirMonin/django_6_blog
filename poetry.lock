@@ -55,6 +55,22 @@ djc-core-html-parser = ">=1.0.3"
 typing-extensions = ">=4.12.2"
 
 [[package]]
+name = "django-htmx"
+version = "1.27.0"
+description = "Extensions for using Django with htmx."
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "django_htmx-1.27.0-py3-none-any.whl", hash = "sha256:13e1e13b87d39b57f95aae6e4987cb3df056d0b1373a41f4a94504a00298ffd8"},
+    {file = "django_htmx-1.27.0.tar.gz", hash = "sha256:036e5da801bfdf5f1ca815f21592cfb9f004a898f330c842f15e55c70e301a75"},
+]
+
+[package.dependencies]
+asgiref = ">=3.6"
+django = ">=4.2"
+
+[[package]]
 name = "djc-core-html-parser"
 version = "1.0.3"
 description = "HTML parser used by django-components written in Rust."
@@ -233,4 +249,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12"
-content-hash = "8e635041202f14a57cb5956992ba8da9d16d192b41adf502f079d10061dc0527"
+content-hash = "603c1025d0b413a62aafa4e2573c6dd3bd4a182d8c7cb012a186812a8b9ce07b"
