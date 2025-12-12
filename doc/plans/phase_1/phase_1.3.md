@@ -8,35 +8,34 @@
 
 ### 1. Создание модели Post
 
-- [ ] Определить модель в `blog/models.py`:
+- [x] Определить модель в `blog/models.py`:
   - `title` — заголовок (CharField, max_length=200)
   - `slug` — URL-slug (SlugField, unique=True)
   - `content` — содержимое поста (TextField)
   - `created_at` — дата создания (DateTimeField, auto_now_add)
   - `updated_at` — дата обновления (DateTimeField, auto_now)
   - `is_published` — статус публикации (BooleanField, default=True)
-- [ ] Добавить `Meta` класс с ordering по `-created_at`
-- [ ] Добавить `__str__()` метод
+- [x] Добавить `Meta` класс с ordering по `-created_at`
+- [x] Добавить `__str__()` метод
 
 ### 2. Миграции
 
-- [ ] Создать миграции (`makemigrations`)
-- [ ] Применить миграции (`migrate`)
+- [x] Создать миграции (`makemigrations`)
+- [x] Применить миграции (`migrate`)
 
 ### 3. Создание датасета
 
-- [ ] Создать management команду `blog/management/commands/create_posts.py`
-- [ ] Сгенерировать 10-15 тестовых постов с:
-  - Реалистичными заголовками о программировании
-  - Lorem ipsum текстом разной длины
+- [x] Создать management команду `blog/management/commands/create_posts.py`
+- [x] Сгенерировать 10-15 тестовых постов с:
+  - Реалистичными заголовками о программировании (прикольные интересные статьи о Django, Python и веб-разработке)
   - Корректными slug из заголовков
   - Разными датами создания (последние 30 дней)
-- [ ] Запустить команду для заполнения БД
+- [x] Запустить команду для заполнения БД
 
-### 4. Админка (опционально для отладки)
+### 4. Админка
 
-- [ ] Зарегистрировать модель Post в `blog/admin.py`
-- [ ] Настроить базовое отображение (list_display, search_fields)
+- [x] Зарегистрировать модель Post в `blog/admin.py`
+- [x] Настроить базовое отображение (list_display, search_fields)
 
 ## Результат
 
