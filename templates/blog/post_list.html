@@ -4,19 +4,45 @@
 
 {% block content %}
 <div class="container py-5">
-    <h1 class="mb-5 fw-bold">
+    <h1 class="mb-4 fw-bold">
         <i class="bi bi-journal-text text-accent"></i> Последние посты
     </h1>
 
-    {# Django Components вместо partials для переиспользуемости #}
-    {% if posts %}
-        <div class="row row-cols-1 g-4">
-            {% for post in posts %}
-                {% component "post_card" post=post %}
-            {% endfor %}
+    {# Форма поиска с HTMX #}
+    <div class="mb-4">
+        <div class="input-group">
+            <span class="input-group-text">
+                <i class="bi bi-search"></i>
+            </span>
+            <input 
+                type="search" 
+                name="search"
+                value="{{ search_query }}"
+                class="form-control"
+                hx-get="{% url 'post_list' %}"
+                hx-trigger="keyup changed delay:500ms, search"
+                hx-target="#post-container"
+                hx-swap="innerHTML"
+                hx-indicator="#search-indicator"
+                placeholder="Поиск по постам...">
+            <span id="search-indicator" class="htmx-indicator input-group-text">
+                <span class="spinner-border spinner-border-sm"></span>
+            </span>
         </div>
-    {% else %}
-        {% component "alert" message="Постов пока нет." type="warning" %}
-    {% endif %}
+    </div>
+
+    {# Контейнер для постов - обновляется через HTMX #}
+    <div class="row row-cols-1 g-4" id="post-container">
+        {% for post in posts %}
+            {% component "post_card" post=post %}{% endcomponent %}
+        {% empty %}
+            <div class="col">
+                {% component "alert" message="Постов не найдено." type="warning" %}{% endcomponent %}
+            </div>
+        {% endfor %}
+    </div>
+    
+    {# Компонент пагинатора #}
+    {% component "paginator" page_obj=page_obj search_query=search_query %}{% endcomponent %}
 </div>
 {% endblock %}
