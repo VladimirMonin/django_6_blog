@@ -8,35 +8,49 @@
         <i class="bi bi-journal-text text-accent"></i> Последние посты
     </h1>
 
-    {% if posts %}
-        <div class="row row-cols-1 g-4">
-            {% for post in posts %}
-                <div class="col">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <h2 class="card-title h4 mb-3">
-                                <a href="{% url 'post_detail' post.pk %}" class="text-decoration-none">
-                                    {{ post.title }}
-                                </a>
-                            </h2>
-                            <p class="text-muted mb-3">
-                                <i class="bi bi-calendar3"></i> {{ post.created_at|date:"d.m.Y H:i" }}
-                            </p>
-                            <p class="card-text">
-                                {{ post.content|truncatewords:50 }}
-                            </p>
-                            <a href="{% url 'post_detail' post.pk %}" class="btn btn-dark">
-                                Читать далее <i class="bi bi-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
+    {# Определение partial для карточки поста #}
+    {# Использует контекст: post #}
+    {# Пример вызова: {% partial post_card %} #}
+    {% partialdef post_card %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title h4 mb-3">
+                        <a href="{% url 'post_detail' post.pk %}" class="text-decoration-none">
+                            {{ post.title }}
+                        </a>
+                    </h2>
+                    <p class="text-muted mb-3">
+                        <i class="bi bi-calendar3"></i> {{ post.created_at|date:"d.m.Y H:i" }}
+                    </p>
+                    <p class="card-text">
+                        {{ post.content|truncatewords:50 }}
+                    </p>
+                    <a href="{% url 'post_detail' post.pk %}" class="btn btn-dark">
+                        Читать далее <i class="bi bi-arrow-right"></i>
+                    </a>
                 </div>
-            {% endfor %}
+            </div>
         </div>
-    {% else %}
+    {% endpartialdef post_card %}
+
+    {# Определение partial для пустого состояния #}
+    {# Использует контекст: нет #}
+    {# Пример вызова: {% partial empty_state %} #}
+    {% partialdef empty_state %}
         <div class="alert alert-warning" role="alert">
             <i class="bi bi-info-circle"></i> Постов пока нет.
         </div>
+    {% endpartialdef empty_state %}
+
+    {% if posts %}
+        <div class="row row-cols-1 g-4">
+            {% for post in posts %}
+                {% partial post_card %}
+            {% endfor %}
+        </div>
+    {% else %}
+        {% partial empty_state %}
     {% endif %}
 </div>
 {% endblock %}

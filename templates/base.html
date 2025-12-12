@@ -19,8 +19,10 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    {# Навигация с Bootstrap 5 #}
-    <header>
+    {# Определение partial для навигационного меню #}
+    {# Использует контекст: request #}
+    {# Пример вызова: {% partial navigation %} #}
+    {% partialdef navigation %}
         <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
             <div class="container">
                 <a class="navbar-brand fw-bold" href="{% url 'post_list' %}">
@@ -47,6 +49,11 @@
                 </div>
             </div>
         </nav>
+    {% endpartialdef navigation %}
+
+    {# Навигация с Bootstrap 5 #}
+    <header>
+        {% partial navigation %}
     </header>
 
     {# Основной контент страницы #}

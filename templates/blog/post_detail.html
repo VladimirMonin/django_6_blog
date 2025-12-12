@@ -6,7 +6,10 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <article>
+            {# Определение partial для заголовка поста #}
+            {# Использует контекст: post #}
+            {# Пример вызова: {% partial post_header %} #}
+            {% partialdef post_header %}
                 <header class="mb-5">
                     <h1 class="display-5 fw-bold mb-3">{{ post.title }}</h1>
                     <div class="text-muted">
@@ -20,22 +23,40 @@
                         {% endif %}
                     </div>
                 </header>
+            {% endpartialdef post_header %}
 
+            {# Определение partial для контента поста #}
+            {# Использует контекст: post #}
+            {# Пример вызова: {% partial post_content %} #}
+            {% partialdef post_content %}
                 <div class="post-content">
                     {{ post.content|linebreaks }}
                 </div>
+            {% endpartialdef post_content %}
+
+            {# Определение partial для метаданных (навигация внизу) #}
+            {# Использует контекст: post #}
+            {# Пример вызова: {% partial post_meta %} #}
+            {% partialdef post_meta %}
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'post_list' %}" class="btn btn-dark">
+                        <i class="bi bi-arrow-left"></i> Назад к списку
+                    </a>
+                    <span class="text-muted">
+                        <i class="bi bi-eye"></i> Пост #{{ post.pk }}
+                    </span>
+                </div>
+            {% endpartialdef post_meta %}
+
+            <article>
+                {% partial post_header %}
+
+                {% partial post_content %}
             </article>
 
             <hr class="my-5">
 
-            <div class="d-flex justify-content-between align-items-center">
-                <a href="{% url 'post_list' %}" class="btn btn-dark">
-                    <i class="bi bi-arrow-left"></i> Назад к списку
-                </a>
-                <span class="text-muted">
-                    <i class="bi bi-eye"></i> Пост #{{ post.pk }}
-                </span>
-            </div>
+            {% partial post_meta %}
         </div>
     </div>
 </div>
