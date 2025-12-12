@@ -5,6 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{% block title %}Django 6 Blog{% endblock %}</title>
     
     {# Bootstrap 5 CSS #}
@@ -36,10 +37,10 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
-                            {% component "button" text="Главная" url="post_list" icon="bi-house-door" active=is_post_list %}
+                            {% component "button" text="Главная" url="post_list" icon="bi-house-door" active=is_post_list %}{% endcomponent %}
                         </li>
                         <li class="nav-item">
-                            {% component "button" text="О блоге" url="about" icon="bi-info-circle" active=is_about %}
+                            {% component "button" text="О блоге" url="about" icon="bi-info-circle" active=is_about %}{% endcomponent %}
                         </li>
                     </ul>
                 </div>
@@ -66,6 +67,16 @@
 
     {# Bootstrap 5 JavaScript Bundle (включает Popper) #}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    
+    {# HTMX для динамических взаимодействий #}
+    <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+    
+    {# Настройка CSRF токена для HTMX #}
+    <script>
+        document.body.addEventListener('htmx:configRequest', (event) => {
+            event.detail.headers['X-CSRFToken'] = document.querySelector('meta[name="csrf-token"]').content;
+        });
+    </script>
     
     {# Дополнительный JavaScript #}
     {% block extra_js %}{% endblock %}
