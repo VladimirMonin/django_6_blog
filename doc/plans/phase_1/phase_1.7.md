@@ -11,6 +11,7 @@
 **Важно:** django-components примерно в 4 раза медленнее стандартных шаблонов. Используем их **стратегически** для сложных UI-элементов, а не для всего подряд.
 
 **Когда использовать:**
+
 - ✅ Сложные UI компоненты с логикой
 - ✅ Переиспользуемые элементы (кнопки, карточки, модалки)
 - ✅ Компоненты с собственными стилями и JS
@@ -22,17 +23,22 @@
 ### 1. Установка и настройка
 
 - [ ] Установить django-components через Poetry:
+
   ```bash
   poetry add django-components
   ```
+
 - [ ] Добавить в `INSTALLED_APPS` в settings.py:
+
   ```python
   INSTALLED_APPS = [
       # ...
       'django_components',
   ]
   ```
+
 - [ ] Добавить в `TEMPLATES` в settings.py:
+
   ```python
   TEMPLATES = [
       {
@@ -47,7 +53,9 @@
       },
   ]
   ```
+
 - [ ] Создать структуру папок:
+
   ```
   blog/
     components/
@@ -135,6 +143,7 @@
 ### Структура компонента (на примере Button)
 
 **button.py:**
+
 ```python
 from django_components import Component, register
 
@@ -159,6 +168,7 @@ class Button(Component):
 ```
 
 **button.html:**
+
 ```django
 <a href="{{ url }}" class="{{ css_class }}">
     {% if icon %}
@@ -169,6 +179,7 @@ class Button(Component):
 ```
 
 **button.css:**
+
 ```css
 .btn-dark:hover {
     background-color: #000;
