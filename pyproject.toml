@@ -9,7 +9,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "django (>=6.0b1)",
-    "transliterate (>=1.10.2,<2.0.0)"
+    "transliterate (>=1.10.2,<2.0.0)",
+    "django-components (>=0.143.2) ; python_version >= \"3.12\" and python_version < \"4.0\""
 ]
 
 

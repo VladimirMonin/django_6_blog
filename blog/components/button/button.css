@@ -1,0 +1,36 @@
+/* Button Component Styles */
+
+/* Hover эффекты для всех кнопок */
+.btn {
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Active состояние с желтым акцентом */
+.btn.border-warning {
+    border-color: #ffc107 !important;
+}
+
+.btn.border-warning:hover {
+    border-color: #e0a800 !important;
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+}
+
+/* Дополнительные стили для темной кнопки */
+.btn-dark:hover {
+    background-color: #000;
+}
+
+/* Отступ для иконки */
+.btn i {
+    margin-right: 0.25rem;
+}
+
+.btn i:last-child {
+    margin-right: 0;
+    margin-left: 0.25rem;
+}

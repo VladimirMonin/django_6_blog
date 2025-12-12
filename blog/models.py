@@ -1,4 +1,5 @@
 from django.db import models
+from django.urls import reverse
 from transliterate import slugify
 
 
@@ -46,6 +47,12 @@ class Post(models.Model):
 
     def __str__(self):
         return self.title
+    
+    def get_absolute_url(self):
+        """
+        Возвращает абсолютный URL для детального просмотра поста.
+        """
+        return reverse('post_detail', kwargs={'pk': self.pk})
 
     def save(self, *args, **kwargs):
         """

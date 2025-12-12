@@ -1,4 +1,5 @@
 {% load static %}
+{% load component_tags %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -15,14 +16,15 @@
     {# Кастомные стили #}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     
+    {# Django Components CSS #}
+    {% component_css_dependencies %}
+    
     {# Дополнительные стили #}
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    {# Определение partial для навигационного меню #}
-    {# Использует контекст: request #}
-    {# Пример вызова: {% partial navigation %} #}
-    {% partialdef navigation %}
+    {# Навигация с Bootstrap 5 #}
+    <header>
         <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
             <div class="container">
                 <a class="navbar-brand fw-bold" href="{% url 'post_list' %}">
@@ -34,26 +36,15 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'post_list' %}active{% endif %}" 
-                               href="{% url 'post_list' %}">
-                                <i class="bi bi-house-door"></i> Главная
-                            </a>
+                            {% component "button" text="Главная" url="post_list" icon="bi-house-door" active=is_post_list %}
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}" 
-                               href="{% url 'about' %}">
-                                <i class="bi bi-info-circle"></i> О блоге
-                            </a>
+                            {% component "button" text="О блоге" url="about" icon="bi-info-circle" active=is_about %}
                         </li>
                     </ul>
                 </div>
             </div>
         </nav>
-    {% endpartialdef navigation %}
-
-    {# Навигация с Bootstrap 5 #}
-    <header>
-        {% partial navigation %}
     </header>
 
     {# Основной контент страницы #}
