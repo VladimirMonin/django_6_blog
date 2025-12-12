@@ -1,0 +1,141 @@
+/*
+ * Django 6 Blog - Кастомные стили
+ * 
+ * Цветовая схема:
+ * - Белый фон (#ffffff)
+ * - Черные кнопки (Bootstrap dark)
+ * - Желтые акценты (Bootstrap warning)
+ */
+
+:root {
+    --accent-yellow: #ffc107;
+    --accent-yellow-hover: #ffcd39;
+    --text-dark: #212529;
+    --text-muted: #6c757d;
+}
+
+/* Общие стили */
+body {
+    background-color: #ffffff;
+    color: var(--text-dark);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Навигация */
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+}
+
+.nav-link.active {
+    background-color: var(--accent-yellow) !important;
+    color: var(--text-dark) !important;
+    border-radius: 0.25rem;
+    padding: 0.5rem 1rem !important;
+    font-weight: 600;
+}
+
+.nav-link {
+    transition: all 0.2s ease;
+}
+
+.nav-link:hover:not(.active) {
+    background-color: rgba(255, 193, 7, 0.1);
+    border-radius: 0.25rem;
+}
+
+/* Карточки постов */
+.card {
+    border: 1px solid #dee2e6;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-title a {
+    color: var(--text-dark);
+    transition: color 0.2s ease;
+}
+
+.card-title a:hover {
+    color: var(--accent-yellow);
+}
+
+/* Кнопки */
+.btn-dark {
+    background-color: var(--text-dark);
+    border-color: var(--text-dark);
+    transition: all 0.2s ease;
+}
+
+.btn-dark:hover {
+    background-color: #000000;
+    border-color: #000000;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Детальный просмотр поста */
+.post-content {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: var(--text-dark);
+}
+
+.post-content p {
+    margin-bottom: 1.5rem;
+}
+
+article h1 {
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+}
+
+/* Footer */
+footer {
+    margin-top: auto;
+}
+
+/* Акценты */
+.text-accent {
+    color: var(--accent-yellow);
+}
+
+.bg-accent {
+    background-color: var(--accent-yellow);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Плавная прокрутка */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Улучшенная читаемость */
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* Иконки */
+.bi {
+    vertical-align: -0.125em;
+}
