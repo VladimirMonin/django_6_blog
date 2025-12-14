@@ -14,7 +14,8 @@ dependencies = [
     "django-htmx (>=1.27.0,<2.0.0)",
     "django-unfold (>=0.73.1,<0.74.0) ; python_version >= \"3.12\" and python_version < \"4.0\"",
     "markdown (>=3.10,<4.0)",
-    "pymdown-extensions (>=10.19,<11.0)"
+    "pymdown-extensions (>=10.19,<11.0)",
+    "beautifulsoup4 (>=4.14.3,<5.0.0)"
 ]
 
 
