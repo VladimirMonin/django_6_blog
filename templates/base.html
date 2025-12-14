@@ -17,6 +17,9 @@
     {# Highlight.js для подсветки синтаксиса кода #}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css">
     
+    {# Plyr.io для медиаплееров #}
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+    
     {# Кастомные стили #}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     
@@ -80,51 +83,18 @@
     {# Mermaid.js для диаграмм #}
     <script src="https://cdn.jsdelivr.net/npm/mermaid@11.12.0/dist/mermaid.min.js"></script>
     
-    {# Copy-button для code blocks #}
-    <script src="{% static 'js/copy-code.js' %}" defer></script>
+    {# Plyr.io для медиаплееров #}
+    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
     
-    {# Настройка CSRF токена для HTMX #}
-    <script>
-        document.body.addEventListener('htmx:configRequest', (event) => {
-            event.detail.headers['X-CSRFToken'] = document.querySelector('meta[name="csrf-token"]').content;
-        });
-    </script>
-    
-    {# Инициализация библиотек #}
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Инициализация Highlight.js
-            hljs.highlightAll();
-            
-            // Инициализация Mermaid.js
-            mermaid.initialize({
-                startOnLoad: true,
-                theme: 'default',
-                securityLevel: 'loose'
-            });
-        });
-        
-        // Повторная инициализация после HTMX загрузки
-        document.body.addEventListener('htmx:afterSwap', function(event) {
-            // Подсветка новых code blocks
-            event.detail.elt.querySelectorAll('pre code').forEach((block) => {
-                hljs.highlightElement(block);
-            });
-            
-            // Рендер новых Mermaid диаграмм
-            const mermaidBlocks = event.detail.elt.querySelectorAll('.mermaid');
-            if (mermaidBlocks.length > 0) {
-                mermaid.run({
-                    querySelector: '.mermaid'
-                });
-            }
-            
-            // Добавляем copy-button к новым блокам
-            if (window.initCopyButtons) {
-                window.initCopyButtons();
-            }
-        });
-    </script>
+    {# Модули Phase 2.7 #}
+    <script src="{% static 'js/htmx-csrf.js' %}"></script>
+    <script src="{% static 'js/init-libs.js' %}"></script>
+    <script src="{% static 'js/fullscreen-images.js' %}"></script>
+    <script src="{% static 'js/media-players.js' %}"></script>
+    <script src="{% static 'js/table-of-contents.js' %}"></script>
+    <script src="{% static 'js/breadcrumbs.js' %}"></script>
+    <script src="{% static 'js/copy-code.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
     
     {# Дополнительный JavaScript #}
     {% block extra_js %}{% endblock %}
