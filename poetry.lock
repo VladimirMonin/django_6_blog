@@ -71,6 +71,22 @@ asgiref = ">=3.6"
 django = ">=4.2"
 
 [[package]]
+name = "django-unfold"
+version = "0.73.1"
+description = "Modern Django admin theme for seamless interface development"
+optional = false
+python-versions = "<4.0,>=3.10"
+groups = ["main"]
+markers = "python_version < \"4.0\""
+files = [
+    {file = "django_unfold-0.73.1-py3-none-any.whl", hash = "sha256:7241275b75f0784a28410afa6bb4660f427eb7b62d48726195b35374887f017d"},
+    {file = "django_unfold-0.73.1.tar.gz", hash = "sha256:2c1bbf24d2fc162fe5d0e19b27c1f8287fdd5343b1ffe2b78ee26586ed1a4837"},
+]
+
+[package.dependencies]
+django = ">=4.2"
+
+[[package]]
 name = "djc-core-html-parser"
 version = "1.0.3"
 description = "HTML parser used by django-components written in Rust."
@@ -249,4 +265,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12"
-content-hash = "603c1025d0b413a62aafa4e2573c6dd3bd4a182d8c7cb012a186812a8b9ce07b"
+content-hash = "726837fe445a9a3538a2f3997a218200baec6c70f66b977ac0689f6b4793a453"
