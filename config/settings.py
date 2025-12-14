@@ -32,7 +32,6 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     "unfold",  # Modern Django admin theme
-    "unfold.contrib.filters.admin",  # Optional filters
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -77,7 +76,6 @@ TEMPLATES = [
                     "django.template.loaders.cached.Loader",
                     [
                         "django.template.loaders.filesystem.Loader",
-                        "unfold.loaders.UnfoldLoader",
                         "django.template.loaders.app_directories.Loader",
                         "django_components.template_loader.Loader",
                     ],
@@ -123,9 +121,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "ru-ru"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Moscow"
 
 USE_I18N = True
 
