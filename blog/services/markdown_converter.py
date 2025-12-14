@@ -8,7 +8,12 @@
 import markdown
 
 from blog.services.markdown_processor import MarkdownProcessor
-from blog.services.processors import TableProcessor
+from blog.services.processors import (
+    BlockquoteProcessor,
+    CodeProcessor,
+    ImageProcessor,
+    TableProcessor,
+)
 
 
 def convert_markdown_to_html(markdown_text: str) -> str:
@@ -85,10 +90,10 @@ def convert_markdown_to_html(markdown_text: str) -> str:
 
         # Этап 2: Обработка HTML процессорами (Beautiful Soup)
         processors = [
-            TableProcessor(),
-            # ImageProcessor(),  # TODO: Phase 2.6
-            # BlockquoteProcessor(),  # TODO: Phase 2.6
-            # CodeProcessor(),  # TODO: Phase 2.6
+            TableProcessor(),  # Таблицы → Bootstrap классы
+            ImageProcessor(),  # Изображения → .img-fluid, lazy loading
+            BlockquoteProcessor(),  # Цитаты + Obsidian Callouts
+            CodeProcessor(),  # Inline-код → .text-danger, .bg-light
         ]
 
         processor = MarkdownProcessor(processors)
