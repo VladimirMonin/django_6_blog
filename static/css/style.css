@@ -228,3 +228,133 @@ button[hx-get]:active::after {
   width: 300px;
   height: 300px;
 }
+
+/* ======================
+   Code Blocks и Подсветка синтаксиса
+   ====================== */
+
+/* Wrapper для позиционирования copy-button */
+.code-block-wrapper {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+/* Блоки кода */
+.post-content pre {
+  position: relative;
+  background-color: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 16px;
+  overflow-x: auto;
+  line-height: 1.45;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+.post-content pre code {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+  word-break: normal;
+  white-space: pre;
+}
+
+/* Inline код */
+.post-content code:not(pre code) {
+  background-color: rgba(175, 184, 193, 0.2);
+  padding: 0.2em 0.4em;
+  border-radius: 6px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9em;
+  color: #24292f;
+}
+
+/* Copy-button для code blocks */
+.copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #57606a;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+  z-index: 10;
+}
+
+.copy-button:hover {
+  background-color: #ffffff;
+  border-color: #6e7781;
+  color: #24292f;
+}
+
+.copy-button.copied {
+  background-color: #dafbe1;
+  border-color: #2da44e;
+  color: #1a7f37;
+}
+
+.copy-button.error {
+  background-color: #ffebe9;
+  border-color: #cf222e;
+  color: #a40e26;
+}
+
+.copy-button i {
+  font-size: 1rem;
+  vertical-align: middle;
+}
+
+/* Mermaid диаграммы */
+.post-content .mermaid {
+  text-align: center;
+  margin: 2rem 0;
+  padding: 1rem;
+  background-color: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+}
+
+/* Адаптивность для code blocks */
+@media (max-width: 768px) {
+  .post-content pre {
+    font-size: 0.8rem;
+    padding: 12px;
+  }
+  
+  .copy-button {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+  
+  .copy-button i {
+    font-size: 0.875rem;
+  }
+}
+
+/* Scrollbar для code blocks (webkit) */
+.post-content pre::-webkit-scrollbar {
+  height: 8px;
+}
+
+.post-content pre::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.post-content pre::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.post-content pre::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
