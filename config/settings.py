@@ -31,6 +31,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "unfold",  # Modern Django admin theme
+    "unfold.contrib.filters.admin",  # Optional filters
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -75,6 +77,7 @@ TEMPLATES = [
                     "django.template.loaders.cached.Loader",
                     [
                         "django.template.loaders.filesystem.Loader",
+                        "unfold.loaders.UnfoldLoader",
                         "django.template.loaders.app_directories.Loader",
                         "django_components.template_loader.Loader",
                     ],
@@ -148,4 +151,64 @@ COMPONENTS = {
         BASE_DIR / "blog" / "components",
     ],
     "app_dirs": ["components"],
+}
+
+# Unfold Admin Configuration
+UNFOLD = {
+    "SITE_TITLE": "Django 6 Blog",
+    "SITE_HEADER": "Админ-панель блога",
+    "SITE_URL": "/",
+    "SITE_SYMBOL": "speed",
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": True,
+    "COLORS": {
+        "primary": {
+            "50": "255 248 225",
+            "100": "255 236 179",
+            "200": "255 224 130",
+            "300": "255 213 79",
+            "400": "255 202 40",
+            "500": "255 193 7",    # Желтый акцент (#FFC107)
+            "600": "255 179 0",
+            "700": "255 160 0",
+            "800": "255 143 0",
+            "900": "230 81 0",
+            "950": "26 13 0",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": True,
+        "navigation": [
+            {
+                "title": "Навигация",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Главная",
+                        "icon": "home",
+                        "link": "/",
+                    },
+                    {
+                        "title": "Админка",
+                        "icon": "dashboard",
+                        "link": "/admin/",
+                    },
+                ],
+            },
+            {
+                "title": "Блог",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Посты",
+                        "icon": "article",
+                        "link": "/admin/blog/post/",
+                    },
+                ],
+            },
+        ],
+    },
 }
