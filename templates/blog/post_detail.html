@@ -22,9 +22,10 @@
                     </div>
                 </header>
 
-                <div class="post-content">
-                    {{ post.content|linebreaks }}
+                <div class="post-content markdown-content">
+                    {{ post.content_html|safe }}
                 </div>
+
             </article>
 
             <hr class="my-5">
