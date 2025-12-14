@@ -342,10 +342,10 @@ def get_template_data(...):
 
 Мы рассмотрели:
 
-1. **[HTMX интеграция](11_htmx_integration.md)** — добавление динамики без JavaScript
-2. **[Components + HTMX + Partials](12_htmx_components_partials.md)** — архитектура взаимодействия
-3. **[Paginator компонент](13_paginator_component.md)** — детальный разбор с двумя режимами
-4. **[Баги с дефисами](14_template_syntax_fixes.md)** — решение проблем Template Syntax
+1. **[HTMX интеграция](06_htmx_integration.md)** — добавление динамики без JavaScript
+2. **[Components + HTMX + Partials](07_htmx_components_partials.md)** — архитектура взаимодействия
+3. **[Paginator компонент](08_paginator_component.md)** — детальный разбор с двумя режимами
+4. **[Баги с дефисами](09_template_syntax_fixes.md)** — решение проблем Template Syntax
 
 ---
 

@@ -554,7 +554,7 @@ load_more = request.GET.get('load_more') == 'true'
 
 Теперь разберём **решение проблем с дефисами** →
 
-**Следующая статья**: [14_template_syntax_fixes.md](14_template_syntax_fixes.md)
+**Следующая статья**: [09_template_syntax_fixes.md](09_template_syntax_fixes.md)
 
 ---
 

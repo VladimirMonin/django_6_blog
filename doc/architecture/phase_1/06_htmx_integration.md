@@ -300,7 +300,7 @@ templates/
 
 Теперь посмотрим, как HTMX работает с **Django Components** и **Partial шаблонами** →
 
-**Следующая статья**: [12_htmx_components_partials.md](12_htmx_components_partials.md)
+**Следующая статья**: [07_htmx_components_partials.md](07_htmx_components_partials.md)
 
 ---
 

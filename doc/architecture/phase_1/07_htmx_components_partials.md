@@ -440,7 +440,7 @@ load_more = request.GET.get('load_more') == 'true'
 
 Теперь детально разберём **Paginator компонент** →
 
-**Следующая статья**: [13_paginator_component.md](13_paginator_component.md)
+**Следующая статья**: [08_paginator_component.md](08_paginator_component.md)
 
 ---
 
