@@ -36,3 +36,4 @@ env/
 .DS_Store
 Thumbs.db
 doc/videos/
+doc/samples/

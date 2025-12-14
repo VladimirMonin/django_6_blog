@@ -73,9 +73,7 @@ class CodeProcessor(HTMLProcessor):
             # Обрабатываем только inline-код
             existing_classes_raw = code.get("class")
             existing_classes = (
-                existing_classes_raw
-                if isinstance(existing_classes_raw, list)
-                else []
+                existing_classes_raw if isinstance(existing_classes_raw, list) else []
             )
 
             # Bootstrap классы для inline-кода

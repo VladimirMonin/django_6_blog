@@ -9,11 +9,9 @@ from . import views
 
 urlpatterns = [
     # Главная страница - список постов
-    path('', views.post_list, name='post_list'),
-    
+    path("", views.post_list, name="post_list"),
     # Детальный просмотр поста
-    path('post/<int:pk>/', views.post_detail, name='post_detail'),
-    
+    path("post/<int:pk>/", views.post_detail, name="post_detail"),
     # Страница "О блоге"
-    path('about/', views.about, name='about'),
+    path("about/", views.about, name="about"),
 ]

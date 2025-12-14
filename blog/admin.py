@@ -20,7 +20,10 @@ class PostAdmin(ModelAdmin):
 
     fieldsets = (
         ("Основная информация", {"fields": ("title", "slug", "content")}),
-        ("HTML предпросмотр", {"fields": ("display_html_preview",), "classes": ("collapse",)}),
+        (
+            "HTML предпросмотр",
+            {"fields": ("display_html_preview",), "classes": ("collapse",)},
+        ),
         ("Статус", {"fields": ("is_published",)}),
         ("Даты", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
@@ -54,7 +57,7 @@ class PostAdmin(ModelAdmin):
             return format_html(
                 '<div style="max-height: 400px; overflow: auto; padding: 15px; '
                 'background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px;">'
-                '{}</div>',
-                obj.content_html
+                "{}</div>",
+                obj.content_html,
             )
         return "—"

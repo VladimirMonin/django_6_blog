@@ -70,7 +70,12 @@ class TableProcessor(HTMLProcessor):
             )
 
             # Добавляем Bootstrap классы (если их еще нет)
-            bootstrap_classes = ["table", "table-striped", "table-hover", "table-bordered"]
+            bootstrap_classes = [
+                "table",
+                "table-striped",
+                "table-hover",
+                "table-bordered",
+            ]
 
             # Объединяем существующие и новые классы (без дубликатов)
             new_classes = existing_classes + [

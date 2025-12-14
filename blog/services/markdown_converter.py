@@ -69,7 +69,12 @@ def convert_markdown_to_html(markdown_text: str) -> str:
                 {
                     "name": "mermaid",
                     "class": "mermaid",
-                    "format": lambda source, language, css_class, options, md, **kwargs: f'<div class="mermaid">{source}</div>',
+                    "format": lambda source,
+                    language,
+                    css_class,
+                    options,
+                    md,
+                    **kwargs: f'<div class="mermaid">{source}</div>',
                 }
             ]
         },
