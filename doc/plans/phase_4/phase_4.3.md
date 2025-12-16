@@ -32,6 +32,7 @@
 ### Создание модели
 
 - [ ] Создать файл `blog/models/text_chunk.py` (или добавить в существующий `models.py`)
+- [ ] Импортировать необходимые типы: `from pgvector.django import HalfVectorField, HnswIndex`, `from django.contrib.postgres.search import SearchVectorField`, `from django.contrib.postgres.indexes import OpClass`, `from django.db.models.functions import Cast`
 - [ ] Определить модель `TextChunk` со следующими полями:
 
 **Основные поля:**
@@ -48,12 +49,12 @@
 
 **Векторизация:**
 
-- `embedding` — VectorField(dimensions=1536), nullable (заполняется после векторизации)
+- `embedding` — HalfVectorField(dimensions=1536), nullable (заполняется после векторизации)
 - `content_hash` — CharField(64), SHA256 хеш контента, db_index=True
 
 **FTS:**
 
-- `search_vector` — SearchVectorField, nullable (для полнотекстового поиска)
+- `search_vector` — SearchVectorField из django.contrib.postgres.search, nullable (для полнотекстового поиска)
 
 ### Создание Enum для типов
 
@@ -61,7 +62,7 @@
 
 ### Индексы
 
-- [ ] HNSW индекс на `embedding` с параметрами m=16, ef_construction=64, opclasses=['vector_cosine_ops']
+- [ ] HNSW индекс на `embedding` с параметрами m=16, ef_construction=64, используя OpClass и Cast для halfvec: `OpClass(Cast('embedding', HalfVectorField(dimensions=1536)), name='halfvec_cosine_ops')`
 - [ ] GIN индекс на `search_vector` для FTS
 - [ ] B-Tree индекс на `content_hash` для быстрой проверки дубликатов
 - [ ] Composite индекс на (`post`, `position_index`) для загрузки контекста
