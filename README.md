@@ -36,7 +36,10 @@ cp .env.example .env
 uv lock --check
 uv run python manage.py check
 uv run pytest -q
+git diff --check
 ```
+
+Подробные рабочие правила, smoke-gates и список того, что нельзя коммитить: [`doc/development.md`](doc/development.md).
 
 ## Публичный блог
 
