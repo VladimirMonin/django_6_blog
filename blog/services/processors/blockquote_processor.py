@@ -67,6 +67,8 @@ class BlockquoteProcessor(HTMLProcessor):
         "[!danger]": "alert alert-danger",
         "[!tip]": "alert alert-primary",
         "[!note]": "alert alert-secondary",
+        "[!important]": "alert alert-warning",
+        "[!summary]": "alert alert-info",
     }
 
     def process(self, soup: BeautifulSoup) -> None:
@@ -94,10 +96,19 @@ class BlockquoteProcessor(HTMLProcessor):
             if first_p:
                 text = first_p.get_text().strip()
 
+                marker = next(
+                    (
+                        marker
+                        for marker in self.CALLOUT_MAPPING
+                        if text == marker or text.startswith(marker)
+                    ),
+                    None,
+                )
+
                 # Проверяем, есть ли Obsidian Callout маркер
-                if text in self.CALLOUT_MAPPING:
+                if marker:
                     # Добавляем Bootstrap Alert классы
-                    alert_classes = self.CALLOUT_MAPPING[text].split()
+                    alert_classes = self.CALLOUT_MAPPING[marker].split()
                     existing_classes_raw = blockquote.get("class")
                     existing_classes = (
                         existing_classes_raw
@@ -107,8 +118,13 @@ class BlockquoteProcessor(HTMLProcessor):
 
                     blockquote["class"] = existing_classes + alert_classes
 
-                    # Удаляем маркер из контента
-                    first_p.decompose()
+                    # Удаляем маркер. Если после него есть текст, оставляем его в callout.
+                    body_text = text.removeprefix(marker).strip()
+                    if body_text:
+                        first_p.clear()
+                        first_p.string = body_text
+                    else:
+                        first_p.decompose()
 
                     # Не добавляем базовые классы, если это Callout
                     continue

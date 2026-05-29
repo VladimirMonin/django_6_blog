@@ -14,7 +14,11 @@ OBSIDIAN_EMBED_RE = re.compile(r"!\[\[([^\]|]+)(?:\|[^\]]+)?\]\]")
 OBSIDIAN_NOTE_LINK_RE = re.compile(r"(?<!!)\[\[([^\]|]+)(?:\|([^\]]+))?\]\]")
 
 
-def import_obsidian_note_to_post(note_path: Path, assets_dir: Path | None = None) -> Post:
+def import_obsidian_note_to_post(
+    note_path: Path,
+    assets_dir: Path | None = None,
+    slug: str | None = None,
+) -> Post:
     """Create a Post and PostMedia rows from an Obsidian Markdown note.
 
     The importer is intentionally small: it is a local prototype/smoke path,
@@ -34,6 +38,7 @@ def import_obsidian_note_to_post(note_path: Path, assets_dir: Path | None = None
 
     post = Post.objects.create(
         title=title,
+        slug=slug or "",
         content=markdown_body,
         is_published=status != "draft",
     )
