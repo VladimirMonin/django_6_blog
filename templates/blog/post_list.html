@@ -34,15 +34,15 @@
     {# Контейнер для постов - обновляется через HTMX #}
     <div class="row row-cols-1 g-4" id="post-container">
         {% for post in posts %}
-            {% component "post_card" post=post %}{% endcomponent %}
+            {% component "post_card" post=post / %}
         {% empty %}
             <div class="col">
-                {% component "alert" message="Постов не найдено." type="warning" %}{% endcomponent %}
+                {% component "alert" message="Постов не найдено." type="warning" / %}
             </div>
         {% endfor %}
     </div>
     
     {# Компонент пагинатора #}
-    {% component "paginator" page_obj=page_obj search_query=search_query %}{% endcomponent %}
+    {% component "paginator" page_obj=page_obj search_query=search_query / %}
 </div>
 {% endblock %}

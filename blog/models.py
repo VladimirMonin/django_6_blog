@@ -1,6 +1,7 @@
 from django.db import models
 from django.urls import reverse
-from transliterate import slugify
+from transliterate import slugify as transliterate_slugify
+from django.utils.text import slugify as django_slugify
 
 from blog.services import convert_markdown_to_html
 
@@ -51,7 +52,7 @@ class Post(models.Model):
         2. Конвертирует Markdown → HTML (всегда, при create и update)
         """
         if not self.slug:
-            self.slug = slugify(self.title)
+            self.slug = transliterate_slugify(self.title) or django_slugify(self.title)
 
         # Конвертация Markdown → HTML при каждом сохранении
         if self.content:

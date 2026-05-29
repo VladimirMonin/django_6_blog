@@ -8,17 +8,15 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "django (>=6.0b1)",
-    "transliterate (>=1.10.2,<2.0.0)",
-    "django-components (>=0.143.2) ; python_version >= \"3.12\" and python_version < \"4.0\"",
-    "django-htmx (>=1.27.0,<2.0.0)",
-    "django-unfold (>=0.73.1,<0.74.0) ; python_version >= \"3.12\" and python_version < \"4.0\"",
-    "markdown (>=3.10,<4.0)",
-    "pymdown-extensions (>=10.19,<11.0)",
-    "beautifulsoup4 (>=4.14.3,<5.0.0)"
+    "django>=6.0.5,<6.1",
+    "transliterate>=1.10.2,<2.0.0",
+    "django-components>=0.143.2,<0.144",
+    "django-htmx>=1.27.0,<2.0.0",
+    "django-unfold>=0.73.1,<0.74.0",
+    "markdown>=3.10,<4.0",
+    "pymdown-extensions>=10.19,<11.0",
+    "beautifulsoup4>=4.14.3,<5.0.0",
 ]
 
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.uv]
+package = false

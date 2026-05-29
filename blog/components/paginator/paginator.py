@@ -32,7 +32,7 @@ class Paginator(Component):
         search_query = kwargs.get("search_query", "")
         show_load_more = kwargs.get("show_load_more", True)
 
-        if not page_obj:
+        if page_obj is None:
             raise ValueError("Paginator component requires 'page_obj' argument")
 
         # Формируем параметры URL для поиска
