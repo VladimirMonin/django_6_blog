@@ -10,4 +10,4 @@
 {% endfor %}
 
 {# Out-of-band обновление пагинатора #}
-{% component "paginator" page_obj=page_obj search_query=search_query / %}
+{% component "paginator" page_obj=page_obj search_query=search_query category_slug=category_slug tag_slug=tag_slug / %}

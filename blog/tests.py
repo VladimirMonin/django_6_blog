@@ -19,7 +19,7 @@ def published_post(db):
     return Post.objects.create(
         title="Linux smoke test",
         content="**Проверка** Django 6 на Linux",
-        is_published=True,
+        status=Post.Status.PUBLISHED,
     )
 
 
@@ -28,7 +28,7 @@ def draft_post(db):
     return Post.objects.create(
         title="Draft only",
         content="Черновик не должен быть виден публично",
-        is_published=False,
+        status=Post.Status.DRAFT,
     )
 
 
@@ -85,12 +85,12 @@ def test_post_search_filters_published_posts(client):
     matching = Post.objects.create(
         title="Django pytest guide",
         content="Текст про pytest-django",
-        is_published=True,
+        status=Post.Status.PUBLISHED,
     )
     hidden = Post.objects.create(
         title="Unrelated note",
         content="Другой текст",
-        is_published=True,
+        status=Post.Status.PUBLISHED,
     )
 
     response = client.get(reverse("post_list"), {"search": "pytest"})
@@ -120,12 +120,12 @@ def test_htmx_search_returns_partial_post_list(client):
     matching = Post.objects.create(
         title="Django HTMX partial",
         content="Материал про динамическую загрузку",
-        is_published=True,
+        status=Post.Status.PUBLISHED,
     )
     hidden = Post.objects.create(
         title="Plain Django page",
         content="Материал без нужного слова",
-        is_published=True,
+        status=Post.Status.PUBLISHED,
     )
 
     response = client.get(
@@ -147,7 +147,7 @@ def test_load_more_button_preserves_search_query_as_urlencoded_parameter(client)
         Post.objects.create(
             title=f"Django HTMX article {index}",
             content="Материал про автозагрузку карточек",
-            is_published=True,
+            status=Post.Status.PUBLISHED,
         )
 
     response = client.get(reverse("post_list"), {"search": "Django HTMX"})
@@ -162,7 +162,7 @@ def test_htmx_load_more_returns_next_page_cards_only(client):
         Post.objects.create(
             title=f"Autoload post {index}",
             content="Проверка второй страницы автозагрузки",
-            is_published=True,
+            status=Post.Status.PUBLISHED,
         )
 
     response = client.get(
@@ -301,7 +301,7 @@ def test_rendered_public_internal_links_resolve_to_available_pages(client):
         Post.objects.create(
             title=f"Rendered links post {index}",
             content="Проверка ссылок из отрендеренного HTML",
-            is_published=True,
+            status=Post.Status.PUBLISHED,
         )
         for index in range(6)
     ]

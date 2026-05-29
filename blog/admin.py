@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 from unfold.decorators import display
-from .models import Post, PostMedia
+from .models import Category, Post, PostMedia, Tag
 
 
 class PostMediaInline(admin.TabularInline):
@@ -45,6 +45,20 @@ class PostMediaInline(admin.TabularInline):
         return format_html('<a href="{}" target="_blank">{}</a>', obj.file.url, obj.original_filename)
 
 
+@admin.register(Category)
+class CategoryAdmin(ModelAdmin):
+    list_display = ("name", "slug", "created_at")
+    search_fields = ("name", "description")
+    prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(Tag)
+class TagAdmin(ModelAdmin):
+    list_display = ("name", "slug", "created_at")
+    search_fields = ("name",)
+    prepopulated_fields = {"slug": ("name",)}
+
+
 @admin.register(PostMedia)
 class PostMediaAdmin(ModelAdmin):
     list_display = ("original_filename", "post", "media_type", "created_at")
@@ -59,21 +73,22 @@ class PostAdmin(ModelAdmin):
     Административный интерфейс для модели Post с Unfold UI.
     """
 
-    list_display = ("title", "slug", "display_created_at", "display_published")
-    list_filter = ("is_published", "created_at")
-    search_fields = ("title", "content")
+    list_display = ("title", "category", "status", "display_created_at")
+    list_filter = ("status", "category", "tags", "created_at")
+    search_fields = ("title", "content", "category__name", "tags__name")
     prepopulated_fields = {"slug": ("title",)}
     date_hierarchy = "created_at"
     ordering = ("-created_at",)
+    filter_horizontal = ("tags",)
     inlines = [PostMediaInline]
 
     fieldsets = (
-        ("Основная информация", {"fields": ("title", "slug", "content")}),
+        ("Основная информация", {"fields": ("title", "slug", "category", "tags", "content")}),
         (
             "HTML предпросмотр",
             {"fields": ("display_html_preview",), "classes": ("collapse",)},
         ),
-        ("Статус", {"fields": ("is_published",)}),
+        ("Статус", {"fields": ("status",)}),
         ("Даты", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
 
@@ -82,11 +97,11 @@ class PostAdmin(ModelAdmin):
     # Custom actions
     @admin.action(description="Опубликовать выбранные посты")
     def publish_posts(self, request, queryset):
-        queryset.update(is_published=True)
+        queryset.update(status=Post.Status.PUBLISHED)
 
-    @admin.action(description="Снять с публикации")
+    @admin.action(description="Перевести в черновики")
     def unpublish_posts(self, request, queryset):
-        queryset.update(is_published=False)
+        queryset.update(status=Post.Status.DRAFT)
 
     actions = [publish_posts, unpublish_posts]
 
@@ -94,10 +109,6 @@ class PostAdmin(ModelAdmin):
     @display(description="Дата создания")
     def display_created_at(self, obj):
         return obj.created_at.strftime("%d.%m.%Y %H:%M")
-
-    @display(description="Статус", boolean=True)
-    def display_published(self, obj):
-        return obj.is_published
 
     @display(description="HTML контент")
     def display_html_preview(self, obj):

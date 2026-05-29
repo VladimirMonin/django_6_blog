@@ -32,6 +32,8 @@ class Paginator(Component):
         """
         page_obj = kwargs.get("page_obj")
         search_query = kwargs.get("search_query", "")
+        category_slug = kwargs.get("category_slug", "")
+        tag_slug = kwargs.get("tag_slug", "")
         show_load_more = kwargs.get("show_load_more", True)
 
         if page_obj is None:
@@ -55,11 +57,16 @@ class Paginator(Component):
             else:
                 page_range = list(range(current_page - 2, current_page + 3))
 
-        query_params = {"search": search_query} if search_query else {}
+        query_params = {}
+        if search_query:
+            query_params["search"] = search_query
+        if category_slug:
+            query_params["category"] = category_slug
+        if tag_slug:
+            query_params["tag"] = tag_slug
         search_param = f"&{urlencode(query_params)}" if query_params else ""
         load_more_params = {"page": next_page}
-        if search_query:
-            load_more_params["search"] = search_query
+        load_more_params.update(query_params)
         load_more_params["load_more"] = "true"
         load_more_query = urlencode(load_more_params)
 

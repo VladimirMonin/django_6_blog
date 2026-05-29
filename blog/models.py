@@ -23,6 +23,49 @@ def build_file_slug(filename):
     return f"{stem}{extension}"
 
 
+class Category(models.Model):
+    """Public category used to group blog posts."""
+
+    name = models.CharField(max_length=120, unique=True, verbose_name="Название")
+    slug = models.SlugField(max_length=140, unique=True, verbose_name="URL-slug")
+    description = models.TextField(blank=True, verbose_name="Описание")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Категория"
+        verbose_name_plural = "Категории"
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = transliterate_slugify(self.name) or django_slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+class Tag(models.Model):
+    """Public tag used for cross-cutting post topics."""
+
+    name = models.CharField(max_length=80, unique=True, verbose_name="Название")
+    slug = models.SlugField(max_length=100, unique=True, verbose_name="URL-slug")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Тег"
+        verbose_name_plural = "Теги"
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = transliterate_slugify(self.name) or django_slugify(self.name)
+        super().save(*args, **kwargs)
+
+
 class Post(models.Model):
     """
     Модель поста блога.
@@ -34,18 +77,44 @@ class Post(models.Model):
         content_html: HTML-версия содержимого (генерируется автоматически)
         created_at: Дата и время создания
         updated_at: Дата и время последнего обновления
-        is_published: Статус публикации (опубликован/черновик)
+        category: Основная категория поста
+        tags: Тематические теги поста
+        status: Статус публикации (published/draft)
     """
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Черновик"
+        PUBLISHED = "published", "Опубликовано"
 
     title = models.CharField(max_length=200, verbose_name="Заголовок")
     slug = models.SlugField(max_length=200, unique=True, verbose_name="URL-slug")
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="posts",
+        verbose_name="Категория",
+    )
+    tags = models.ManyToManyField(
+        Tag,
+        blank=True,
+        related_name="posts",
+        verbose_name="Теги",
+    )
     content = models.TextField(verbose_name="Содержимое (Markdown)")
     content_html = models.TextField(
         blank=True, editable=False, verbose_name="HTML контент"
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
-    is_published = models.BooleanField(default=True, verbose_name="Опубликовано")
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PUBLISHED,
+        db_index=True,
+        verbose_name="Статус",
+    )
 
     class Meta:
         ordering = ["-created_at"]

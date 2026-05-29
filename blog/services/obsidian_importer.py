@@ -40,7 +40,7 @@ def import_obsidian_note_to_post(
         title=title,
         slug=slug or "",
         content=markdown_body,
-        is_published=status != "draft",
+        status=Post.Status.DRAFT if status == "draft" else Post.Status.PUBLISHED,
     )
 
     for filename in unique_obsidian_embeds(markdown_body):

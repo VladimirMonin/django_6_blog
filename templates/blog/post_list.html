@@ -8,30 +8,69 @@
         <i class="bi bi-journal-text text-accent"></i> Последние посты
     </h1>
 
-    {# Форма поиска с HTMX #}
-    <div class="mb-4">
+    <form id="post-filters" class="mb-4" action="{% url 'post_list' %}" method="get">
+        {% if category_slug %}<input type="hidden" name="category" value="{{ category_slug }}">{% endif %}
+        {% if tag_slug %}<input type="hidden" name="tag" value="{{ tag_slug }}">{% endif %}
         <div class="input-group">
             <span class="input-group-text">
                 <i class="bi bi-search"></i>
             </span>
-            <input 
-                type="search" 
+            <input
+                type="search"
                 name="search"
                 value="{{ search_query }}"
                 class="form-control"
                 hx-get="{% url 'post_list' %}"
+                hx-include="#post-filters"
                 hx-trigger="keyup changed delay:500ms, search"
                 hx-target="#post-container"
                 hx-swap="innerHTML"
+                hx-push-url="true"
                 hx-indicator="#search-indicator"
-                placeholder="Поиск по постам...">
+                placeholder="Поиск по постам, категориям и тегам...">
+            <button class="btn btn-outline-dark" type="submit">Найти</button>
             <span id="search-indicator" class="htmx-indicator input-group-text">
                 <span class="spinner-border spinner-border-sm"></span>
             </span>
         </div>
-    </div>
+    </form>
 
-    {# Контейнер для постов - обновляется через HTMX #}
+    {% if categories or tags %}
+    <div class="mb-4 d-flex flex-column gap-3">
+        {% if categories %}
+        <div>
+            <div class="small text-muted mb-2">Категории</div>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-sm {% if not category_slug %}btn-dark{% else %}btn-outline-dark{% endif %}"
+                   href="{% url 'post_list' %}{% if search_query or tag_slug %}?{% if search_query %}search={{ search_query|urlencode }}{% endif %}{% if search_query and tag_slug %}&{% endif %}{% if tag_slug %}tag={{ tag_slug|urlencode }}{% endif %}{% endif %}"
+                   hx-get="{% url 'post_list' %}{% if search_query or tag_slug %}?{% if search_query %}search={{ search_query|urlencode }}{% endif %}{% if search_query and tag_slug %}&{% endif %}{% if tag_slug %}tag={{ tag_slug|urlencode }}{% endif %}{% endif %}"
+                   hx-target="#post-container" hx-swap="innerHTML" hx-push-url="true">Все</a>
+                {% for category in categories %}
+                <a class="btn btn-sm {% if category.slug == category_slug %}btn-dark{% else %}btn-outline-dark{% endif %}"
+                   href="{% url 'post_list' %}?category={{ category.slug|urlencode }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if tag_slug %}&tag={{ tag_slug|urlencode }}{% endif %}"
+                   hx-get="{% url 'post_list' %}?category={{ category.slug|urlencode }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if tag_slug %}&tag={{ tag_slug|urlencode }}{% endif %}"
+                   hx-target="#post-container" hx-swap="innerHTML" hx-push-url="true">{{ category.name }}</a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if tags %}
+        <div>
+            <div class="small text-muted mb-2">Теги</div>
+            <div class="d-flex flex-wrap gap-2">
+                {% for tag in tags %}
+                <a class="badge rounded-pill {% if tag.slug == tag_slug %}text-bg-dark{% else %}text-bg-light text-dark border{% endif %} text-decoration-none"
+                   href="{% url 'post_list' %}?tag={{ tag.slug|urlencode }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if category_slug %}&category={{ category_slug|urlencode }}{% endif %}"
+                   hx-get="{% url 'post_list' %}?tag={{ tag.slug|urlencode }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if category_slug %}&category={{ category_slug|urlencode }}{% endif %}"
+                   hx-target="#post-container" hx-swap="innerHTML" hx-push-url="true">#{{ tag.name }}</a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <div class="row row-cols-1 g-4" id="post-container">
         {% for post in posts %}
             {% component "post_card" post=post / %}
@@ -41,8 +80,7 @@
             </div>
         {% endfor %}
     </div>
-    
-    {# Компонент пагинатора #}
-    {% component "paginator" page_obj=page_obj search_query=search_query / %}
+
+    {% component "paginator" page_obj=page_obj search_query=search_query category_slug=category_slug tag_slug=tag_slug / %}
 </div>
 {% endblock %}

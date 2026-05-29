@@ -99,7 +99,7 @@ class Command(BaseCommand):
 
                 # Создаем пост
                 post = Post.objects.create(
-                    title=title, slug=slug, content=content, is_published=True
+                    title=title, slug=slug, content=content, status=Post.Status.PUBLISHED
                 )
 
                 created_posts.append(post)
