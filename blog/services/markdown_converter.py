@@ -7,6 +7,7 @@
 
 import markdown
 
+from blog.services.markdown_media_preprocessor import MarkdownMediaPreprocessor
 from blog.services.markdown_processor import MarkdownProcessor
 from blog.services.processors import (
     BlockquoteProcessor,
@@ -16,7 +17,7 @@ from blog.services.processors import (
 )
 
 
-def convert_markdown_to_html(markdown_text: str) -> str:
+def convert_markdown_to_html(markdown_text: str, post=None) -> str:
     """Конвертирует Markdown текст в HTML с обработкой процессорами.
 
     Двухэтапный процесс:
@@ -86,6 +87,7 @@ def convert_markdown_to_html(markdown_text: str) -> str:
 
     try:
         # Этап 1: Конвертация Markdown → HTML
+        markdown_text = MarkdownMediaPreprocessor(post).process(markdown_text)
         html = markdown.markdown(
             markdown_text,
             extensions=extensions,

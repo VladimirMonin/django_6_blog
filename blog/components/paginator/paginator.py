@@ -12,6 +12,8 @@ SEO-friendly компонент пагинации с поддержкой HTMX.
     - show_load_more: показывать кнопку "Загрузить еще" (по умолчанию True)
 """
 
+from urllib.parse import urlencode
+
 from django_components import Component, register
 
 
@@ -35,12 +37,10 @@ class Paginator(Component):
         if page_obj is None:
             raise ValueError("Paginator component requires 'page_obj' argument")
 
-        # Формируем параметры URL для поиска
-        search_param = f"&search={search_query}" if search_query else ""
-
         # Определяем диапазон страниц для отображения
         current_page = page_obj.number
         total_pages = page_obj.paginator.num_pages
+        next_page = page_obj.next_page_number() if page_obj.has_next() else None
 
         # Показываем максимум 5 кнопок страниц
         page_range = []
@@ -55,19 +55,28 @@ class Paginator(Component):
             else:
                 page_range = list(range(current_page - 2, current_page + 3))
 
+        query_params = {"search": search_query} if search_query else {}
+        search_param = f"&{urlencode(query_params)}" if query_params else ""
+        load_more_params = {"page": next_page}
+        if search_query:
+            load_more_params["search"] = search_query
+        load_more_params["load_more"] = "true"
+        load_more_query = urlencode(load_more_params)
+
         return {
             "page_obj": page_obj,
             "current_page": current_page,
             "total_pages": total_pages,
             "page_range": page_range,
             "search_param": search_param,
+            "load_more_query": load_more_query,
             "show_load_more": show_load_more,
             "has_previous": page_obj.has_previous(),
             "has_next": page_obj.has_next(),
             "previous_page": page_obj.previous_page_number()
             if page_obj.has_previous()
             else None,
-            "next_page": page_obj.next_page_number() if page_obj.has_next() else None,
+            "next_page": next_page,
         }
 
     class Media:

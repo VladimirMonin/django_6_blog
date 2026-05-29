@@ -136,6 +136,10 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
+# Media files (user uploads)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 # Django Components Finder
 STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",

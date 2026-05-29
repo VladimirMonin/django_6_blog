@@ -16,7 +16,13 @@ __pycache__/
 *.log
 db.sqlite3
 db.sqlite3-journal
-/media
+media/*
+!media/posts/
+!media/categories/
+media/posts/*
+media/categories/*
+!media/posts/.gitkeep
+!media/categories/.gitkeep
 /staticfiles
 
 # Virtual Environment
@@ -37,3 +43,4 @@ env/
 Thumbs.db
 doc/videos/
 doc/samples/
+tests/assets/

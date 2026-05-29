@@ -74,7 +74,7 @@
     has_next %}
     <button
       class="btn btn-dark"
-      hx-get="?page={{ next_page }}{{ search_param }}&load_more=true"
+      hx-get="?{{ load_more_query }}"
       hx-target="#post-container"
       hx-swap="beforeend"
       hx-indicator="#load-more-spinner"

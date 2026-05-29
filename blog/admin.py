@@ -2,7 +2,55 @@ from django.contrib import admin
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 from unfold.decorators import display
-from .models import Post
+from .models import Post, PostMedia
+
+
+class PostMediaInline(admin.TabularInline):
+    """Prototype uploader for post-scoped media files."""
+
+    model = PostMedia
+    extra = 1
+    fields = (
+        "file",
+        "original_filename",
+        "file_slug",
+        "media_type",
+        "display_markdown_link",
+        "display_preview",
+    )
+    readonly_fields = (
+        "original_filename",
+        "file_slug",
+        "media_type",
+        "display_markdown_link",
+        "display_preview",
+    )
+
+    @display(description="Markdown-ссылка")
+    def display_markdown_link(self, obj):
+        if obj and obj.pk:
+            return obj.markdown_link
+        return "—"
+
+    @display(description="Предпросмотр")
+    def display_preview(self, obj):
+        if not obj or not obj.pk:
+            return "—"
+        if obj.media_type == PostMedia.MediaType.IMAGE:
+            return format_html(
+                '<img src="{}" alt="{}" style="max-width: 160px; max-height: 90px; object-fit: contain;" />',
+                obj.file.url,
+                obj.original_filename,
+            )
+        return format_html('<a href="{}" target="_blank">{}</a>', obj.file.url, obj.original_filename)
+
+
+@admin.register(PostMedia)
+class PostMediaAdmin(ModelAdmin):
+    list_display = ("original_filename", "post", "media_type", "created_at")
+    list_filter = ("media_type", "created_at")
+    search_fields = ("original_filename", "file_slug", "post__title")
+    readonly_fields = ("original_filename", "file_slug", "media_type", "created_at")
 
 
 @admin.register(Post)
@@ -17,6 +65,7 @@ class PostAdmin(ModelAdmin):
     prepopulated_fields = {"slug": ("title",)}
     date_hierarchy = "created_at"
     ordering = ("-created_at",)
+    inlines = [PostMediaInline]
 
     fieldsets = (
         ("Основная информация", {"fields": ("title", "slug", "content")}),
