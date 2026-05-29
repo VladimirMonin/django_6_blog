@@ -1,0 +1,21 @@
+<div id="post-reactions-{{ post.pk }}" class="post-reactions d-flex flex-wrap align-items-center gap-3">
+  <span class="post-reaction-stat" title="Просмотры">
+    <i class="bi bi-eye"></i> {{ post.view_count_label }}
+  </span>
+  <span class="post-reaction-stat" title="Лайки">
+    <i class="bi bi-heart-fill text-danger"></i> {{ post.like_count_label }}
+  </span>
+  <form method="post" action="{% url 'post_like_toggle' post.pk %}" class="post-like-form">
+    {% csrf_token %}
+    <button
+      type="submit"
+      class="btn btn-sm post-like-button {% if post_is_liked %}is-liked{% endif %}"
+      aria-pressed="{% if post_is_liked %}true{% else %}false{% endif %}"
+      hx-post="{% url 'post_like_toggle' post.pk %}"
+      hx-target="#post-reactions-{{ post.pk }}"
+      hx-swap="outerHTML">
+      <i class="bi {% if post_is_liked %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+      {% if post_is_liked %}Лайк поставлен{% else %}Нравится{% endif %}
+    </button>
+  </form>
+</div>

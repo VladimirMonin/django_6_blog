@@ -2,12 +2,29 @@ import re
 from pathlib import PurePath
 
 from django.db import models
+from django.utils import timezone
 from django.urls import reverse
 from django.utils.html import strip_tags
 from django.utils.text import Truncator, slugify as django_slugify
 from transliterate import slugify as transliterate_slugify
 
 from blog.services import convert_markdown_to_html
+
+
+def format_ru_count(value, forms):
+    """Return a Russian pluralized counter label, e.g. '21 просмотр'."""
+    value = int(value or 0)
+    last_two = value % 100
+    last = value % 10
+    if 11 <= last_two <= 14:
+        form = forms[2]
+    elif last == 1:
+        form = forms[0]
+    elif 2 <= last <= 4:
+        form = forms[1]
+    else:
+        form = forms[2]
+    return f"{value} {form}"
 
 
 def post_media_upload_to(instance, filename):
@@ -117,6 +134,8 @@ class Post(models.Model):
         db_index=True,
         verbose_name="Статус",
     )
+    view_count = models.PositiveIntegerField(default=0, verbose_name="Просмотры")
+    like_count = models.PositiveIntegerField(default=0, verbose_name="Лайки")
 
     class Meta:
         ordering = ["-created_at"]
@@ -171,6 +190,14 @@ class Post(models.Model):
         if self.title and text.lower().startswith(self.title.lower()):
             text = text[len(self.title) :].strip(" —-:·")
         return Truncator(text).words(42)
+
+    @property
+    def view_count_label(self):
+        return format_ru_count(self.view_count, ("просмотр", "просмотра", "просмотров"))
+
+    @property
+    def like_count_label(self):
+        return format_ru_count(self.like_count, ("лайк", "лайка", "лайков"))
 
     def save(self, *args, **kwargs):
         """
@@ -270,3 +297,57 @@ class PostMedia(models.Model):
             self.file_slug = build_file_slug(self.original_filename)
         self.media_type = self.detect_media_type()
         super().save(*args, **kwargs)
+
+
+class SessionPostInteraction(models.Model):
+    """Central history of anonymous session interactions with public posts."""
+
+    session_key = models.CharField(max_length=40, db_index=True, verbose_name="Ключ сессии")
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name="session_interactions",
+        verbose_name="Пост",
+    )
+    viewed_at = models.DateTimeField(null=True, blank=True, verbose_name="Первый просмотр")
+    liked_at = models.DateTimeField(null=True, blank=True, verbose_name="Лайк поставлен")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["session_key", "post"],
+                name="unique_session_interaction_per_post",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["session_key", "liked_at"]),
+            models.Index(fields=["post", "viewed_at"]),
+        ]
+        ordering = ["-updated_at"]
+        verbose_name = "Сессионное действие с постом"
+        verbose_name_plural = "Сессионные действия с постами"
+
+    def __str__(self):
+        return f"{self.session_key}: {self.post_id}"
+
+    @property
+    def is_liked(self):
+        return self.liked_at is not None
+
+    def mark_viewed(self):
+        if self.viewed_at is None:
+            self.viewed_at = timezone.now()
+            self.save(update_fields=["viewed_at", "updated_at"])
+            return True
+        return False
+
+    def toggle_like(self):
+        if self.liked_at is None:
+            self.liked_at = timezone.now()
+            self.save(update_fields=["liked_at", "updated_at"])
+            return True
+        self.liked_at = None
+        self.save(update_fields=["liked_at", "updated_at"])
+        return False

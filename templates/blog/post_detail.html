@@ -25,7 +25,7 @@
                         </a>
                         {% endfor %}
                     </div>
-                    <div class="text-muted">
+                    <div class="text-muted mb-3">
                         <p class="mb-2">
                             <i class="bi bi-calendar-plus"></i> Создано: {{ post.created_at|date:"d.m.Y H:i" }}
                         </p>
@@ -35,6 +35,7 @@
                             </p>
                         {% endif %}
                     </div>
+                    {% include "blog/_post_reactions.html" %}
                 </header>
 
                 <div class="post-content markdown-content">

@@ -2,9 +2,11 @@ from urllib.parse import urlencode
 
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.generic import DetailView, ListView, TemplateView, View
 
 from .models import Category, Post, Tag
+from .session_interactions import SessionInteractionMixin
 
 
 def _needs_python_casefold(value):
@@ -33,118 +35,145 @@ def _filter_query_string(*, search="", category="", tag=""):
     return urlencode(params)
 
 
-def post_list(request):
-    """
-    Список постов блога (главная страница).
+class PostListView(ListView):
+    """Public post list with filters, SEO pagination, and HTMX partials."""
 
-    Отображает опубликованные посты с поддержкой:
-    - статуса публикации/черновика;
-    - категорий и тегов;
-    - поиска по заголовку, контенту, категории и тегам;
-    - SEO-friendly пагинации обычными ссылками;
-    - HTMX-поиска и догрузки карточек без перезагрузки страницы.
-    """
-    posts = (
-        Post.objects.filter(status=Post.Status.PUBLISHED)
-        .select_related("category")
-        .prefetch_related("tags", "media_files")
-    )
+    model = Post
+    template_name = "blog/post_list.html"
+    context_object_name = "posts"
+    paginate_by = 5
 
-    search = request.GET.get("search", "").strip()
-    category_slug = request.GET.get("category", "").strip()
-    tag_slug = request.GET.get("tag", "").strip()
+    def dispatch(self, request, *args, **kwargs):
+        self.search = request.GET.get("search", "").strip()
+        self.category_slug = request.GET.get("category", "").strip()
+        self.tag_slug = request.GET.get("tag", "").strip()
+        self.active_category = None
+        self.active_tag = None
+        return super().dispatch(request, *args, **kwargs)
 
-    active_category = None
-    active_tag = None
-
-    if category_slug:
-        active_category = get_object_or_404(Category, slug=category_slug)
-        posts = posts.filter(category=active_category)
-
-    if tag_slug:
-        active_tag = get_object_or_404(Tag, slug=tag_slug)
-        posts = posts.filter(tags=active_tag)
-
-    if search:
-        search_filter = (
-            Q(title__icontains=search)
-            | Q(content__icontains=search)
-            | Q(category__name__icontains=search)
-            | Q(tags__name__icontains=search)
+    def get_queryset(self):
+        posts = (
+            Post.objects.filter(status=Post.Status.PUBLISHED)
+            .select_related("category")
+            .prefetch_related("tags", "media_files")
         )
-        if _needs_python_casefold(search):
-            needle = search.casefold()
-            casefold_matches = [
-                post.pk for post in posts if _post_matches_casefold(post, needle)
-            ]
-            posts = posts.filter(search_filter | Q(pk__in=casefold_matches)).distinct()
-        else:
-            posts = posts.filter(search_filter).distinct()
 
-    paginator = Paginator(posts, 5)
-    page_number = request.GET.get("page", 1)
-    page_obj = paginator.get_page(page_number)
+        if self.category_slug:
+            self.active_category = get_object_or_404(Category, slug=self.category_slug)
+            posts = posts.filter(category=self.active_category)
 
-    load_more = request.GET.get("load_more") == "true"
-    filter_query = _filter_query_string(
-        search=search,
-        category=category_slug,
-        tag=tag_slug,
-    )
+        if self.tag_slug:
+            self.active_tag = get_object_or_404(Tag, slug=self.tag_slug)
+            posts = posts.filter(tags=self.active_tag)
 
-    context = {
-        "posts": page_obj,
-        "page_obj": page_obj,
-        "search_query": search,
-        "category_slug": category_slug,
-        "tag_slug": tag_slug,
-        "filter_query": filter_query,
-        "active_category": active_category,
-        "active_tag": active_tag,
-        "categories": Category.objects.all(),
-        "tags": Tag.objects.all(),
-        "is_post_list": True,
-        "is_about": False,
-    }
+        if self.search:
+            search_filter = (
+                Q(title__icontains=self.search)
+                | Q(content__icontains=self.search)
+                | Q(category__name__icontains=self.search)
+                | Q(tags__name__icontains=self.search)
+            )
+            if _needs_python_casefold(self.search):
+                needle = self.search.casefold()
+                casefold_matches = [
+                    post.pk for post in posts if _post_matches_casefold(post, needle)
+                ]
+                posts = posts.filter(search_filter | Q(pk__in=casefold_matches)).distinct()
+            else:
+                posts = posts.filter(search_filter).distinct()
 
-    if request.htmx and load_more:
-        return render(request, "blog/_post_cards_only.html", context)
+        return posts
 
-    if request.htmx:
-        return render(request, "blog/_post_list_partial.html", context)
+    def paginate_queryset(self, queryset, page_size):
+        paginator = Paginator(queryset, page_size)
+        page_number = self.request.GET.get("page", 1)
+        page_obj = paginator.get_page(page_number)
+        return paginator, page_obj, page_obj.object_list, page_obj.has_other_pages()
 
-    return render(request, "blog/post_list.html", context)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                "search_query": self.search,
+                "category_slug": self.category_slug,
+                "tag_slug": self.tag_slug,
+                "filter_query": _filter_query_string(
+                    search=self.search,
+                    category=self.category_slug,
+                    tag=self.tag_slug,
+                ),
+                "active_category": self.active_category,
+                "active_tag": self.active_tag,
+                "categories": Category.objects.all(),
+                "tags": Tag.objects.all(),
+                "is_post_list": True,
+                "is_about": False,
+            }
+        )
+        return context
+
+    def get_template_names(self):
+        load_more = self.request.GET.get("load_more") == "true"
+        if self.request.htmx and load_more:
+            return ["blog/_post_cards_only.html"]
+        if self.request.htmx:
+            return ["blog/_post_list_partial.html"]
+        return [self.template_name]
 
 
-def post_detail(request, pk):
-    """
-    Детальный просмотр опубликованного поста.
-    """
-    post = get_object_or_404(
-        Post.objects.select_related("category").prefetch_related("tags", "media_files"),
-        pk=pk,
-        status=Post.Status.PUBLISHED,
-    )
-    return render(
-        request,
-        "blog/post_detail.html",
-        {
-            "post": post,
-            "is_post_list": False,
-            "is_about": False,
-        },
-    )
+class PostDetailView(SessionInteractionMixin, DetailView):
+    """Detail page for a published post with session-based view counting."""
+
+    model = Post
+    template_name = "blog/post_detail.html"
+    context_object_name = "post"
+    pk_url_kwarg = "pk"
+
+    def get_queryset(self):
+        return (
+            Post.objects.filter(status=Post.Status.PUBLISHED)
+            .select_related("category")
+            .prefetch_related("tags", "media_files")
+        )
+
+    def get_object(self, queryset=None):
+        post = super().get_object(queryset)
+        return self.register_post_view(post)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                "post_is_liked": self.is_post_liked(self.object),
+                "is_post_list": False,
+                "is_about": False,
+            }
+        )
+        return context
 
 
-def about(request):
-    """
-    Страница "О блоге".
-    """
-    return render(
-        request,
-        "blog/about.html",
-        {
-            "is_post_list": False,
-            "is_about": True,
-        },
-    )
+class PostLikeToggleView(SessionInteractionMixin, View):
+    """Toggle one anonymous like per session for a published post."""
+
+    def post(self, request, pk):
+        post = get_object_or_404(
+            Post.objects.filter(status=Post.Status.PUBLISHED),
+            pk=pk,
+        )
+        post_is_liked = self.toggle_post_like(post)
+        post.refresh_from_db(fields=["like_count", "view_count"])
+        context = {"post": post, "post_is_liked": post_is_liked}
+        if request.htmx:
+            return render(request, "blog/_post_reactions.html", context)
+        return redirect(post.get_absolute_url())
+
+
+class AboutView(TemplateView):
+    """Static about page."""
+
+    template_name = "blog/about.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({"is_post_list": False, "is_about": True})
+        return context

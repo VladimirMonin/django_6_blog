@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 from unfold.decorators import display
-from .models import Category, Post, PostMedia, Tag
+from .models import Category, Post, PostMedia, SessionPostInteraction, Tag
 
 
 class PostMediaInline(admin.TabularInline):
@@ -67,13 +67,21 @@ class PostMediaAdmin(ModelAdmin):
     readonly_fields = ("original_filename", "file_slug", "media_type", "created_at")
 
 
+@admin.register(SessionPostInteraction)
+class SessionPostInteractionAdmin(ModelAdmin):
+    list_display = ("session_key", "post", "viewed_at", "liked_at", "updated_at")
+    list_filter = ("viewed_at", "liked_at", "updated_at")
+    search_fields = ("session_key", "post__title")
+    readonly_fields = ("session_key", "post", "viewed_at", "liked_at", "created_at", "updated_at")
+
+
 @admin.register(Post)
 class PostAdmin(ModelAdmin):
     """
     Административный интерфейс для модели Post с Unfold UI.
     """
 
-    list_display = ("title", "category", "status", "display_created_at")
+    list_display = ("title", "category", "status", "view_count", "like_count", "display_created_at")
     list_filter = ("status", "category", "tags", "created_at")
     search_fields = ("title", "content", "category__name", "tags__name")
     prepopulated_fields = {"slug": ("title",)}
@@ -88,11 +96,11 @@ class PostAdmin(ModelAdmin):
             "HTML предпросмотр",
             {"fields": ("display_html_preview",), "classes": ("collapse",)},
         ),
-        ("Статус", {"fields": ("status",)}),
+        ("Статус и реакции", {"fields": ("status", "view_count", "like_count")}),
         ("Даты", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
 
-    readonly_fields = ("created_at", "updated_at", "display_html_preview")
+    readonly_fields = ("created_at", "updated_at", "view_count", "like_count", "display_html_preview")
 
     # Custom actions
     @admin.action(description="Опубликовать выбранные посты")

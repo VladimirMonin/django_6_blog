@@ -5,13 +5,12 @@ URL-маршруты приложения blog.
 """
 
 from django.urls import path
-from . import views
+
+from .views import AboutView, PostDetailView, PostLikeToggleView, PostListView
 
 urlpatterns = [
-    # Главная страница - список постов
-    path("", views.post_list, name="post_list"),
-    # Детальный просмотр поста
-    path("post/<int:pk>/", views.post_detail, name="post_detail"),
-    # Страница "О блоге"
-    path("about/", views.about, name="about"),
+    path("", PostListView.as_view(), name="post_list"),
+    path("post/<int:pk>/", PostDetailView.as_view(), name="post_detail"),
+    path("post/<int:pk>/like/", PostLikeToggleView.as_view(), name="post_like_toggle"),
+    path("about/", AboutView.as_view(), name="about"),
 ]
