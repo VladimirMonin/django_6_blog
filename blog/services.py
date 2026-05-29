@@ -10,7 +10,7 @@ import markdown
 from markdown.extensions.codehilite import CodeHiliteExtension
 
 
-def convert_markdown_to_html(markdown_text: str) -> str:
+def convert_markdown_to_html(markdown_text: str, post=None) -> str:
     """Конвертирует Markdown текст в HTML.
 
     Использует гибридный подход: генерирует чистый HTML с классами для
@@ -19,6 +19,7 @@ def convert_markdown_to_html(markdown_text: str) -> str:
 
     Args:
         markdown_text: Текст в формате Markdown.
+        post: Опциональный объект Post для будущей обработки post-scoped media.
 
     Returns:
         HTML строка с сохраненной структурой и классами для code blocks.

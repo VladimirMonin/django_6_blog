@@ -1,9 +1,11 @@
+import re
 from pathlib import PurePath
 
 from django.db import models
 from django.urls import reverse
+from django.utils.html import strip_tags
+from django.utils.text import Truncator, slugify as django_slugify
 from transliterate import slugify as transliterate_slugify
-from django.utils.text import slugify as django_slugify
 
 from blog.services import convert_markdown_to_html
 
@@ -129,6 +131,46 @@ class Post(models.Model):
         Возвращает абсолютный URL для детального просмотра поста.
         """
         return reverse("post_detail", kwargs={"pk": self.pk})
+
+    @property
+    def cover_media(self):
+        """Return the first attached image as the public cover for list/detail UI."""
+        prefetched_media = getattr(self, "_prefetched_objects_cache", {}).get("media_files")
+        if prefetched_media is not None:
+            return next(
+                (media for media in prefetched_media if media.media_type == PostMedia.MediaType.IMAGE),
+                None,
+            )
+        return self.media_files.filter(media_type=PostMedia.MediaType.IMAGE).first()
+
+    @property
+    def body_content_html(self):
+        """Return rendered HTML without a leading H1 that duplicates the post title."""
+        html = self.content_html or ""
+        match = re.match(r"\s*<h1[^>]*>(.*?)</h1>", html, flags=re.IGNORECASE | re.DOTALL)
+        if match and strip_tags(match.group(1)).strip().casefold() == self.title.strip().casefold():
+            return html[match.end() :].lstrip()
+        return html
+
+    @property
+    def plain_text_excerpt(self):
+        """Return a clean preview without raw Markdown, Obsidian embeds, or HTML tags."""
+        text = self.content or ""
+        text = re.sub(r"(?s)^---.*?---", " ", text)
+        text = re.sub(r"(?s)```.*?```", " ", text)
+        text = re.sub(r"!\[\[[^\]]+\]\]", " ", text)
+        text = re.sub(r"\[\[[^\]]+\]\]", " ", text)
+        text = re.sub(r"!\[[^\]]*\]\([^)]*\)", " ", text)
+        text = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)
+        text = re.sub(r"(?m)^\s{0,3}#{1,6}\s*", "", text)
+        text = re.sub(r"(?m)^\s{0,3}>\s?", "", text)
+        text = re.sub(r"(?m)^\s*[-*+]\s+", "", text)
+        text = strip_tags(text)
+        text = re.sub(r"[#*_>`~\-]{2,}", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        if self.title and text.lower().startswith(self.title.lower()):
+            text = text[len(self.title) :].strip(" —-:·")
+        return Truncator(text).words(42)
 
     def save(self, *args, **kwargs):
         """

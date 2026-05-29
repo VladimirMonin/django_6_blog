@@ -3,40 +3,49 @@
 {% block title %}Главная — Django 6 Blog{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <h1 class="mb-4 fw-bold">
-        <i class="bi bi-journal-text text-accent"></i> Последние посты
-    </h1>
-
-    <form id="post-filters" class="mb-4" action="{% url 'post_list' %}" method="get">
-        {% if category_slug %}<input type="hidden" name="category" value="{{ category_slug }}">{% endif %}
-        {% if tag_slug %}<input type="hidden" name="tag" value="{{ tag_slug }}">{% endif %}
-        <div class="input-group">
-            <span class="input-group-text">
-                <i class="bi bi-search"></i>
-            </span>
-            <input
-                type="search"
-                name="search"
-                value="{{ search_query }}"
-                class="form-control"
-                hx-get="{% url 'post_list' %}"
-                hx-include="#post-filters"
-                hx-trigger="keyup changed delay:500ms, search"
-                hx-target="#post-container"
-                hx-swap="innerHTML"
-                hx-push-url="true"
-                hx-indicator="#search-indicator"
-                placeholder="Поиск по постам, категориям и тегам...">
-            <button class="btn btn-outline-dark" type="submit">Найти</button>
-            <span id="search-indicator" class="htmx-indicator input-group-text">
-                <span class="spinner-border spinner-border-sm"></span>
-            </span>
+<div class="container py-5 blog-index">
+    <section class="blog-hero mb-4">
+        <div>
+            <p class="blog-eyebrow mb-2">Django 6 · SSR · HTMX · uv</p>
+            <h1 class="mb-2 fw-bold">
+                <i class="bi bi-journal-text text-accent"></i> Последние посты
+            </h1>
+            <p class="text-muted mb-0">Заметки, эксперименты и материалы разработки без сырой Markdown-разметки в превью.</p>
         </div>
-    </form>
+    </section>
+
+    <section class="filter-panel mb-4" aria-label="Фильтры постов">
+        <form id="post-filters" class="blog-search-form" action="{% url 'post_list' %}" method="get">
+            {% if category_slug %}<input type="hidden" name="category" value="{{ category_slug }}">{% endif %}
+            {% if tag_slug %}<input type="hidden" name="tag" value="{{ tag_slug }}">{% endif %}
+            <div class="input-group blog-search-group">
+                <span class="input-group-text blog-search-icon">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input
+                    type="search"
+                    name="search"
+                    value="{{ search_query }}"
+                    class="form-control blog-search-input"
+                    hx-get="{% url 'post_list' %}"
+                    hx-include="#post-filters"
+                    hx-trigger="keyup changed delay:500ms, search"
+                    hx-target="#post-container"
+                    hx-swap="innerHTML"
+                    hx-push-url="true"
+                    hx-indicator="#search-indicator"
+                    placeholder="Поиск по постам, категориям и тегам...">
+                <button class="btn btn-dark blog-search-button" type="submit">
+                    <i class="bi bi-search"></i> Найти
+                </button>
+                <span id="search-indicator" class="htmx-indicator input-group-text blog-search-indicator">
+                    <span class="spinner-border spinner-border-sm"></span>
+                </span>
+            </div>
+        </form>
 
     {% if categories or tags %}
-    <div class="mb-4 d-flex flex-column gap-3">
+    <div class="mt-4 d-flex flex-column gap-3">
         {% if categories %}
         <div>
             <div class="small text-muted mb-2">Категории</div>
@@ -70,8 +79,9 @@
         {% endif %}
     </div>
     {% endif %}
+    </section>
 
-    <div class="row row-cols-1 g-4" id="post-container">
+    <div class="row row-cols-1 row-cols-lg-2 g-4" id="post-container">
         {% for post in posts %}
             {% component "post_card" post=post / %}
         {% empty %}

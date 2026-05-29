@@ -1,10 +1,11 @@
+from django.core.files.base import ContentFile
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 from bs4 import BeautifulSoup
 
-from blog.models import Category, Post, Tag
+from blog.models import Category, Post, PostMedia, Tag
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -38,6 +39,63 @@ def create_post(title, content="Текст", *, status=Post.Status.PUBLISHED, ca
 
 def soup(response):
     return BeautifulSoup(response.content, "html.parser")
+
+
+@pytest.mark.django_db
+def test_post_excerpt_strips_markdown_and_obsidian_embeds():
+    post = create_post(
+        "Токены, параметры и встраивания",
+        content="""# Токены, параметры и встраивания 🧠
+
+![[cover-01.webp]]
+
+### 🎧 Подкаст
+![[01_Как_нейросети_превращают_слова_в_геометрию.opus]]
+
+Локальная языковая модель часто кажется магической.
+> Небольшая цитата.
+""",
+    )
+
+    excerpt = post.plain_text_excerpt
+
+    assert "[[" not in excerpt
+    assert "cover-01.webp" not in excerpt
+    assert ".opus" not in excerpt
+    assert "#" not in excerpt
+    assert excerpt.startswith("🧠") or excerpt.startswith("Локальная")
+    assert "Локальная языковая модель" in excerpt
+
+
+@pytest.mark.django_db
+def test_detail_page_does_not_duplicate_leading_title_heading(client):
+    post = create_post(
+        "Визуальная проверка статьи",
+        content="# Визуальная проверка статьи\n\nТекст статьи",
+    )
+
+    response = client.get(post.get_absolute_url())
+
+    assert response.status_code == 200
+    page = soup(response)
+    headings = [heading.get_text(strip=True) for heading in page.select("h1")]
+    assert headings.count("Визуальная проверка статьи") == 1
+    assert "Текст статьи" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_post_card_uses_first_image_as_cover(client):
+    post = create_post("Пост с обложкой", content="Текст без markdown")
+    media = PostMedia(post=post, original_filename="cover.webp")
+    media.file.save("cover.webp", ContentFile(b"fake-image"), save=True)
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    page = soup(response)
+    cover = page.select_one("img.post-card-cover")
+    assert cover is not None
+    assert cover["alt"] == "Обложка статьи Пост с обложкой"
 
 
 @pytest.mark.django_db
@@ -93,6 +151,19 @@ def test_search_checks_title_content_category_and_tags(client, category, tag_pyt
     assert tag_response.status_code == 200
     assert "Про backend" in tag_response.content.decode()
     assert "Не подходит" not in tag_response.content.decode()
+
+
+@pytest.mark.django_db
+def test_search_uses_unicode_casefold_for_cyrillic(client):
+    create_post("Визуальная проверка статьи", content="обычный текст")
+    create_post("Не подходит", content="ничего полезного")
+
+    response = client.get("/", {"search": "визуальная"})
+
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert "Визуальная проверка статьи" in body
+    assert "Не подходит" not in body
 
 
 @pytest.mark.django_db

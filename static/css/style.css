@@ -556,3 +556,209 @@ button[hx-get]:active::after {
     padding: 0.4rem 0.75rem;
   }
 }
+
+/* ======================
+   Blog index UI polish
+   ====================== */
+.navbar-nav {
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.navbar .btn {
+  border-radius: 999px;
+  padding-inline: 1rem;
+}
+
+.navbar .btn.border-warning {
+  background: #fff7df;
+  color: var(--text-dark);
+  box-shadow: inset 0 0 0 1px rgba(255, 193, 7, 0.35);
+}
+
+.blog-index {
+  max-width: 1180px;
+}
+
+.blog-hero {
+  background: linear-gradient(135deg, #fff8df 0%, #ffffff 52%, #f6f8fa 100%);
+  border: 1px solid rgba(33, 37, 41, 0.08);
+  border-radius: 1.5rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  box-shadow: 0 16px 40px rgba(33, 37, 41, 0.06);
+}
+
+.blog-eyebrow {
+  color: #8a6400;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.filter-panel {
+  background: #ffffff;
+  border: 1px solid rgba(33, 37, 41, 0.08);
+  border-radius: 1.25rem;
+  padding: 1rem;
+  box-shadow: 0 10px 30px rgba(33, 37, 41, 0.05);
+}
+
+.blog-search-group {
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(33, 37, 41, 0.08);
+}
+
+.blog-search-icon,
+.blog-search-input,
+.blog-search-button,
+.blog-search-indicator {
+  min-height: 3rem;
+}
+
+.blog-search-icon {
+  border-top-left-radius: 999px !important;
+  border-bottom-left-radius: 999px !important;
+  background: #fff8df;
+  border-color: #f2dfaa;
+  color: #8a6400;
+  padding-left: 1rem;
+}
+
+.blog-search-input {
+  border-color: #f2dfaa;
+}
+
+.blog-search-input:focus {
+  border-color: var(--accent-yellow);
+  box-shadow: none;
+}
+
+.blog-search-button {
+  border-top-right-radius: 999px !important;
+  border-bottom-right-radius: 999px !important;
+  padding-inline: 1.3rem;
+  font-weight: 700;
+}
+
+.blog-search-indicator {
+  border: 0;
+  background: transparent;
+  padding-inline: 0.75rem 0;
+}
+
+.post-badge {
+  border-radius: 999px;
+  font-weight: 700;
+  padding: 0.45rem 0.7rem;
+}
+
+.post-badge-category {
+  background: #ffe8a3;
+  color: #523d00;
+  border: 1px solid #f5d36f;
+}
+
+.post-badge-category:hover {
+  background: #ffd75a;
+  color: #2b2100;
+}
+
+.post-badge-tag {
+  background: #f6f8fa;
+  color: #495057;
+  border: 1px solid #dfe5eb;
+}
+
+.post-badge-tag:hover {
+  background: #e9ecef;
+  color: #212529;
+}
+
+.post-card {
+  border: 1px solid rgba(33, 37, 41, 0.08);
+  border-radius: 1.25rem;
+  overflow: hidden;
+  box-shadow: 0 10px 28px rgba(33, 37, 41, 0.07);
+}
+
+.post-card-cover-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.post-card-cover {
+  width: 100%;
+  height: 190px;
+  display: block;
+  object-fit: cover;
+  background: #f6f8fa;
+}
+
+.post-card-cover-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255, 193, 7, 0.45), transparent 26%),
+    linear-gradient(135deg, #2b2f36 0%, #121417 100%);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 3rem;
+}
+
+.post-card-title-link {
+  color: var(--text-dark);
+  text-decoration: none;
+  background-image: linear-gradient(var(--accent-yellow), var(--accent-yellow));
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0 0.18em;
+  transition: background-size 0.2s ease, color 0.2s ease;
+}
+
+.post-card-title-link:hover {
+  color: #000;
+  background-size: 100% 0.18em;
+}
+
+.post-card-date {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.post-card-excerpt {
+  color: #495057;
+  line-height: 1.65;
+}
+
+@media (max-width: 576px) {
+  .blog-search-group {
+    border-radius: 1rem;
+    box-shadow: none;
+  }
+
+  .blog-search-icon {
+    display: none;
+  }
+
+  .blog-search-input {
+    border-top-left-radius: 1rem !important;
+    border-bottom-left-radius: 1rem !important;
+  }
+
+  .blog-search-button {
+    border-radius: 1rem !important;
+    margin-top: 0.5rem;
+    width: 100%;
+  }
+
+  .blog-search-group {
+    display: block;
+  }
+
+  .blog-search-input,
+  .blog-search-button {
+    width: 100% !important;
+  }
+}

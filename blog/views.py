@@ -7,6 +7,20 @@ from django.shortcuts import get_object_or_404, render
 from .models import Category, Post, Tag
 
 
+def _needs_python_casefold(value):
+    """SQLite icontains is ASCII-centric; Cyrillic search needs Python casefold."""
+    return any(ord(char) > 127 for char in value)
+
+
+def _post_matches_casefold(post, needle):
+    """Return True if a post matches the search text with Unicode-aware casefold."""
+    chunks = [post.title, post.content]
+    if post.category:
+        chunks.append(post.category.name)
+    chunks.extend(tag.name for tag in post.tags.all())
+    return needle in " ".join(filter(None, chunks)).casefold()
+
+
 def _filter_query_string(*, search="", category="", tag=""):
     """Build a stable query string for links that should preserve filters."""
     params = {}
@@ -33,7 +47,7 @@ def post_list(request):
     posts = (
         Post.objects.filter(status=Post.Status.PUBLISHED)
         .select_related("category")
-        .prefetch_related("tags")
+        .prefetch_related("tags", "media_files")
     )
 
     search = request.GET.get("search", "").strip()
@@ -52,12 +66,20 @@ def post_list(request):
         posts = posts.filter(tags=active_tag)
 
     if search:
-        posts = posts.filter(
+        search_filter = (
             Q(title__icontains=search)
             | Q(content__icontains=search)
             | Q(category__name__icontains=search)
             | Q(tags__name__icontains=search)
-        ).distinct()
+        )
+        if _needs_python_casefold(search):
+            needle = search.casefold()
+            casefold_matches = [
+                post.pk for post in posts if _post_matches_casefold(post, needle)
+            ]
+            posts = posts.filter(search_filter | Q(pk__in=casefold_matches)).distinct()
+        else:
+            posts = posts.filter(search_filter).distinct()
 
     paginator = Paginator(posts, 5)
     page_number = request.GET.get("page", 1)
@@ -99,7 +121,7 @@ def post_detail(request, pk):
     Детальный просмотр опубликованного поста.
     """
     post = get_object_or_404(
-        Post.objects.select_related("category").prefetch_related("tags"),
+        Post.objects.select_related("category").prefetch_related("tags", "media_files"),
         pk=pk,
         status=Post.Status.PUBLISHED,
     )
