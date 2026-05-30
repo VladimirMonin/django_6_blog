@@ -1,4 +1,4 @@
-﻿# blog/services/processors/image_processor.py
+# blog/services/processors/image_processor.py
 """Процессор для добавления Bootstrap классов к изображениям.
 
 Обрабатывает все <img> элементы в HTML и добавляет Bootstrap 5 классы
@@ -62,8 +62,9 @@ class ImageProcessor(HTMLProcessor):
                 else []
             )
 
-            # Bootstrap классы для изображений
-            bootstrap_classes = ["img-fluid", "d-block", "mx-auto"]
+            # Bootstrap классы для изображений + локальный класс для ограничения
+            # гигантских картинок в статье без влияния на fullscreen overlay.
+            bootstrap_classes = ["img-fluid", "d-block", "mx-auto", "post-content-image"]
 
             # Добавляем только те классы, которых еще нет
             new_classes = [

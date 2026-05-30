@@ -31,7 +31,7 @@
 </head>
 <body>
     {# Навигация с Bootstrap 5 #}
-    <header>
+    <header class="site-header sticky-top">
         <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
             <div class="container">
                 <a class="navbar-brand fw-bold" href="{% url 'post_list' %}">
@@ -63,10 +63,10 @@
     <footer class="bg-dark text-white py-4 mt-5">
         <div class="container text-center">
             <p class="mb-0">
-                &copy; 2025 {{ site_author }}. Django 6 Blog · SSR + HTMX + Bootstrap 5
+                <span class="footer-copyright">&copy; 2026 {{ site_author }}</span>
             </p>
             <small class="text-muted">
-                Построено на Django 6.0 с ❤️
+                Построено на Django 6.0.5 с GPT-5.5 ♥
             </small>
         </div>
     </footer>
@@ -82,6 +82,7 @@
     
     {# Mermaid.js для диаграмм #}
     <script src="https://cdn.jsdelivr.net/npm/mermaid@11.12.0/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.2/dist/svg-pan-zoom.min.js"></script>
     
     {# Plyr.io для медиаплееров #}
     <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>

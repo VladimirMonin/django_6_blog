@@ -4,63 +4,66 @@
 {% block title %}О блоге — Django 6 Blog{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <h1 class="mb-4">
-        <i class="bi bi-info-circle"></i> О проекте
-    </h1>
+<div class="container py-5 about-page">
+    <section class="about-hero mb-4">
+        <p class="blog-eyebrow mb-2">О блоге</p>
+        <h1 class="display-5 fw-bold mb-3">
+            <i class="bi bi-journal-richtext text-accent"></i> Живые заметки о разработке, AI и инженерной практике
+        </h1>
+        <p class="lead mb-0">
+            Это личный технический блог Владимира Монина: место для статей, конспектов,
+            экспериментов и разборов, которые рождаются по ходу реальной работы.
+        </p>
+    </section>
 
-    <div class="card">
-        <div class="card-body">
-            <h2 class="card-title">Django 6 Blog</h2>
-            <p class="lead">
-                Современный блог на Django 6 с SSR и ощущением SPA.
-            </p>
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <article class="card about-card h-100">
+                <div class="card-body p-4 p-lg-5">
+                    <h2 class="h3 mb-3">Что здесь будет</h2>
+                    <p>
+                        Здесь собираются живые заметки без рекламного блеска: Django, Python,
+                        локальные LLM, агенты, автоматизация, Obsidian-процессы, инфраструктура
+                        и практические ошибки, которые полезно не забыть.
+                    </p>
+                    <p>
+                        Формат простой: если идея проверялась руками, ломалась на Linux,
+                        требовала smoke-теста или внезапно стала учебным материалом — ей здесь место.
+                    </p>
 
-            <h3 class="mt-4">Технологический стек</h3>
-            <ul class="list-unstyled">
-                <li><i class="bi bi-check-circle-fill text-success"></i> <strong>Django 6.0</strong> — Backend framework с Template Partials</li>
-                <li><i class="bi bi-check-circle-fill text-success"></i> <strong>Bootstrap 5</strong> — CSS framework для современного дизайна</li>
-                <li><i class="bi bi-check-circle-fill text-success"></i> <strong>Bootstrap Icons</strong> — Иконки для UI</li>
-                <li><i class="bi bi-check-circle-fill text-success"></i> <strong>Django Components</strong> — Модульные UI-компоненты</li>
-                <li><i class="bi bi-circle text-muted"></i> <strong>HTMX</strong> — Интерактивность без JavaScript (в разработке)</li>
-            </ul>
+                    <h2 class="h3 mt-4 mb-3">Зачем этот сайт</h2>
+                    <p>
+                        Блог нужен как публичная витрина рабочих материалов: не только финальные
+                        «правильные» статьи, но и аккуратно оформленные следы экспериментов.
+                        Такой формат помогает возвращаться к решениям, показывать студентам реальные
+                        примеры и постепенно превращать заметки в полноценные материалы.
+                    </p>
 
-            <h3 class="mt-4">Концепция дизайна</h3>
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="card mb-3">
-                        <div class="card-body text-center" style="background-color: #ffffff;">
-                            <h5>Белый фон</h5>
-                            <p class="text-muted">Чистота и читаемость</p>
-                        </div>
+                    <blockquote class="about-quote my-4">
+                        <p class="mb-0">Не музей идеального кода, а мастерская: с выводами, контекстом и проверками.</p>
+                    </blockquote>
+
+                    <div class="mt-4">
+                        {% component "button" text="Вернуться к постам" url="post_list" icon="bi-arrow-left" / %}
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card mb-3">
-                        <div class="card-body text-center bg-dark text-white">
-                            <h5>Черные кнопки</h5>
-                            <p>Строгий стиль</p>
-                        </div>
-                    </div>
+            </article>
+        </div>
+        <div class="col-lg-4">
+            <aside class="card about-side-card h-100">
+                <div class="card-body p-4">
+                    <h2 class="h4 mb-3">Автор</h2>
+                    <p class="mb-3">
+                        <strong>Владимир Монин</strong> — преподаватель и разработчик, который
+                        любит проверять инструменты на настоящих задачах, а не на стерильных демках.
+                    </p>
+                    <ul class="about-list list-unstyled mb-0">
+                        <li><i class="bi bi-check-circle-fill text-accent"></i> Практические разборы</li>
+                        <li><i class="bi bi-check-circle-fill text-accent"></i> Учебные материалы</li>
+                        <li><i class="bi bi-check-circle-fill text-accent"></i> Заметки из разработки</li>
+                    </ul>
                 </div>
-                <div class="col-md-4">
-                    <div class="card mb-3">
-                        <div class="card-body text-center bg-warning">
-                            <h5>Желтые акценты</h5>
-                            <p>Навигация и контекст</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <h3 class="mt-4">Философия проекта</h3>
-            <blockquote class="blockquote">
-                <p>"Server-Side Rendering с ощущением Single Page Application, но без сложности фронтенд-фреймворков."</p>
-            </blockquote>
-
-            <div class="mt-4">
-                {% component "button" text="Вернуться к постам" url="post_list" icon="bi-arrow-left" / %}
-            </div>
+            </aside>
         </div>
     </div>
 </div>

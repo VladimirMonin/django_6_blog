@@ -71,6 +71,18 @@ class BlockquoteProcessor(HTMLProcessor):
         "[!summary]": "alert alert-info",
     }
 
+    CALLOUT_ICONS = {
+        "[!info]": "bi-info-circle-fill",
+        "[!warning]": "bi-exclamation-triangle-fill",
+        "[!success]": "bi-check-circle-fill",
+        "[!error]": "bi-x-octagon-fill",
+        "[!danger]": "bi-x-octagon-fill",
+        "[!tip]": "bi-lightbulb-fill",
+        "[!note]": "bi-sticky-fill",
+        "[!important]": "bi-exclamation-circle-fill",
+        "[!summary]": "bi-list-check",
+    }
+
     def process(self, soup: BeautifulSoup) -> None:
         """Обрабатывает blockquote элементы.
 
@@ -107,7 +119,7 @@ class BlockquoteProcessor(HTMLProcessor):
 
                 # Проверяем, есть ли Obsidian Callout маркер
                 if marker:
-                    # Добавляем Bootstrap Alert классы
+                    callout_type = marker[2:-1].lower()
                     alert_classes = self.CALLOUT_MAPPING[marker].split()
                     existing_classes_raw = blockquote.get("class")
                     existing_classes = (
@@ -116,15 +128,29 @@ class BlockquoteProcessor(HTMLProcessor):
                         else []
                     )
 
-                    blockquote["class"] = existing_classes + alert_classes
+                    blockquote["class"] = existing_classes + alert_classes + [
+                        "callout",
+                        f"callout-{callout_type}",
+                    ]
+                    blockquote["data-callout"] = callout_type
 
-                    # Удаляем маркер. Если после него есть текст, оставляем его в callout.
+                    # Удаляем маркер. Если после него есть текст, делаем его
+                    # заголовком callout с Bootstrap Icons, иначе оставляем
+                    # только иконку как визуальный маркер типа.
                     body_text = text.removeprefix(marker).strip()
+                    title = soup.new_tag("p")
+                    title["class"] = ["callout-title", "fw-semibold", "mb-2"]
+                    icon = soup.new_tag("i")
+                    icon["class"] = [
+                        "bi",
+                        self.CALLOUT_ICONS.get(marker, "bi-info-circle-fill"),
+                        "callout-icon",
+                    ]
+                    icon["aria-hidden"] = "true"
+                    title.append(icon)
                     if body_text:
-                        first_p.clear()
-                        first_p.string = body_text
-                    else:
-                        first_p.decompose()
+                        title.append(f" {body_text}")
+                    first_p.replace_with(title)
 
                     # Не добавляем базовые классы, если это Callout
                     continue

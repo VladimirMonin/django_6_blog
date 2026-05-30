@@ -75,7 +75,17 @@ def convert_markdown_to_html(markdown_text: str, post=None) -> str:
                     css_class,
                     options,
                     md,
-                    **kwargs: f'<div class="mermaid">{source}</div>',
+                    **kwargs: (
+                        '<figure class="mermaid-panzoom-shell">'
+                        '<div class="mermaid-toolbar" aria-label="Управление диаграммой">'
+                        '<button type="button" class="btn btn-sm btn-light mermaid-zoom-in">+</button>'
+                        '<button type="button" class="btn btn-sm btn-light mermaid-zoom-out">−</button>'
+                        '<button type="button" class="btn btn-sm btn-light mermaid-reset">Сброс</button>'
+                        '<button type="button" class="btn btn-sm btn-dark mermaid-panzoom-fullscreen">На весь экран</button>'
+                        '</div>'
+                        f'<div class="mermaid">{source}</div>'
+                        '</figure>'
+                    ),
                 }
             ]
         },

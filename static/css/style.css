@@ -28,6 +28,11 @@ main {
 }
 
 /* Навигация */
+.site-header {
+  z-index: 1030;
+  box-shadow: 0 0.25rem 1rem rgba(33, 37, 41, 0.04);
+}
+
 .navbar-brand {
   font-weight: 700;
   font-size: 1.5rem;
@@ -95,6 +100,15 @@ main {
   margin-bottom: 1.5rem;
 }
 
+.post-content img.post-content-image {
+  max-width: 100%;
+  width: auto;
+  max-height: min(72vh, 760px);
+  object-fit: contain;
+  border-radius: 0.75rem;
+  box-shadow: 0 0.75rem 2rem rgba(33, 37, 41, 0.10);
+}
+
 article h1 {
   font-weight: 700;
   margin-bottom: 1.5rem;
@@ -147,6 +161,48 @@ article h1 {
 /* Footer */
 footer {
   margin-top: auto;
+}
+
+.callout {
+  position: relative;
+  border-width: 1px 1px 1px 0.35rem;
+  border-radius: 0.85rem;
+  box-shadow: 0 0.6rem 1.5rem rgba(33, 37, 41, 0.06);
+}
+
+.callout-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.callout-icon {
+  flex: 0 0 auto;
+  font-size: 1.2rem;
+}
+
+.callout-info .callout-icon,
+.callout-summary .callout-icon {
+  color: #087990;
+}
+
+.callout-warning .callout-icon,
+.callout-important .callout-icon {
+  color: #997404;
+}
+
+.callout-success .callout-icon,
+.callout-tip .callout-icon {
+  color: #146c43;
+}
+
+.callout-error .callout-icon,
+.callout-danger .callout-icon {
+  color: #b02a37;
+}
+
+.callout-note .callout-icon {
+  color: #6c757d;
 }
 
 /* Акценты */
@@ -357,14 +413,65 @@ button[hx-get]:active::after {
   vertical-align: middle;
 }
 
-/* Mermaid диаграммы */
-.post-content .mermaid {
-  text-align: center;
+/* Mermaid диаграммы: векторный pan/zoom для больших схем */
+.mermaid-panzoom-shell {
+  position: relative;
   margin: 2rem 0;
-  padding: 1rem;
+  padding: 0;
   background-color: #f6f8fa;
   border: 1px solid #d0d7de;
-  border-radius: 6px;
+  border-radius: 0.9rem;
+  overflow: hidden;
+  box-shadow: 0 0.75rem 2rem rgba(33, 37, 41, 0.08);
+}
+
+.mermaid-panzoom-shell .mermaid {
+  width: 100%;
+  height: min(70vh, 720px);
+  min-height: 420px;
+  margin: 0;
+  padding: 1rem;
+  cursor: grab;
+}
+
+.mermaid-panzoom-shell .mermaid:active {
+  cursor: grabbing;
+}
+
+.mermaid-panzoom-shell svg {
+  display: block;
+}
+
+.mermaid-toolbar {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 5;
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.mermaid-toolbar .btn {
+  border-radius: 999px;
+  box-shadow: 0 0.35rem 1rem rgba(33, 37, 41, 0.14);
+}
+
+.mermaid-panzoom-shell.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  margin: 0;
+  border-radius: 0;
+  border: 0;
+  background: #ffffff;
+}
+
+.mermaid-panzoom-shell.is-fullscreen .mermaid {
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
 }
 
 /* Адаптивность для code blocks */
@@ -445,13 +552,23 @@ button[hx-get]:active::after {
 /* Динамические breadcrumbs */
 .breadcrumbs-dynamic {
   position: sticky;
-  top: 0;
+  top: 56px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   padding: 0.75rem 0;
   border-bottom: 1px solid #dee2e6;
-  z-index: 1000;
+  z-index: 1020;
   font-size: 0.9rem;
+}
+
+.article-breadcrumbs-sticky {
+  box-shadow: 0 0.35rem 1rem rgba(33, 37, 41, 0.05);
+}
+
+.breadcrumbs-section {
+  min-width: 0;
+  max-width: 48%;
+  font-size: 0.85rem;
 }
 
 .breadcrumb-item {
@@ -655,7 +772,6 @@ button[hx-get]:active::after {
 
 .blog-search-icon,
 .blog-search-input,
-.blog-search-button,
 .blog-search-indicator {
   min-height: 3rem;
 }
@@ -688,7 +804,9 @@ button[hx-get]:active::after {
 .blog-search-indicator {
   border: 0;
   background: transparent;
-  padding-inline: 0.75rem 0;
+  padding-inline: 0.75rem 1rem;
+  border-top-right-radius: 999px !important;
+  border-bottom-right-radius: 999px !important;
 }
 
 .post-badge {
@@ -766,9 +884,67 @@ button[hx-get]:active::after {
   background-size: 100% 0.18em;
 }
 
+.post-card-byline,
 .post-card-date {
   color: var(--text-muted);
   font-size: 0.9rem;
+}
+
+.post-card-author {
+  color: #343a40;
+  font-weight: 600;
+}
+
+.post-detail-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  font-size: 0.95rem;
+}
+
+.post-detail-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.post-detail-author {
+  color: var(--text-dark);
+  font-weight: 700;
+}
+
+.post-detail-meta-spacer {
+  flex: 1 1 auto;
+}
+
+.about-page {
+  max-width: 1180px;
+}
+
+.about-hero,
+.about-card,
+.about-side-card {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(33, 37, 41, 0.08);
+  box-shadow: 0 16px 40px rgba(33, 37, 41, 0.06);
+}
+
+.about-hero {
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  background: linear-gradient(135deg, #fff8df 0%, #ffffff 58%, #f6f8fa 100%);
+}
+
+.about-quote {
+  border-left: 0.35rem solid var(--accent-yellow);
+  padding: 1rem 1.25rem;
+  background: #fff8df;
+  border-radius: 0.75rem;
+}
+
+.about-list li + li {
+  margin-top: 0.7rem;
 }
 
 .post-card-excerpt {
@@ -791,18 +967,20 @@ button[hx-get]:active::after {
     border-bottom-left-radius: 1rem !important;
   }
 
-  .blog-search-button {
-    border-radius: 1rem !important;
-    margin-top: 0.5rem;
-    width: 100%;
-  }
-
-  .blog-search-group {
-    display: block;
-  }
-
-  .blog-search-input,
-  .blog-search-button {
+  .blog-search-input {
     width: 100% !important;
+  }
+
+  .breadcrumbs-section {
+    display: none;
+  }
+
+  .post-detail-meta-spacer {
+    display: none;
+  }
+
+  .mermaid-toolbar {
+    left: 0.75rem;
+    right: 0.75rem;
   }
 }

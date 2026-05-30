@@ -29,15 +29,12 @@
                     class="form-control blog-search-input"
                     hx-get="{% url 'post_list' %}"
                     hx-include="#post-filters"
-                    hx-trigger="keyup changed delay:500ms, search"
+                    hx-trigger="keyup changed delay:1500ms, search"
                     hx-target="#post-container"
                     hx-swap="innerHTML"
                     hx-push-url="true"
                     hx-indicator="#search-indicator"
                     placeholder="Поиск по постам, категориям и тегам...">
-                <button class="btn btn-dark blog-search-button" type="submit">
-                    <i class="bi bi-search"></i> Найти
-                </button>
                 <span id="search-indicator" class="htmx-indicator input-group-text blog-search-indicator">
                     <span class="spinner-border spinner-border-sm"></span>
                 </span>

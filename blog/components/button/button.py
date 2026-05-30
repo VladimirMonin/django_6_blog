@@ -40,6 +40,7 @@ class Button(Component):
         icon = kwargs.get("icon")
         active = kwargs.get("active", False)
         size = kwargs.get("size")
+        mobile_icon_only = kwargs.get("mobile_icon_only", False)
 
         # Разрешаем URL - если это имя маршрута, используем reverse()
         url = url_or_name
@@ -59,14 +60,25 @@ class Button(Component):
         if active:
             css_classes.append("border-warning border-2")
 
-        # Формируем полный класс иконки (если есть)
-        icon_class = f"bi bi-{icon}" if icon else None
+        # Формируем полный класс иконки (если есть). Поддерживаем и "arrow-left",
+        # и уже готовый Bootstrap Icons формат "bi-arrow-left".
+        if icon:
+            icon_name = icon if icon.startswith("bi-") else f"bi-{icon}"
+            icon_class = f"bi {icon_name}"
+        else:
+            icon_class = None
+
+        text_class = "button-text"
+        if mobile_icon_only:
+            text_class += " d-none d-sm-inline"
 
         return {
             "text": text,
             "url": url,
             "css_class": " ".join(css_classes),
             "icon_class": icon_class,
+            "text_class": text_class,
+            "aria_label": text,
         }
 
     class Media:

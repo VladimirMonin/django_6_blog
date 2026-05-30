@@ -12,8 +12,9 @@ def assert_empty_homepage_renders_safely(response):
 
     body = response.content.decode()
     assert "Постов не найдено." in body
-    assert "blog-search-button" in body
-    assert 'type="submit"' in body
+    assert "blog-search-input" in body
+    assert "delay:1500ms" in body
+    assert "blog-search-button" not in body
     assert "Последние посты" in body
 
 
@@ -28,7 +29,8 @@ def test_about_page_returns_200_and_renders_about_content(client):
 
     assert response.status_code == 200
     body = response.content.decode()
-    assert "О проекте" in body
+    assert "О блоге" in body
+    assert "Живые заметки" in body
     assert "Django 6 Blog" in body
 
 
