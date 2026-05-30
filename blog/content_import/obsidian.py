@@ -13,6 +13,7 @@ from blog.content_import.media_links import collect_local_media_references
 from blog.models import Category, Post, PostMedia, Tag
 
 OBSIDIAN_NOTE_LINK_RE = re.compile(r"(?<!!)\[\[([^\]|]+)(?:\|([^\]]+))?\]\]")
+LEADING_H1_RE = re.compile(r"\A\s*#\s+(.+?)\s*(?:\n+|\Z)")
 
 
 def import_obsidian_note_to_post(
@@ -31,7 +32,8 @@ def import_obsidian_note_to_post(
     description = description or required_metadata(metadata, "description")
     markdown_body = normalize_obsidian_note_links(markdown_body)
 
-    title = title or metadata.get("title") or note_path.stem
+    title = title or metadata.get("title") or title_from_leading_h1(markdown_body) or note_path.stem
+    markdown_body = remove_duplicate_leading_h1(markdown_body, title)
     status = metadata.get("status", "done")
 
     category = category_from_metadata(metadata)
@@ -65,6 +67,27 @@ def required_metadata(metadata: dict[str, str], key: str) -> str:
     if not value:
         raise ValueError(f"Required frontmatter field is missing: {key}")
     return value
+
+
+def title_from_leading_h1(markdown_text: str) -> str:
+    """Return the first Markdown H1 text when it starts the note body."""
+
+    match = LEADING_H1_RE.match(markdown_text or "")
+    if not match:
+        return ""
+    return match.group(1).strip()
+
+
+def remove_duplicate_leading_h1(markdown_text: str, title: str) -> str:
+    """Drop an initial H1 when it duplicates the post title rendered elsewhere."""
+
+    match = LEADING_H1_RE.match(markdown_text or "")
+    if not match:
+        return markdown_text
+    heading = match.group(1).strip()
+    if heading.casefold() != (title or "").strip().casefold():
+        return markdown_text
+    return markdown_text[match.end() :].strip()
 
 
 def tags_from_metadata(metadata: dict[str, str]) -> list[str]:

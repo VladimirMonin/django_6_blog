@@ -115,7 +115,8 @@ uv run python manage.py import_obsidian_note \
 
 - читает Markdown-файл;
 - требует `description` во frontmatter и сохраняет его в `Post.description`;
-- берёт `title` из frontmatter или имя файла;
+- берёт `title` из frontmatter, затем из первого H1 в теле заметки, затем из имени файла;
+- не требует и не сохраняет автора в Obsidian/frontmatter: публичный автор задаётся дефолтом сайта (`SITE_AUTHOR`);
 - копирует найденные медиа в `media/posts/<post-slug>/`;
 - понимает Obsidian embeds `![[image.webp]]`, `![[image|alt]]` и стандартные Markdown images `![alt](image.webp)`;
 - ищет изображения по полному имени или stem: `![[cover]]` может найти `cover.webp`;

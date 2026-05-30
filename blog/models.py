@@ -150,7 +150,7 @@ class Post(models.Model):
         """
         Возвращает абсолютный URL для детального просмотра поста.
         """
-        return reverse("post_detail", kwargs={"pk": self.pk})
+        return reverse("post_detail", kwargs={"slug": self.slug})
 
     @property
     def cover_media(self):

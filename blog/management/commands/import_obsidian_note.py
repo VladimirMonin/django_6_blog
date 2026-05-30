@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from blog.content_import import collect_broken_local_links, collect_local_media_references
 from blog.models import Post
+from blog.content_import.obsidian import title_from_leading_h1
 from blog.services.obsidian_importer import import_obsidian_note_to_post, split_frontmatter
 from blog.slug_utils import build_slug
 
@@ -63,7 +64,7 @@ class Command(BaseCommand):
 
         raw_markdown = note_path.read_text(encoding="utf-8")
         metadata, markdown_body = split_frontmatter(raw_markdown)
-        title = options["title"] or metadata.get("title") or note_path.stem
+        title = options["title"] or metadata.get("title") or title_from_leading_h1(markdown_body) or note_path.stem
         slug = options["slug"] or build_slug(title, fallback="post")
         if not slug:
             raise CommandError("Could not generate a post slug; pass --slug explicitly.")
@@ -111,7 +112,7 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 "Imported Obsidian note: "
-                f"id={post.pk}, slug={post.slug}, title={post.title!r}, "
+                f"url={post.get_absolute_url()}, slug={post.slug}, title={post.title!r}, "
                 f"description={post.description!r}, "
                 f"media={post.media_files.count()}, media_by_type={media_counts}"
             )

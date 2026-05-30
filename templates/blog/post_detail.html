@@ -7,8 +7,12 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            {# Динамические хлебные крошки #}
-            <div class="breadcrumbs-dynamic"></div>
+            <nav aria-label="Хлебные крошки" class="mb-4">
+                <ol class="breadcrumb small mb-0">
+                    <li class="breadcrumb-item"><a href="{% url 'post_list' %}">Главная</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ post.title }}</li>
+                </ol>
+            </nav>
             
             <article>
                 <header class="mb-5">
@@ -26,6 +30,9 @@
                         {% endfor %}
                     </div>
                     <div class="text-muted mb-3">
+                        <p class="mb-2">
+                            <i class="bi bi-person"></i> Автор: {{ site_author }}
+                        </p>
                         <p class="mb-2">
                             <i class="bi bi-calendar-plus"></i> Создано: {{ post.created_at|date:"d.m.Y H:i" }}
                         </p>
@@ -48,9 +55,6 @@
 
             <div class="d-flex justify-content-between align-items-center">
                 {% component "button" text="Назад к списку" url="post_list" icon="bi-arrow-left" / %}
-                <span class="text-muted">
-                    <i class="bi bi-eye"></i> Пост #{{ post.pk }}
-                </span>
             </div>
         </div>
     </div>

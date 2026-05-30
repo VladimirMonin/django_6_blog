@@ -1,7 +1,7 @@
 from urllib.parse import urlencode
 
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.generic import DetailView, ListView, TemplateView, View
 
@@ -106,6 +106,13 @@ class PostListView(ListView):
                 "active_tag": self.active_tag,
                 "categories": Category.objects.all(),
                 "tags": Tag.objects.all(),
+                "tag_map": Tag.objects.annotate(
+                    public_post_count=Count(
+                        "posts",
+                        filter=Q(posts__status=Post.Status.PUBLISHED),
+                        distinct=True,
+                    )
+                ).filter(public_post_count__gt=0),
                 "is_post_list": True,
                 "is_about": False,
             }
@@ -127,7 +134,7 @@ class PostDetailView(SessionInteractionMixin, DetailView):
     model = Post
     template_name = "blog/post_detail.html"
     context_object_name = "post"
-    pk_url_kwarg = "pk"
+    slug_url_kwarg = "slug"
 
     def get_queryset(self):
         return (
@@ -155,10 +162,10 @@ class PostDetailView(SessionInteractionMixin, DetailView):
 class PostLikeToggleView(SessionInteractionMixin, View):
     """Toggle one anonymous like per session for a published post."""
 
-    def post(self, request, pk):
+    def post(self, request, slug):
         post = get_object_or_404(
             Post.objects.filter(status=Post.Status.PUBLISHED),
-            pk=pk,
+            slug=slug,
         )
         post_is_liked = self.toggle_post_like(post)
         post.refresh_from_db(fields=["like_count", "view_count"])

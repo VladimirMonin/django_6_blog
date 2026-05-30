@@ -224,8 +224,8 @@ def test_environment_example_documents_runtime_variables():
 def test_public_blog_urls_are_class_based_views():
     assert resolve(reverse("post_list")).func.view_class is PostListView
     assert resolve(reverse("about")).func.view_class is AboutView
-    assert resolve(reverse("post_detail", kwargs={"pk": 1})).func.view_class is PostDetailView
-    assert resolve(reverse("post_like_toggle", kwargs={"pk": 1})).func.view_class is PostLikeToggleView
+    assert resolve(reverse("post_detail", kwargs={"slug": "sample-post"})).func.view_class is PostDetailView
+    assert resolve(reverse("post_like_toggle", kwargs={"slug": "sample-post"})).func.view_class is PostLikeToggleView
 
 
 @pytest.mark.django_db
@@ -257,7 +257,7 @@ def test_detail_view_counts_different_anonymous_sessions_separately(client, djan
 @pytest.mark.django_db
 def test_anonymous_like_toggle_is_stored_in_session_history(client):
     post = create_post("Лайк через сессию", content="Текст")
-    like_url = reverse("post_like_toggle", kwargs={"pk": post.pk})
+    like_url = reverse("post_like_toggle", kwargs={"slug": post.slug})
 
     liked = client.post(like_url, HTTP_HX_REQUEST="true")
     post.refresh_from_db()
@@ -299,7 +299,7 @@ def test_detail_page_renders_reaction_counters_and_like_form(client):
     button = page.select_one("button.post-like-button")
     assert reactions is not None
     assert button is not None
-    assert button["hx-post"] == reverse("post_like_toggle", kwargs={"pk": post.pk})
+    assert button["hx-post"] == reverse("post_like_toggle", kwargs={"slug": post.slug})
     body = response.content.decode()
     assert "13 просмотров" in body
     assert "3 лайка" in body

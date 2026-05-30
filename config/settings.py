@@ -35,6 +35,8 @@ ALLOWED_HOSTS = env_list(
     ["localhost", "127.0.0.1", "testserver"],
 )
 
+SITE_AUTHOR = "Владимир Монин"
+
 
 # Application definition
 
@@ -75,6 +77,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "blog.context_processors.site_identity",
             ],
             "builtins": [
                 "django_components.templatetags.component_tags",

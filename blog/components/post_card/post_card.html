@@ -1,6 +1,6 @@
 <div class="col">
   <article class="card h-100 post-card">
-    <a class="post-card-cover-link" href="{% url 'post_detail' post.pk %}" aria-label="Читать: {{ post.title }}">
+    <a class="post-card-cover-link" href="{{ post.get_absolute_url }}" aria-label="Читать: {{ post.title }}">
       {% with cover=post.cover_media %}
         {% if cover %}
           <img class="post-card-cover" src="{{ cover.file.url }}" alt="Обложка статьи {{ post.title }}" loading="lazy">
@@ -27,7 +27,7 @@
       </div>
 
       <h2 class="card-title h4 mb-2">
-        <a href="{% url 'post_detail' post.pk %}" class="post-card-title-link">
+        <a href="{{ post.get_absolute_url }}" class="post-card-title-link">
           {{ post.title }}
         </a>
       </h2>

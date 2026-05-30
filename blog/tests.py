@@ -102,7 +102,7 @@ def test_post_search_filters_published_posts(client):
 
 @pytest.mark.django_db
 def test_post_detail_renders_published_post(client, published_post):
-    response = client.get(reverse("post_detail", kwargs={"pk": published_post.pk}))
+    response = client.get(reverse("post_detail", kwargs={"slug": published_post.slug}))
 
     assert response.status_code == 200
     assert published_post.title.encode() in response.content
@@ -110,7 +110,7 @@ def test_post_detail_renders_published_post(client, published_post):
 
 @pytest.mark.django_db
 def test_post_detail_returns_404_for_draft(client, draft_post):
-    response = client.get(reverse("post_detail", kwargs={"pk": draft_post.pk}))
+    response = client.get(reverse("post_detail", kwargs={"slug": draft_post.slug}))
 
     assert response.status_code == 404
 
@@ -308,7 +308,7 @@ def test_rendered_public_internal_links_resolve_to_available_pages(client):
     source_paths = [
         reverse("post_list"),
         reverse("about"),
-        reverse("post_detail", kwargs={"pk": posts[0].pk}),
+        reverse("post_detail", kwargs={"slug": posts[0].slug}),
     ]
     discovered_hrefs = set()
 
@@ -340,7 +340,7 @@ def test_rendered_post_media_sources_are_served_in_debug_mode(client, settings, 
     post.content = "![[linked-image.png|Linked image]]"
     post.save()
 
-    response = client.get(reverse("post_detail", kwargs={"pk": post.pk}))
+    response = client.get(reverse("post_detail", kwargs={"slug": post.slug}))
     assert response.status_code == 200
     soup = BeautifulSoup(response.content, "html.parser")
     media_sources = [img["src"] for img in soup.select("img[src]")]
@@ -373,7 +373,7 @@ def test_obsidian_lm_studio_lesson_fixture_imports_and_renders_media(client, set
     assert PostMedia.objects.filter(post=post, media_type=PostMedia.MediaType.IMAGE).count() == 8
     assert PostMedia.objects.filter(post=post, media_type=PostMedia.MediaType.AUDIO).count() == 1
 
-    response = client.get(reverse("post_detail", kwargs={"pk": post.pk}))
+    response = client.get(reverse("post_detail", kwargs={"slug": post.slug}))
     assert response.status_code == 200
     soup = BeautifulSoup(response.content, "html.parser")
 
