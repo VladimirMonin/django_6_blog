@@ -87,6 +87,8 @@ git ls-files | grep -E '(^|/)poetry\.lock$' && exit 1 || true
 
 ## Импорт Obsidian-заметки
 
+Полная справка по CLI-командам импорта: [`doc/cli.md`](cli.md).
+
 Для проверки реального Markdown и медиа используются ignored test assets в `tests/assets/`.
 
 Сбор заметки и всех локальных Obsidian/Markdown assets в одну папку:

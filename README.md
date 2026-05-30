@@ -40,6 +40,7 @@ git diff --check
 ```
 
 Подробные рабочие правила, smoke-gates и список того, что нельзя коммитить: [`doc/development.md`](doc/development.md).
+CLI-команды для сборки assets и импорта Obsidian-статей: [`doc/cli.md`](doc/cli.md).
 
 ## Публичный блог
 

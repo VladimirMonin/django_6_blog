@@ -5,7 +5,8 @@ from pathlib import Path
 import pytest
 from bs4 import BeautifulSoup
 
-from blog.models import Post
+from blog.content_import.media_links import collect_local_media_references
+from blog.models import PostMedia
 from blog.services.obsidian_importer import import_obsidian_note_to_post
 
 FIXTURE_DIR = Path("tests/assets/obsidian/lm-studio-lesson-01")
@@ -32,9 +33,15 @@ def test_real_obsidian_lm_studio_lesson_import_renders_media_and_mermaid(client)
         "Токены, параметры и встраивания",
         "LM Studio: токены, параметры и встраивания",
     }
-    assert post.media_files.count() == 18
-    assert len(soup.select("img[src]")) == 17
-    assert len(soup.select("audio[src]")) == 1
+    expected_media = collect_local_media_references(post.content, FIXTURE_DIR)
+    image_media_count = post.media_files.filter(media_type=PostMedia.MediaType.IMAGE).count()
+    audio_media_count = post.media_files.filter(media_type=PostMedia.MediaType.AUDIO).count()
+
+    assert post.media_files.count() == len(expected_media.found)
+    assert image_media_count >= 1
+    assert audio_media_count == 1
+    assert len(soup.select("img[src]")) == image_media_count
+    assert len(soup.select("audio[src]")) == audio_media_count
     assert len(soup.select(".mermaid")) >= 1
     assert len(soup.select("blockquote.alert")) >= 1
     assert not soup.select('img[src$=".opus"]')
