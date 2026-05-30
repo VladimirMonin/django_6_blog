@@ -5,10 +5,10 @@ from django.db import models
 from django.utils import timezone
 from django.urls import reverse
 from django.utils.html import strip_tags
-from django.utils.text import Truncator, slugify as django_slugify
-from transliterate import slugify as transliterate_slugify
+from django.utils.text import Truncator
 
 from blog.services import convert_markdown_to_html
+from blog.slug_utils import build_slug, build_unique_slug
 
 
 def format_ru_count(value, forms):
@@ -37,7 +37,7 @@ def post_media_upload_to(instance, filename):
 def build_file_slug(filename):
     """Create a URL-safe filename while preserving the original extension."""
     path = PurePath(filename)
-    stem = django_slugify(path.stem) or "file"
+    stem = build_slug(path.stem, fallback="file")
     extension = path.suffix.lower()
     return f"{stem}{extension}"
 
@@ -60,7 +60,7 @@ class Category(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = transliterate_slugify(self.name) or django_slugify(self.name)
+            self.slug = build_unique_slug(self, self.name, fallback="category")
         super().save(*args, **kwargs)
 
 
@@ -81,7 +81,7 @@ class Tag(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = transliterate_slugify(self.name) or django_slugify(self.name)
+            self.slug = build_unique_slug(self, self.name, fallback="tag")
         super().save(*args, **kwargs)
 
 
@@ -207,7 +207,7 @@ class Post(models.Model):
         2. Конвертирует Markdown → HTML (всегда, при create и update)
         """
         if not self.slug:
-            self.slug = transliterate_slugify(self.title) or django_slugify(self.title)
+            self.slug = build_unique_slug(self, self.title, fallback="post")
 
         # Конвертация Markdown → HTML при каждом сохранении
         if self.content:

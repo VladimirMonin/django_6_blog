@@ -5,11 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
-from django.utils.text import slugify as django_slugify
-from transliterate import slugify as transliterate_slugify
 
 from blog.models import Post
 from blog.services.obsidian_importer import import_obsidian_note_to_post, split_frontmatter
+from blog.slug_utils import build_slug
 
 
 class Command(BaseCommand):
@@ -47,7 +46,7 @@ class Command(BaseCommand):
 
         metadata, _body = split_frontmatter(note_path.read_text(encoding="utf-8"))
         title = metadata.get("title") or note_path.stem
-        slug = options["slug"] or transliterate_slugify(title) or django_slugify(title)
+        slug = options["slug"] or build_slug(title, fallback="post")
         if not slug:
             raise CommandError("Could not generate a post slug; pass --slug explicitly.")
 
