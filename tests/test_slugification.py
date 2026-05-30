@@ -53,6 +53,8 @@ def test_obsidian_import_auto_slug_and_media_for_lm_studio_like_article(tmp_path
             [
                 "---",
                 'title: "Токены, параметры и встраивания"',
+                "tags: ['lesson', 'lm-studio', 'llm', 'tokens', 'embeddings']",
+                "series: lm-studio-course",
                 "status: done",
                 "---",
                 "# Токены, параметры и встраивания 🧠",
@@ -67,6 +69,14 @@ def test_obsidian_import_auto_slug_and_media_for_lm_studio_like_article(tmp_path
     post = import_obsidian_note_to_post(note_path, assets_dir=assets_dir)
 
     assert post.slug == "tokeny-parametry-i-vstraivaniya"
+    assert post.category.name == "LM Studio"
+    assert {tag.name for tag in post.tags.all()} == {
+        "Lesson",
+        "LM Studio",
+        "LLM",
+        "Tokens",
+        "Embeddings",
+    }
     assert post.cover_media is not None
     assert post.media_files.filter(media_type=PostMedia.MediaType.IMAGE).count() == 1
     assert post.media_files.filter(media_type=PostMedia.MediaType.AUDIO).count() == 1
@@ -75,3 +85,37 @@ def test_obsidian_import_auto_slug_and_media_for_lm_studio_like_article(tmp_path
 
     for media in post.media_files.all():
         default_storage.delete(media.file.name)
+
+
+@pytest.mark.django_db
+def test_obsidian_imported_lm_studio_article_is_visible_in_catalog_search(client, tmp_path, settings):
+    settings.MEDIA_ROOT = tmp_path / "media"
+    assets_dir = tmp_path / "lm-studio-lesson-01"
+    assets_dir.mkdir()
+    (assets_dir / "cover-01.webp").write_bytes(b"RIFFxxxxWEBP")
+    note_path = assets_dir / "01-токены-параметры-и-встраивания.md"
+    note_path.write_text(
+        "\n".join(
+            [
+                "---",
+                'title: "Токены, параметры и встраивания"',
+                "tags: ['lm-studio', 'llm']",
+                "series: lm-studio-course",
+                "status: done",
+                "---",
+                "# Токены, параметры и встраивания 🧠",
+                "![[cover-01.webp]]",
+                "Текст урока про токены и параметры.",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    post = import_obsidian_note_to_post(note_path, assets_dir=assets_dir)
+
+    response = client.get("/", {"search": "LM Studio"})
+
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert post.title in body
+    assert "LM Studio" in body
+    assert "post-card-cover" in body
