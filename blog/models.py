@@ -106,6 +106,7 @@ class Post(models.Model):
         PUBLISHED = "published", "Опубликовано"
 
     title = models.CharField(max_length=200, verbose_name="Заголовок")
+    description = models.TextField(verbose_name="Описание")
     slug = models.SlugField(max_length=200, unique=True, verbose_name="URL-slug")
     category = models.ForeignKey(
         Category,
@@ -177,6 +178,7 @@ class Post(models.Model):
         text = self.content or ""
         text = re.sub(r"(?s)^---.*?---", " ", text)
         text = re.sub(r"(?s)```.*?```", " ", text)
+        text = re.sub(r"(?m)^\s*\|.*\|\s*$", " ", text)
         text = re.sub(r"!\[\[[^\]]+\]\]", " ", text)
         text = re.sub(r"\[\[[^\]]+\]\]", " ", text)
         text = re.sub(r"!\[[^\]]*\]\([^)]*\)", " ", text)

@@ -28,9 +28,12 @@ def test_real_obsidian_lm_studio_lesson_import_renders_media_and_mermaid(client)
 
     soup = BeautifulSoup(response.content, "html.parser")
 
-    assert post.title == "Токены, параметры и встраивания"
-    assert post.media_files.count() == 9
-    assert len(soup.select("img[src]")) == 8
+    assert post.title in {
+        "Токены, параметры и встраивания",
+        "LM Studio: токены, параметры и встраивания",
+    }
+    assert post.media_files.count() == 18
+    assert len(soup.select("img[src]")) == 17
     assert len(soup.select("audio[src]")) == 1
     assert len(soup.select(".mermaid")) >= 1
     assert len(soup.select("blockquote.alert")) >= 1

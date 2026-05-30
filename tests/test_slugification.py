@@ -53,6 +53,7 @@ def test_obsidian_import_auto_slug_and_media_for_lm_studio_like_article(tmp_path
             [
                 "---",
                 'title: "Токены, параметры и встраивания"',
+                'description: "Короткое описание урока про токены и параметры."',
                 "tags: ['lesson', 'lm-studio', 'llm', 'tokens', 'embeddings']",
                 "series: lm-studio-course",
                 "status: done",
@@ -99,6 +100,7 @@ def test_obsidian_imported_lm_studio_article_is_visible_in_catalog_search(client
             [
                 "---",
                 'title: "Токены, параметры и встраивания"',
+                'description: "Короткое описание урока про токены и параметры."',
                 "tags: ['lm-studio', 'llm']",
                 "series: lm-studio-course",
                 "status: done",

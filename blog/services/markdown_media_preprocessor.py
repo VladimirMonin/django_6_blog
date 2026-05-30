@@ -53,9 +53,14 @@ class MarkdownMediaPreprocessor:
             return media_map
 
         for media in self.post.media_files.all():
-            for key in {media.original_filename, media.file_slug, PurePosixPath(media.file.name).name}:
-                if key:
-                    media_map[self._normalize_path(key)] = media
+            names = {media.original_filename, media.file_slug, PurePosixPath(media.file.name).name}
+            for key in names:
+                if not key:
+                    continue
+                path = PurePosixPath(key)
+                for alias in {path.name, path.stem}:
+                    if alias:
+                        media_map[self._normalize_path(alias)] = media
         return media_map
 
     def _resolve_media_url(self, target):

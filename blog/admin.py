@@ -83,7 +83,7 @@ class PostAdmin(ModelAdmin):
 
     list_display = ("title", "category", "status", "view_count", "like_count", "display_created_at")
     list_filter = ("status", "category", "tags", "created_at")
-    search_fields = ("title", "content", "category__name", "tags__name")
+    search_fields = ("title", "description", "content", "category__name", "tags__name")
     prepopulated_fields = {"slug": ("title",)}
     date_hierarchy = "created_at"
     ordering = ("-created_at",)
@@ -91,7 +91,7 @@ class PostAdmin(ModelAdmin):
     inlines = [PostMediaInline]
 
     fieldsets = (
-        ("Основная информация", {"fields": ("title", "slug", "category", "tags", "content")}),
+        ("Основная информация", {"fields": ("title", "slug", "description", "category", "tags", "content")}),
         (
             "HTML предпросмотр",
             {"fields": ("display_html_preview",), "classes": ("collapse",)},

@@ -45,6 +45,8 @@ git diff --check
 
 Реализовано:
 
+- обязательное описание статьи `Post.description`, импортируемое из frontmatter `description`;
+- карточки используют `description`, а не начало Markdown-статьи;
 - статусы постов: `published` и `draft`;
 - публично видны только опубликованные посты;
 - категории;
@@ -60,10 +62,31 @@ git diff --check
 
 Реальные заметки и медиа для локальной проверки держим в ignored-папке `tests/assets/`.
 
+Сначала можно собрать заметку и все локальные медиа/связанные `.md`-карточки в одну папку:
+
+```bash
+uv run python manage.py collect_note_assets \
+  "/path/to/vault/10_Lessons/LM Studio/01-токены-параметры-и-встраивания.md" \
+  tests/assets/obsidian/lm-studio-lesson-01 \
+  --vault-root "/path/to/vault" \
+  --clean \
+  --title "LM Studio: токены, параметры и встраивания" \
+  --description "Короткое описание для карточки."
+```
+
+Команда понимает Obsidian embeds `![[999_files/image.webp|500]]` и Markdown images `![alt](../image.webp)`, копирует найденные файлы в плоскую assets-папку и может сразу дописать `title`/`description` в копию заметки.
+
 ```bash
 uv run python manage.py import_obsidian_note \
   tests/assets/obsidian/lm-studio-lesson-01/01-токены-параметры-и-встраивания.md \
   --assets-dir tests/assets/obsidian/lm-studio-lesson-01 \
   --slug lm-studio-lesson-01 \
   --replace
+```
+
+Frontmatter должен содержать `description`: именно оно показывается в карточках.
+Для сухой проверки локальных Markdown/Obsidian ссылок без создания поста:
+
+```bash
+uv run python manage.py import_obsidian_note path/to/article.md --assets-dir path/to/assets --check-links
 ```

@@ -40,10 +40,10 @@
         <span><i class="bi bi-heart"></i> {{ post.like_count_label }}</span>
       </div>
 
-      {% if post.plain_text_excerpt %}
-        <p class="card-text post-card-excerpt">{{ post.plain_text_excerpt }}</p>
+      {% if post.description %}
+        <p class="card-text post-card-excerpt">{{ post.description }}</p>
       {% else %}
-        <p class="card-text post-card-excerpt text-muted">Короткое описание появится после добавления текста статьи.</p>
+        <p class="card-text post-card-excerpt text-muted">Короткое описание появится после заполнения мета-поля description.</p>
       {% endif %}
 
       <div class="mt-auto pt-2">

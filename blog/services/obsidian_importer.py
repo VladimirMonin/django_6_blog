@@ -1,156 +1,25 @@
-"""Import local Obsidian notes into blog posts for smoke tests/prototypes."""
+"""Compatibility imports for the Markdown/Obsidian content importer package."""
 
-from __future__ import annotations
+from blog.content_import import (
+    collect_broken_local_links,
+    collect_local_media_references,
+    import_obsidian_note_to_post,
+    split_frontmatter,
+)
+from blog.content_import.obsidian import (
+    category_from_metadata,
+    humanize_taxonomy_name,
+    normalize_obsidian_note_links,
+    tags_from_metadata,
+)
 
-import re
-from ast import literal_eval
-from pathlib import Path
-
-from django.core.files import File
-
-from blog.models import Category, Post, PostMedia, Tag
-
-FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?", re.DOTALL)
-OBSIDIAN_EMBED_RE = re.compile(r"!\[\[([^\]|]+)(?:\|[^\]]+)?\]\]")
-OBSIDIAN_NOTE_LINK_RE = re.compile(r"(?<!!)\[\[([^\]|]+)(?:\|([^\]]+))?\]\]")
-
-
-def import_obsidian_note_to_post(
-    note_path: Path,
-    assets_dir: Path | None = None,
-    slug: str | None = None,
-) -> Post:
-    """Create a Post and PostMedia rows from an Obsidian Markdown note.
-
-    The importer is intentionally small: it is a local prototype/smoke path,
-    not a full vault synchronizer. It uses YAML-like frontmatter only for
-    simple scalar fields such as ``title`` and copies embedded local media from
-    ``assets_dir`` into Django's configured media storage.
-    """
-
-    note_path = Path(note_path)
-    assets_dir = Path(assets_dir) if assets_dir else note_path.parent
-    raw_markdown = note_path.read_text(encoding="utf-8")
-    metadata, markdown_body = split_frontmatter(raw_markdown)
-    markdown_body = normalize_obsidian_note_links(markdown_body)
-
-    title = metadata.get("title") or note_path.stem
-    status = metadata.get("status", "done")
-
-    category = category_from_metadata(metadata)
-    tag_names = tags_from_metadata(metadata)
-
-    post = Post.objects.create(
-        title=title,
-        slug=slug or "",
-        content=markdown_body,
-        status=Post.Status.DRAFT if status == "draft" else Post.Status.PUBLISHED,
-        category=category,
-    )
-
-    if tag_names:
-        post.tags.set(Tag.objects.get_or_create(name=tag_name)[0] for tag_name in tag_names)
-
-    for filename in unique_obsidian_embeds(markdown_body):
-        source_path = assets_dir / filename
-        if not source_path.exists() or not source_path.is_file():
-            continue
-        with source_path.open("rb") as source_file:
-            PostMedia.objects.create(post=post, file=File(source_file, name=source_path.name))
-
-    # Re-render after media rows exist, so Obsidian embeds resolve to /media/ URLs.
-    post.content = markdown_body
-    post.save()
-    return post
-
-
-def split_frontmatter(markdown_text: str) -> tuple[dict[str, str], str]:
-    """Return simple frontmatter key/value metadata and Markdown body."""
-
-    match = FRONTMATTER_RE.match(markdown_text)
-    if not match:
-        return {}, markdown_text
-
-    metadata: dict[str, str] = {}
-    for line in match.group(1).splitlines():
-        if ":" not in line or line.startswith((" ", "\t")):
-            continue
-        key, value = line.split(":", 1)
-        value = value.strip().strip('"\'')
-        if value and not value.startswith(("{", ">")):
-            metadata[key.strip()] = value
-
-    return metadata, markdown_text[match.end():]
-
-
-def tags_from_metadata(metadata: dict[str, str]) -> list[str]:
-    """Return human-readable tag names from simple Obsidian frontmatter."""
-
-    raw_tags = metadata.get("tags", "")
-    if not raw_tags:
-        return []
-
-    if raw_tags.startswith("["):
-        try:
-            parsed_tags = literal_eval(raw_tags)
-        except (SyntaxError, ValueError):
-            parsed_tags = []
-    else:
-        parsed_tags = [tag.strip() for tag in raw_tags.split(",")]
-
-    names = []
-    seen = set()
-    for tag in parsed_tags:
-        tag_name = humanize_taxonomy_name(str(tag).strip().lstrip("#"))
-        if tag_name and tag_name.casefold() not in seen:
-            seen.add(tag_name.casefold())
-            names.append(tag_name)
-    return names
-
-
-def category_from_metadata(metadata: dict[str, str]) -> Category | None:
-    """Create a category from the Obsidian series value, if present."""
-
-    series = metadata.get("series", "").strip()
-    if not series:
-        return None
-    name = humanize_taxonomy_name(series.removesuffix("-course"))
-    if not name:
-        return None
-    return Category.objects.get_or_create(name=name)[0]
-
-
-def humanize_taxonomy_name(value: str) -> str:
-    """Convert frontmatter slugs such as 'lm-studio' to readable labels."""
-
-    words = re.split(r"[-_/\s]+", value.strip())
-    acronyms = {"ai", "api", "llm", "lm", "ui", "uv"}
-    return " ".join(
-        word.upper() if word.casefold() in acronyms else word.capitalize()
-        for word in words
-        if word
-    )
-
-
-def unique_obsidian_embeds(markdown_text: str) -> list[str]:
-    """List embedded filenames in source order without duplicates."""
-
-    seen = set()
-    filenames = []
-    for match in OBSIDIAN_EMBED_RE.finditer(markdown_text):
-        filename = Path(match.group(1).strip()).name
-        if filename not in seen:
-            seen.add(filename)
-            filenames.append(filename)
-    return filenames
-
-
-def normalize_obsidian_note_links(markdown_text: str) -> str:
-    """Replace non-embedded Obsidian wikilinks with readable text."""
-
-    def replace(match):
-        target = match.group(1).strip()
-        alias = match.group(2)
-        return (alias or target).strip()
-
-    return OBSIDIAN_NOTE_LINK_RE.sub(replace, markdown_text)
+__all__ = [
+    "category_from_metadata",
+    "collect_broken_local_links",
+    "collect_local_media_references",
+    "humanize_taxonomy_name",
+    "import_obsidian_note_to_post",
+    "normalize_obsidian_note_links",
+    "split_frontmatter",
+    "tags_from_metadata",
+]

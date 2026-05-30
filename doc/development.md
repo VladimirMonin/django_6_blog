@@ -89,6 +89,20 @@ git ls-files | grep -E '(^|/)poetry\.lock$' && exit 1 || true
 
 Для проверки реального Markdown и медиа используются ignored test assets в `tests/assets/`.
 
+Сбор заметки и всех локальных Obsidian/Markdown assets в одну папку:
+
+```bash
+uv run python manage.py collect_note_assets \
+  "/path/to/vault/10_Lessons/LM Studio/01-токены-параметры-и-встраивания.md" \
+  tests/assets/obsidian/lm-studio-lesson-01 \
+  --vault-root "/path/to/vault" \
+  --clean \
+  --title "LM Studio: токены, параметры и встраивания" \
+  --description "Короткое описание для карточки."
+```
+
+Команда поддерживает Obsidian embeds, Markdown image paths, vault-relative пути и note-relative пути. Выходная папка плоская, чтобы её можно было передать в `import_obsidian_note --assets-dir`.
+
 ```bash
 uv run python manage.py import_obsidian_note \
   tests/assets/obsidian/lm-studio-lesson-01/01-токены-параметры-и-встраивания.md \
@@ -100,10 +114,22 @@ uv run python manage.py import_obsidian_note \
 Команда:
 
 - читает Markdown-файл;
+- требует `description` во frontmatter и сохраняет его в `Post.description`;
 - берёт `title` из frontmatter или имя файла;
 - копирует найденные медиа в `media/posts/<post-slug>/`;
+- понимает Obsidian embeds `![[image.webp]]`, `![[image|alt]]` и стандартные Markdown images `![alt](image.webp)`;
+- ищет изображения по полному имени или stem: `![[cover]]` может найти `cover.webp`;
+- проверяет битые локальные ссылки перед импортом;
 - создаёт/заменяет пост при `--replace`;
 - конвертирует Markdown в HTML при сохранении `Post`.
+
+Отдельно проверить ссылки без создания поста:
+
+```bash
+uv run python manage.py import_obsidian_note path/to/article.md \
+  --assets-dir path/to/assets \
+  --check-links
+```
 
 ## Что не коммитить
 

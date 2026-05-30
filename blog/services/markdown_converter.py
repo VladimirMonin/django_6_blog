@@ -51,7 +51,7 @@ def convert_markdown_to_html(markdown_text: str, post=None) -> str:
         "fenced_code",  # Блоки кода с тройными backticks ```
         "tables",  # Таблицы (входит в extra, но явно указываем)
         "nl2br",  # Переносы строк → <br>
-        "codehilite",  # Подсветка кода БЕЗ Pygments (классы для Highlight.js)
+        "pymdownx.highlight",  # Code blocks with language-* classes for Highlight.js
         "pymdownx.superfences",  # Улучшенные code blocks (поддержка Mermaid)
         "pymdownx.emoji",  # Эмодзи :smile:
         "pymdownx.tasklist",  # Чекбоксы - [ ] и - [x]
@@ -59,10 +59,10 @@ def convert_markdown_to_html(markdown_text: str, post=None) -> str:
 
     # Конфигурация расширений
     extension_configs = {
-        "codehilite": {
-            "use_pygments": False,  # НЕ генерировать HTML с Pygments
+        "pymdownx.highlight": {
+            "use_pygments": False,  # НЕ генерировать Pygments spans/styles
             "guess_lang": True,  # Автоопределение языка
-            "lang_prefix": "language-",  # Префикс для классов (Highlight.js формат)
+            "language_prefix": "language-",  # Префикс для классов Highlight.js
             "css_class": "highlight",  # CSS класс для обертки
         },
         "pymdownx.superfences": {

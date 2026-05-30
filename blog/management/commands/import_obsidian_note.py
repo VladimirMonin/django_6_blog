@@ -6,16 +6,17 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 
+from blog.content_import import collect_broken_local_links, collect_local_media_references
 from blog.models import Post
 from blog.services.obsidian_importer import import_obsidian_note_to_post, split_frontmatter
 from blog.slug_utils import build_slug
 
 
 class Command(BaseCommand):
-    help = "Import a local Obsidian note and its copied assets into a blog post."
+    help = "Import a local Obsidian/Markdown note and its copied assets into a blog post."
 
     def add_arguments(self, parser):
-        parser.add_argument("note", type=Path, help="Path to the copied Obsidian .md note")
+        parser.add_argument("note", type=Path, help="Path to the copied Markdown note")
         parser.add_argument(
             "--assets-dir",
             type=Path,
@@ -28,9 +29,25 @@ class Command(BaseCommand):
             help="Post slug to use. Defaults to a slug generated from frontmatter title or filename.",
         )
         parser.add_argument(
+            "--title",
+            default=None,
+            help="Override the post title instead of using frontmatter title or filename.",
+        )
+        parser.add_argument(
+            "--description",
+            default=None,
+            help="Override the post description instead of using frontmatter description.",
+        )
+        parser.add_argument(
             "--replace",
             action="store_true",
             help="Delete an existing post with the same slug before import.",
+        )
+        parser.add_argument(
+            "--check-links",
+            action="store_true",
+            dest="check_links",
+            help="Validate local Markdown/Obsidian media links and exit without creating a post.",
         )
 
     def handle(self, *args, **options):
@@ -44,11 +61,27 @@ class Command(BaseCommand):
         if not assets_dir.exists() or not assets_dir.is_dir():
             raise CommandError(f"Assets directory not found: {assets_dir}")
 
-        metadata, _body = split_frontmatter(note_path.read_text(encoding="utf-8"))
-        title = metadata.get("title") or note_path.stem
+        raw_markdown = note_path.read_text(encoding="utf-8")
+        metadata, markdown_body = split_frontmatter(raw_markdown)
+        title = options["title"] or metadata.get("title") or note_path.stem
         slug = options["slug"] or build_slug(title, fallback="post")
         if not slug:
             raise CommandError("Could not generate a post slug; pass --slug explicitly.")
+
+        link_report = collect_local_media_references(markdown_body, assets_dir)
+        broken_links = collect_broken_local_links(markdown_body, assets_dir)
+        if broken_links:
+            missing = ", ".join(broken_links)
+            raise CommandError(f"Broken local links: {missing}")
+
+        if options["check_links"]:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    "Local links are valid: "
+                    f"found={len(link_report.found)}, missing=0"
+                )
+            )
+            return
 
         existing = Post.objects.filter(slug=slug)
         if existing.exists() and not options["replace"]:
@@ -60,7 +93,16 @@ class Command(BaseCommand):
             if deleted_count:
                 self.stdout.write(f"Deleted existing post with slug '{slug}'.")
 
-        post = import_obsidian_note_to_post(note_path, assets_dir=assets_dir, slug=slug)
+        try:
+            post = import_obsidian_note_to_post(
+                note_path,
+                assets_dir=assets_dir,
+                slug=slug,
+                title=options["title"],
+                description=options["description"],
+            )
+        except ValueError as exc:
+            raise CommandError(str(exc)) from exc
 
         media_counts = {}
         for media in post.media_files.all():
@@ -70,6 +112,7 @@ class Command(BaseCommand):
             self.style.SUCCESS(
                 "Imported Obsidian note: "
                 f"id={post.pk}, slug={post.slug}, title={post.title!r}, "
+                f"description={post.description!r}, "
                 f"media={post.media_files.count()}, media_by_type={media_counts}"
             )
         )
