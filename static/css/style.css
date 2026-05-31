@@ -163,6 +163,10 @@ footer {
   margin-top: auto;
 }
 
+.footer-heart {
+  color: #dc3545;
+}
+
 .callout {
   position: relative;
   border-width: 1px 1px 1px 0.35rem;
@@ -856,6 +860,10 @@ button[hx-get]:active::after {
   background: rgba(33, 37, 41, 0.88);
 }
 
+.post-badge-type-article {
+  background: rgba(33, 37, 41, 0.92);
+}
+
 .post-badge-type-video {
   background: rgba(13, 110, 253, 0.92);
 }
@@ -895,10 +903,61 @@ button[hx-get]:active::after {
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(circle at 18% 22%, rgba(255, 193, 7, 0.45), transparent 26%),
+    radial-gradient(circle at 18% 22%, rgba(255, 193, 7, 0.42), transparent 27%),
+    radial-gradient(circle at 84% 76%, rgba(255, 255, 255, 0.12), transparent 28%),
     linear-gradient(135deg, #2b2f36 0%, #121417 100%);
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 3rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.post-card-cover-placeholder-mark {
+  width: 6.25rem;
+  height: 6.25rem;
+  border-radius: 2rem;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(10px);
+}
+
+.post-card-cover-placeholder-mark .bi {
+  font-size: 2.65rem;
+  line-height: 1;
+}
+
+.post-card-cover-placeholder-mark span {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.post-card-cover-placeholder-article {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255, 193, 7, 0.44), transparent 27%),
+    linear-gradient(135deg, #2b2f36 0%, #121417 100%);
+}
+
+.post-card-cover-placeholder-video {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(13, 110, 253, 0.48), transparent 27%),
+    linear-gradient(135deg, #1d3557 0%, #111827 100%);
+}
+
+.post-card-cover-placeholder-audio {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(25, 135, 84, 0.48), transparent 27%),
+    linear-gradient(135deg, #164b35 0%, #111827 100%);
+}
+
+.post-card-cover-placeholder-podcast {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(111, 66, 193, 0.52), transparent 27%),
+    linear-gradient(135deg, #3d2a68 0%, #111827 100%);
 }
 
 .post-card-title-link {

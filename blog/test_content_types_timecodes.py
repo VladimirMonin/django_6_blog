@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 
 import pytest
 from bs4 import BeautifulSoup
@@ -7,11 +8,26 @@ from django.core.management import call_command, CommandError
 
 from blog.content_import.obsidian import import_obsidian_note_to_post, resolve_cover_reference
 from blog.content_import.timecodes import extract_timecode_blocks, parse_timecodes
-from blog.models import Post
+from blog.models import Post, PostMedia
 from blog.services.markdown_converter import convert_markdown_to_html
 
 
 pytestmark = pytest.mark.django_db
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REAL_LM_STUDIO_OPUS = (
+    PROJECT_ROOT
+    / "tests"
+    / "assets"
+    / "obsidian"
+    / "lm-studio-lesson-01"
+    / "01_Как_нейросети_превращают_слова_в_геометрию.opus"
+)
+HERMES_YOUTUBE_ASSET_DIR = PROJECT_ROOT / "tests" / "assets" / "youtube" / "hermes-six-features"
+HERMES_YOUTUBE_VIDEO_NOTE = HERMES_YOUTUBE_ASSET_DIR / "hermes-six-features-video.md"
+HERMES_YOUTUBE_PODCAST_NOTE = HERMES_YOUTUBE_ASSET_DIR / "hermes-six-features-podcast.md"
+HERMES_YOUTUBE_VIDEO = HERMES_YOUTUBE_ASSET_DIR / "hermes-six-features.mp4"
+HERMES_YOUTUBE_AUDIO = HERMES_YOUTUBE_ASSET_DIR / "hermes-six-features.opus"
 
 
 def write_note(tmp_path: Path, body: str) -> Path:
@@ -150,24 +166,60 @@ def test_create_content_note_template_command_writes_media_note_with_timecodes(t
 
 
 
-def test_list_card_shows_content_type_badge_for_media_posts(client):
-    Post.objects.create(
-        title="Подкаст в списке",
-        description="Описание подкаста.",
-        content_type=Post.ContentType.PODCAST,
-        media_url="https://cdn.example.test/podcast.mp3",
-        content="Текст.",
-        status=Post.Status.PUBLISHED,
-    )
+def test_list_card_shows_content_type_badge_for_all_post_types(client):
+    expected = [
+        (Post.ContentType.ARTICLE, "Статья", "bi-file-text"),
+        (Post.ContentType.VIDEO, "Видео", "bi-camera-video"),
+        (Post.ContentType.AUDIO, "Аудио", "bi-soundwave"),
+        (Post.ContentType.PODCAST, "Подкаст", "bi-broadcast-pin"),
+    ]
+    for content_type, label, _icon in expected:
+        Post.objects.create(
+            title=f"{label} в списке",
+            description=f"Описание: {label}.",
+            content_type=content_type,
+            media_url="https://cdn.example.test/media.mp3" if content_type != Post.ContentType.ARTICLE else "",
+            content="Текст.",
+            status=Post.Status.PUBLISHED,
+        )
 
     response = client.get("/")
 
     assert response.status_code == 200
     page = page_soup(response)
-    badge = page.select_one(".post-badge-type-podcast")
-    assert badge is not None
-    assert "Подкаст" in badge.get_text(" ", strip=True)
-    assert badge.select_one(".bi-broadcast-pin") is not None
+    for content_type, label, icon in expected:
+        badge = page.select_one(f".post-badge-type-{content_type}")
+        assert badge is not None
+        assert label in badge.get_text(" ", strip=True)
+        assert badge.select_one(f".{icon}") is not None
+
+
+def test_list_card_uses_unified_default_cover_placeholders_for_all_post_types(client):
+    expected = [
+        (Post.ContentType.ARTICLE, "bi-journal-code"),
+        (Post.ContentType.VIDEO, "bi-camera-video"),
+        (Post.ContentType.AUDIO, "bi-soundwave"),
+        (Post.ContentType.PODCAST, "bi-broadcast-pin"),
+    ]
+    for content_type, _icon in expected:
+        Post.objects.create(
+            title=f"{content_type} без обложки",
+            description="Описание.",
+            content_type=content_type,
+            media_url="https://cdn.example.test/media.mp3" if content_type != Post.ContentType.ARTICLE else "",
+            content="Текст.",
+            status=Post.Status.PUBLISHED,
+        )
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    page = page_soup(response)
+    for content_type, icon in expected:
+        cover = page.select_one(f".post-card-cover-placeholder-{content_type}")
+        assert cover is not None
+        assert "post-card-cover-placeholder" in cover["class"]
+        assert cover.select_one(f".{icon}") is not None
 
 
 def test_media_import_rejects_invalid_timecode_line_for_media_posts(tmp_path):
@@ -378,3 +430,123 @@ def test_audio_and_podcast_detail_render_audio_player(client):
         assert player is not None
         assert player["src"] == "https://cdn.example.test/audio.mp3"
         assert page.select_one("button.timecode-button")["data-seek-seconds"] == "5"
+
+
+def test_imported_podcast_uses_embedded_local_audio_as_player_source(tmp_path, settings, client):
+    if not REAL_LM_STUDIO_OPUS.exists():
+        pytest.skip("Real LM Studio opus fixture is stored in ignored tests/assets/ and is unavailable.")
+    settings.MEDIA_ROOT = tmp_path / "media-root"
+    audio = tmp_path / REAL_LM_STUDIO_OPUS.name
+    shutil.copyfile(REAL_LM_STUDIO_OPUS, audio)
+    assert audio.stat().st_size > 1_000_000
+    note_path = write_note(
+        tmp_path,
+        f"""---
+title: Реальный локальный подкаст
+description: Подкаст с реальным Opus-файлом LM Studio и таймкодами.
+type: podcast
+---
+
+# Реальный локальный подкаст
+
+![[{REAL_LM_STUDIO_OPUS.name}]]
+
+```timecodes
+00:00 Вступление
+01:58 Что такое модель
+```
+""",
+    )
+
+    post = import_obsidian_note_to_post(note_path, assets_dir=tmp_path, slug="local-podcast")
+
+    assert post.media_url == ""
+    assert post.primary_media is not None
+    assert post.primary_media.original_filename == REAL_LM_STUDIO_OPUS.name
+    assert post.primary_media.media_type == PostMedia.MediaType.AUDIO
+    assert post.primary_media.file.size == REAL_LM_STUDIO_OPUS.stat().st_size
+    assert post.timecodes[1] == {"time": "01:58", "seconds": 118, "label": "Что такое модель"}
+
+    response = client.get(post.get_absolute_url())
+    page = page_soup(response)
+    player = page.select_one("audio.post-media-player")
+    assert response.status_code == 200
+    assert player is not None
+    assert len(page.select("audio")) == 1
+    assert page.select_one(".markdown-content audio") is None
+    assert player["src"].endswith("/media/posts/local-podcast/01-kak-neyroseti-prevrashchayut-slova-v-geometriyu.opus")
+    assert [button["data-seek-seconds"] for button in page.select("button.timecode-button")] == ["0", "118"]
+
+
+def test_imported_hermes_youtube_video_uses_real_downloaded_mp4_as_player_source(tmp_path, settings, client):
+    if not HERMES_YOUTUBE_VIDEO_NOTE.exists() or not HERMES_YOUTUBE_VIDEO.exists():
+        pytest.skip("Real Hermes YouTube video fixture is stored in ignored tests/assets/ and is unavailable.")
+    settings.MEDIA_ROOT = tmp_path / "media-root"
+
+    post = import_obsidian_note_to_post(
+        HERMES_YOUTUBE_VIDEO_NOTE,
+        assets_dir=HERMES_YOUTUBE_ASSET_DIR,
+        slug="hermes-six-features-video",
+    )
+
+    assert post.content_type == Post.ContentType.VIDEO
+    assert post.media_url == ""
+    assert post.primary_media is not None
+    assert post.primary_media.original_filename == "hermes-six-features.mp4"
+    assert post.primary_media.media_type == PostMedia.MediaType.VIDEO
+    assert post.primary_media.file.size == HERMES_YOUTUBE_VIDEO.stat().st_size
+    assert post.cover_media is not None
+    assert post.cover_media.original_filename == "hermes-six-features.webp"
+    assert post.timecodes == [
+        {"time": "0:00", "seconds": 0, "label": "Вступление"},
+        {"time": "1:16", "seconds": 76, "label": "Фича 1"},
+        {"time": "2:57", "seconds": 177, "label": "Фича 2"},
+        {"time": "4:56", "seconds": 296, "label": "Фича 3"},
+        {"time": "6:15", "seconds": 375, "label": "Фича 4"},
+        {"time": "7:38", "seconds": 458, "label": "Фича 5"},
+        {"time": "8:48", "seconds": 528, "label": "Фича 6"},
+    ]
+
+    response = client.get(post.get_absolute_url())
+    page = page_soup(response)
+    player = page.select_one("video.post-media-player")
+    assert response.status_code == 200
+    assert player is not None
+    assert len(page.select("video")) == 1
+    assert page.select_one(".markdown-content video") is None
+    assert player["src"].endswith("/media/posts/hermes-six-features-video/hermes-six-features.mp4")
+    assert [button["data-seek-seconds"] for button in page.select("button.timecode-button")] == [
+        "0", "76", "177", "296", "375", "458", "528"
+    ]
+
+
+def test_imported_hermes_youtube_podcast_uses_extracted_opus_as_player_source(tmp_path, settings, client):
+    if not HERMES_YOUTUBE_PODCAST_NOTE.exists() or not HERMES_YOUTUBE_AUDIO.exists():
+        pytest.skip("Real Hermes YouTube extracted opus fixture is stored in ignored tests/assets/ and is unavailable.")
+    settings.MEDIA_ROOT = tmp_path / "media-root"
+
+    post = import_obsidian_note_to_post(
+        HERMES_YOUTUBE_PODCAST_NOTE,
+        assets_dir=HERMES_YOUTUBE_ASSET_DIR,
+        slug="hermes-six-features-podcast",
+    )
+
+    assert post.content_type == Post.ContentType.PODCAST
+    assert post.media_url == ""
+    assert post.primary_media is not None
+    assert post.primary_media.original_filename == "hermes-six-features.opus"
+    assert post.primary_media.media_type == PostMedia.MediaType.AUDIO
+    assert post.primary_media.file.size == HERMES_YOUTUBE_AUDIO.stat().st_size
+    assert post.cover_media is not None
+
+    response = client.get(post.get_absolute_url())
+    page = page_soup(response)
+    player = page.select_one("audio.post-media-player")
+    assert response.status_code == 200
+    assert player is not None
+    assert len(page.select("audio")) == 1
+    assert page.select_one(".markdown-content audio") is None
+    assert player["src"].endswith("/media/posts/hermes-six-features-podcast/hermes-six-features.opus")
+    assert [button["data-seek-seconds"] for button in page.select("button.timecode-button")] == [
+        "0", "76", "177", "296", "375", "458", "528"
+    ]

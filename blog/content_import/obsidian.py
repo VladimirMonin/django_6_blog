@@ -9,7 +9,7 @@ from pathlib import Path
 from django.core.files import File
 
 from blog.content_import.frontmatter import split_frontmatter
-from blog.content_import.media_links import collect_local_media_references
+from blog.content_import.media_links import clean_target, collect_local_media_references
 from blog.content_import.timecodes import extract_timecode_blocks
 from blog.models import Category, Post, PostMedia, Tag
 
@@ -75,6 +75,12 @@ def import_obsidian_note_to_post(
         create_post_media(post, reference.path)
         existing_originals.add(reference.path.name)
 
+    markdown_body = remove_primary_player_media_embeds(
+        markdown_body,
+        references.found,
+        content_type=content_type,
+    )
+
     # Re-render after media rows exist, so local Markdown/Obsidian embeds resolve to /media/ URLs.
     post.content = markdown_body
     post.save()
@@ -123,6 +129,60 @@ def resolve_cover_reference(raw_cover: str, assets_dir: Path) -> Path | None:
     if not cover_path.exists() or not cover_path.is_file():
         raise ValueError(f"Cover file not found: {cover}")
     return cover_path
+
+
+def remove_primary_player_media_embeds(
+    markdown_text: str,
+    references,
+    *,
+    content_type: str,
+) -> str:
+    """Remove local audio/video embeds that are rendered by the detail media player.
+
+    Media posts render their primary audio/video above the timecodes. Keeping the
+    same ``![[file.mp4]]`` or ``![](file.opus)`` line in the Markdown body creates
+    a second player below the timecodes, so importer strips only local player
+    media embeds for video/audio/podcast posts. Image embeds remain in the body.
+    """
+
+    expected_extensions = {
+        Post.ContentType.VIDEO: PostMedia.VIDEO_EXTENSIONS,
+        Post.ContentType.AUDIO: PostMedia.AUDIO_EXTENSIONS,
+        Post.ContentType.PODCAST: PostMedia.AUDIO_EXTENSIONS,
+    }.get(content_type)
+    if not expected_extensions:
+        return markdown_text
+
+    player_targets = {
+        clean_target(reference.source_name).casefold()
+        for reference in references
+        if reference.path.suffix.lower() in expected_extensions
+    }
+    player_targets.update(
+        reference.path.name.casefold()
+        for reference in references
+        if reference.path.suffix.lower() in expected_extensions
+    )
+    if not player_targets:
+        return markdown_text
+
+    kept_lines: list[str] = []
+    for line in (markdown_text or "").splitlines():
+        if is_standalone_player_media_embed(line, player_targets):
+            continue
+        kept_lines.append(line)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(kept_lines)).strip()
+
+
+def is_standalone_player_media_embed(line: str, player_targets: set[str]) -> bool:
+    stripped = line.strip()
+    obsidian_match = re.fullmatch(r"!\[\[([^\]|]+)(?:\|[^\]]+)?\]\]", stripped)
+    if obsidian_match:
+        return clean_target(obsidian_match.group(1)).casefold() in player_targets
+    markdown_match = re.fullmatch(r"!\[[^\]]*\]\(([^)]+)\)", stripped)
+    if markdown_match:
+        return clean_target(markdown_match.group(1).strip().strip("<>")).casefold() in player_targets
+    return False
 
 
 def required_metadata(metadata: dict[str, str], key: str) -> str:

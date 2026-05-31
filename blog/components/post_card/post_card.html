@@ -1,18 +1,19 @@
 <div class="col">
   <article class="card h-100 post-card">
     <a class="post-card-cover-link" href="{{ post.get_absolute_url }}" aria-label="Читать: {{ post.title }}">
-      {% if post.content_type != 'article' %}
       <span class="badge post-badge post-badge-type post-badge-type-overlay post-badge-type-{{ post.content_type }}">
-        {% if post.content_type == 'video' %}<i class="bi bi-camera-video"></i>{% elif post.content_type == 'audio' %}<i class="bi bi-soundwave"></i>{% elif post.content_type == 'podcast' %}<i class="bi bi-broadcast-pin"></i>{% endif %}
+        {% if post.content_type == 'video' %}<i class="bi bi-camera-video"></i>{% elif post.content_type == 'audio' %}<i class="bi bi-soundwave"></i>{% elif post.content_type == 'podcast' %}<i class="bi bi-broadcast-pin"></i>{% else %}<i class="bi bi-file-text"></i>{% endif %}
         {{ post.get_content_type_display }}
       </span>
-      {% endif %}
       {% with cover=post.cover_media %}
         {% if cover %}
           <img class="post-card-cover" src="{{ cover.file.url }}" alt="Обложка статьи {{ post.title }}" loading="lazy">
         {% else %}
-          <div class="post-card-cover post-card-cover-placeholder" aria-hidden="true">
-            <i class="bi bi-journal-code"></i>
+          <div class="post-card-cover post-card-cover-placeholder post-card-cover-placeholder-{{ post.content_type }}" aria-hidden="true">
+            <div class="post-card-cover-placeholder-mark">
+              {% if post.content_type == 'video' %}<i class="bi bi-camera-video"></i>{% elif post.content_type == 'audio' %}<i class="bi bi-soundwave"></i>{% elif post.content_type == 'podcast' %}<i class="bi bi-broadcast-pin"></i>{% else %}<i class="bi bi-journal-code"></i>{% endif %}
+              <span>{{ post.get_content_type_display }}</span>
+            </div>
           </div>
         {% endif %}
       {% endwith %}

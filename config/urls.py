@@ -16,9 +16,10 @@ Including another URLconf
 """
 
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path, re_path
+
+from blog.dev_media import serve_media_with_range
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -26,6 +27,12 @@ urlpatterns = [
     path("", include("blog.urls")),
 ]
 
-# Раздача медиа-файлов в режиме разработки
+# Раздача медиа-файлов в режиме разработки с поддержкой HTTP Range для seek в audio/video.
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += [
+        re_path(
+            rf"^{settings.MEDIA_URL.lstrip('/')}(?P<path>.*)$",
+            serve_media_with_range,
+            {"document_root": settings.MEDIA_ROOT},
+        )
+    ]
