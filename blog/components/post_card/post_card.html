@@ -54,8 +54,17 @@
         <p class="card-text post-card-excerpt text-muted">Короткое описание появится после заполнения мета-поля description.</p>
       {% endif %}
 
-      <div class="mt-auto pt-2">
+      <div class="mt-auto pt-2 post-card-actions">
         {% component "button" text="Читать далее" url=post.get_absolute_url icon="arrow-right" mobile_icon_only=True / %}
+        <button
+          class="share-link-button share-link-button-card"
+          type="button"
+          data-share-copy
+          data-share-url="{{ request.scheme }}://{{ request.get_host }}{{ post.get_absolute_url }}"
+          aria-label="Скопировать ссылку на пост {{ post.title }}">
+          <i class="bi bi-link-45deg" aria-hidden="true"></i>
+          <span data-share-label>Ссылка</span>
+        </button>
       </div>
     </div>
   </article>

@@ -318,3 +318,51 @@ def test_post_cards_render_view_and_like_counters(client):
     body = response.content.decode()
     assert "7 просмотров" in body
     assert "2 лайка" in body
+
+
+@pytest.mark.django_db
+def test_detail_page_exposes_open_graph_metadata_for_link_previews(client):
+    post = create_post(
+        "Красивый шаринг",
+        content="Текст поста",
+    )
+    post.description = "Описание для Telegram, VK и других карточек ссылок."
+    post.save(update_fields=["description"])
+    media = PostMedia(post=post, original_filename="share-cover.webp")
+    media.file.save("share-cover.webp", ContentFile(b"fake-image"), save=True)
+
+    response = client.get(post.get_absolute_url())
+
+    assert response.status_code == 200
+    page = soup(response)
+    assert page.select_one('meta[property="og:type"]')["content"] == "article"
+    assert page.select_one('meta[property="og:title"]')["content"] == post.title
+    assert page.select_one('meta[property="og:description"]')["content"] == post.description
+    assert page.select_one('meta[property="og:url"]')["content"] == f"http://testserver{post.get_absolute_url()}"
+    assert page.select_one('meta[property="og:image"]')["content"].startswith("http://testserver/media/posts/")
+    assert page.select_one('meta[name="twitter:card"]')["content"] == "summary_large_image"
+
+
+@pytest.mark.django_db
+def test_share_copy_controls_render_absolute_post_links_on_detail_and_cards(client):
+    post = create_post("Копируемая ссылка", content="Текст")
+
+    detail_response = client.get(post.get_absolute_url())
+    list_response = client.get("/")
+
+    assert detail_response.status_code == 200
+    assert list_response.status_code == 200
+    absolute_url = f"http://testserver{post.get_absolute_url()}"
+    detail_page = soup(detail_response)
+    list_page = soup(list_response)
+    detail_button = detail_page.select_one("button.share-link-button-detail[data-share-copy]")
+    card_button = list_page.select_one("button.share-link-button-card[data-share-copy]")
+    script = detail_page.select_one('script[src$="/static/js/share-link.js"]')
+
+    assert detail_button is not None
+    assert detail_button["data-share-url"] == absolute_url
+    assert detail_button.select_one("[data-share-label]").get_text(strip=True) == "Скопировать ссылку"
+    assert card_button is not None
+    assert card_button["data-share-url"] == absolute_url
+    assert card_button.select_one("[data-share-label]").get_text(strip=True) == "Ссылка"
+    assert script is not None

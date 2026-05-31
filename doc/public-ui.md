@@ -27,9 +27,22 @@ SQLite `icontains` ограничен ASCII-поведением, поэтому
 - `cover_media` как обложку, если есть image media;
 - type badge для `article`/`video`/`audio`/`podcast`;
 - placeholder для no-cover состояний;
-- category/tag links как обычные URL.
+- category/tag links как обычные URL;
+- copy-link control с абсолютной canonical-ссылкой на detail page.
 
 Не показывай сырой Markdown, frontmatter, служебные blocks или первый H1 внутри карточки.
+
+## Link previews и шаринг
+
+Detail page должен отдавать OpenGraph/Twitter metadata для красивых карточек ссылок в Telegram, VK и других сетях:
+
+- `og:type=article`;
+- `og:title` из `Post.title`;
+- `og:description` из `Post.description`;
+- `og:url` как абсолютный URL текущего detail page;
+- `og:image`/`twitter:image`, если у поста есть `cover_media`.
+
+В ленте и на detail page есть кнопка копирования ссылки. Это не сеть-специфичная share-кнопка: она копирует универсальный абсолютный URL, который пользователь может вставить в Telegram, VK или куда угодно.
 
 ## Detail page
 

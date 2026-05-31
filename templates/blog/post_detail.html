@@ -3,6 +3,25 @@
 
 {% block title %}{{ post.title }} — Django 6 Blog{% endblock %}
 
+{% block social_meta %}
+<meta name="description" content="{{ post.description }}">
+<meta property="og:site_name" content="Django 6 Blog">
+<meta property="og:type" content="article">
+<meta property="og:title" content="{{ post.title }}">
+<meta property="og:description" content="{{ post.description }}">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+{% with cover=post.cover_media %}{% if cover %}
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ cover.file.url }}">
+<meta property="og:image:alt" content="Обложка статьи {{ post.title }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ cover.file.url }}">
+{% else %}
+<meta name="twitter:card" content="summary">
+{% endif %}{% endwith %}
+<meta name="twitter:title" content="{{ post.title }}">
+<meta name="twitter:description" content="{{ post.description }}">
+{% endblock %}
+
 {% block content %}
 <nav aria-label="Навигация по статье" class="breadcrumbs-dynamic article-breadcrumbs-sticky">
     <div class="container d-flex align-items-center gap-2 overflow-hidden">
@@ -48,6 +67,17 @@
                         </span>
                     </div>
                     {% include "blog/_post_reactions.html" %}
+                    <div class="post-share-panel mt-3" aria-label="Поделиться постом">
+                        <button
+                            class="share-link-button share-link-button-detail"
+                            type="button"
+                            data-share-copy
+                            data-share-url="{{ request.build_absolute_uri }}"
+                            aria-label="Скопировать ссылку на пост {{ post.title }}">
+                            <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                            <span data-share-label>Скопировать ссылку</span>
+                        </button>
+                    </div>
                 </header>
 
                 {% if post.has_media_player %}

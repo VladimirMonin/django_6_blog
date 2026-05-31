@@ -259,11 +259,17 @@ class Post(models.Model):
 
     @property
     def body_content_html(self):
-        """Return rendered HTML without a leading H1 that duplicates the post title."""
+        """Return rendered HTML without duplicate title or raw service media embeds."""
         html = self.content_html or ""
         match = re.match(r"\s*<h1[^>]*>(.*?)</h1>", html, flags=re.IGNORECASE | re.DOTALL)
         if match and strip_tags(match.group(1)).strip().casefold() == self.title.strip().casefold():
-            return html[match.end() :].lstrip()
+            html = html[match.end() :].lstrip()
+        html = re.sub(
+            r"\s*<p>\s*!\[\[[^\]]+\]\]\s*</p>\s*",
+            "",
+            html,
+            flags=re.IGNORECASE,
+        )
         return html
 
     @property

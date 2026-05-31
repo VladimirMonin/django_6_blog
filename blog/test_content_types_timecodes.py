@@ -520,6 +520,7 @@ def test_imported_hermes_youtube_video_uses_real_downloaded_mp4_as_player_source
     assert player is not None
     assert len(page.select("video")) == 1
     assert page.select_one(".markdown-content video") is None
+    assert "![[" not in page.select_one(".markdown-content").get_text()
     assert player["src"].endswith("/media/posts/hermes-six-features-video/hermes-six-features.mp4")
     assert [button["data-seek-seconds"] for button in page.select("button.timecode-button")] == [
         "0", "76", "177", "296", "375", "458", "528"
@@ -552,6 +553,7 @@ def test_imported_hermes_youtube_podcast_uses_extracted_opus_as_player_source(tm
     assert player is not None
     assert len(page.select("audio")) == 1
     assert page.select_one(".markdown-content audio") is None
+    assert "![[" not in page.select_one(".markdown-content").get_text()
     assert player["src"].endswith("/media/posts/hermes-six-features-podcast/hermes-six-features.opus")
     assert [button["data-seek-seconds"] for button in page.select("button.timecode-button")] == [
         "0", "76", "177", "296", "375", "458", "528"

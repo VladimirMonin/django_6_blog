@@ -25,7 +25,8 @@ When search behavior changes, test Cyrillic queries separately. SQLite `icontain
 
 ## Cards
 
-Cards use `Post.description`, cover/placeholder, type badge, category and tag links. Do not leak raw Markdown, frontmatter or service blocks into cards.
+- Cards use `Post.description`, cover/placeholder, type badge, category and tag links. Do not leak raw Markdown, frontmatter or service blocks into cards.
+- Cards and detail pages expose a copy-link control with an absolute detail URL; link sharing is universal, not tied to network-specific buttons.
 
 ## Detail page
 
