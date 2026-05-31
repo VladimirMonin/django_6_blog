@@ -1,7 +1,7 @@
 # AGENTS.md — Django 6 Blog · Master Instruction
 
 > This file is the project router for coding agents. It is not a substitute for subsystem instructions.
-> Before touching a subsystem, read every relevant `.github/instructions/*.instructions.md` file.
+> Before touching a subsystem, read every relevant `instructions/*.instructions.md` file.
 
 ## Project identity
 
@@ -49,16 +49,16 @@ Use smaller tests first when the change is narrow.
 
 ## Instruction routing
 
-`.github/instructions/` contains atomic subsystem instructions. Read all matching files before editing that area.
+`instructions/` contains atomic subsystem instructions. Read all matching files before editing that area.
 
 | Area | Instruction |
 |---|---|
-| Project setup, dependencies, commit safety | `.github/instructions/CORE.project.instructions.md` |
-| Markdown/Obsidian import, frontmatter, local media | `.github/instructions/CONTENT.import.instructions.md` |
-| Video/audio/podcast, player, cover, timecodes | `.github/instructions/CONTENT.media.instructions.md` |
-| Public list/detail UI, HTMX, reactions, visual QA | `.github/instructions/UI.public_blog.instructions.md` |
-| Tests, smoke gates, browser evidence | `.github/instructions/TEST.quality_gates.instructions.md` |
-| README, `doc/`, instructions style | `.github/instructions/DOCS.documentation.instructions.md` |
+| Project setup, dependencies, commit safety | `instructions/CORE.project.instructions.md` |
+| Markdown/Obsidian import, frontmatter, local media | `instructions/CONTENT.import.instructions.md` |
+| Video/audio/podcast, player, cover, timecodes | `instructions/CONTENT.media.instructions.md` |
+| Public list/detail UI, HTMX, reactions, visual QA | `instructions/UI.public_blog.instructions.md` |
+| Tests, smoke gates, browser evidence | `instructions/TEST.quality_gates.instructions.md` |
+| README, `doc/`, instructions style | `instructions/DOCS.documentation.instructions.md` |
 
 If no instruction clearly matches, read `doc/README.md`, inspect the current code, then update instructions only if the discovered rule is fundamental.
 

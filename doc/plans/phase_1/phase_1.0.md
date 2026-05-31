@@ -73,7 +73,7 @@
 ## Документация
 
 - [Style Guide](style_guide_html.md) — концепция дизайна
-- [Context7 библиотеки](../../.github/instructions/main_guide.instructions.md) — ID для документации
+- [Context7 библиотеки](../../instructions/main_guide.instructions.md) — ID для документации
 - [Django 6 Template Innovations](../../researches/report_2/README.md) — исследование Template Partials
 - [Django Components Research](../../researches/report_3/README.md) — исследование компонентной системы
 - [HTMX Integration Research](../../researches/report_4/README.md) — исследование HTMX

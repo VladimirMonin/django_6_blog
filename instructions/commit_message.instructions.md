@@ -42,7 +42,7 @@ docs: add project documentation and agent instructions
 
 - Обновлена README-точка входа
 - Добавлены атомарные документы в doc/
-- Синхронизированы AGENTS.md и .github/instructions/
+- Синхронизированы AGENTS.md и instructions/
 ```
 
 ## Safety

@@ -1,7 +1,7 @@
 ---
-applyTo: "README.md,doc/**/*.md,AGENTS.md,.github/instructions/*.instructions.md"
+applyTo: "README.md,doc/**/*.md,AGENTS.md,instructions/*.instructions.md"
 name: "DOCS.Documentation"
-description: "Use when updating README, doc/*.md, AGENTS.md, or .github/instructions: documentation structure, atomic docs, instruction style, routing, and what belongs in fundamental project instructions."
+description: "Use when updating README, doc/*.md, AGENTS.md, or instructions: documentation structure, atomic docs, instruction style, routing, and what belongs in fundamental project instructions."
 ---
 
 # DOCS — Documentation and instructions
@@ -13,7 +13,7 @@ description: "Use when updating README, doc/*.md, AGENTS.md, or .github/instruct
 - Current operational docs live as atomic `doc/*.md` files.
 - Historical plans, architecture serials and research reports stay in their subfolders and are references only.
 - `AGENTS.md` is the agent router.
-- `.github/instructions/*.instructions.md` contains atomic subsystem instructions.
+- `instructions/*.instructions.md` contains atomic subsystem instructions.
 
 ## Atomicity
 

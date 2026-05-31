@@ -10,7 +10,7 @@
 - [`media-content.md`](media-content.md) — `article`/`video`/`audio`/`podcast`, HTML5-плееры, cover, `timecodes`.
 - [`public-ui.md`](public-ui.md) — публичная лента, карточки, detail page, HTMX, реакции, визуальные gates.
 - [`cli.md`](cli.md) — management commands и рабочие CLI-сценарии.
-- [`agent-workflow.md`](agent-workflow.md) — правила для агентов и поддержка `.github/instructions/`.
+- [`agent-workflow.md`](agent-workflow.md) — правила для агентов и поддержка `instructions/`.
 
 ## Исторические материалы
 
@@ -25,4 +25,4 @@
 2. Актуальные справочники живут в `doc/*.md` и должны быть атомарными.
 3. Большие исторические серии и планы не смешиваются с текущими operational docs.
 4. Если меняется поведение CLI, импорта, публичного UI, медиа или тестовых gates — обновляй соответствующий документ в том же слайсе.
-5. Фундаментальные правила для агентов обновляй в `AGENTS.md` и `.github/instructions/*.instructions.md`, а не в длинных чатовых отчётах.
+5. Фундаментальные правила для агентов обновляй в `AGENTS.md` и `instructions/*.instructions.md`, а не в длинных чатовых отчётах.
