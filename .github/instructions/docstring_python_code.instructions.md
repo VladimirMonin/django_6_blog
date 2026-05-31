@@ -1,91 +1,43 @@
 ---
 applyTo: "**/*.py"
-name: Python Docstring Guidelines
-description: Guidelines for writing clear and consistent docstrings in Python code.
+name: "DOCS.PythonDocstrings"
+description: "Use when adding or changing Python docstrings in django_6_blog modules, functions, classes, services, management commands, tests, and helpers."
 ---
 
-# Документирование кода (на русском языке)
+# DOCS — Python docstrings
 
-## Модули (файлы .py)
+## Language and style
 
-Первая строка — путь к файлу относительно корня проекта
-Далее — краткое описание.
-Далее — публичный API модуля:
+- Write project docstrings in Russian unless a public library/API convention requires English.
+- Keep docstrings factual and short.
+- Prefer type hints in function signatures; do not duplicate obvious types in docstrings.
 
-```python
-# core/image_utils.py
-"""Утилиты для работы с изображениями.
+## Modules
 
-Функции:
-    get_file_mime_type(file_path: str) -> str | None
-        Определяет MIME-тип файла.
-    read_file_as_bytes(file_path: str) -> bytes
-        Читает файл как байты.
-    is_image_valid(file_path: str) -> bool
-        Проверяет, поддерживается ли формат изображения.
-"""
-```
+Use a module docstring when the file has a meaningful responsibility that is not obvious from its path.
 
-Для модулей с классами:
+Good module docstring shape:
 
 ```python
-# core/gemini_client.py
-"""Клиент для работы с Gemini API.
-
-Классы:
-    GeminiClient
-        Клиент для отправки запросов к Gemini API.
-
-        Методы:
-            generate_content(prompt: str, image: bytes) -> dict
-                Генерирует контент на основе промпта и изображения.
-            analyze_video(video_path: str, mode: str) -> VideoAnalysis
-                Анализирует видео с извлечением кадров.
-"""
+"""Import local Obsidian/Markdown notes into blog posts."""
 ```
 
-## Функции и методы
+Do not add long module inventories that duplicate the code.
 
-Google-style docstring:
+## Functions and methods
 
-```python
-def analyze_image(image_path: str, model: str = "default") -> dict:
-    """Анализирует изображение через Gemini API.
+Use Google-style sections only when they add information:
 
-    Args:
-        image_path: Путь к файлу изображения.
-        model: Модель для анализа (по умолчанию "default").
+- `Args` for non-obvious parameters;
+- `Returns` for non-obvious return contracts;
+- `Raises` for expected domain errors.
 
-    Returns:
-        Словарь с результатами анализа.
+Skip docstrings for trivial private helpers, simple getters, one-line wrappers and tests whose assertion names are already clear.
 
-    Raises:
-        ValueError: Если формат изображения не поддерживается.
-        FileNotFoundError: Если файл не найден.
-    """
-```
+## Classes
 
-**Правила:**
+Class docstrings should explain responsibility, not list every field. Model field meanings belong in model definitions, docs or tests when they are user-facing contracts.
 
-- Args, Returns, Raises — только при наличии
-- Типы в сигнатуре, НЕ дублировать в docstring
-- Краткое описание — глагол: "Анализирует", "Получает", "Создаёт"
+## Keep current
 
-## Классы
-
-```python
-class ImageProcessor:
-    """Процессор для обработки изображений.
-
-    Attributes:
-        client: Клиент для API запросов.
-        config: Конфигурация процессора.
-    """
-```
-
-## Что НЕ документировать
-
-- Приватные методы (`_parse_response`)
-- Простые getter/setter
-- `__init__` с простым присваиванием
-- Однострочные lambda
+When behavior changes, update or remove stale docstrings in the same slice. A stale docstring is worse than no docstring.

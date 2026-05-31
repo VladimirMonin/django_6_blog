@@ -44,6 +44,8 @@ cp .env.example .env
 
 ## Проверки перед коммитом
 
+Перед работой агентам нужно прочитать [`../AGENTS.md`](../AGENTS.md) и релевантные файлы из [`../.github/instructions/`](../.github/instructions/). `AGENTS.md` — роутер; атомарные правила живут в `.github/instructions/*.instructions.md`.
+
 ```bash
 uv lock --check
 uv run python manage.py check

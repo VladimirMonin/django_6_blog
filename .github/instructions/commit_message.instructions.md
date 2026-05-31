@@ -1,37 +1,50 @@
 ---
 applyTo: "**"
-name: Commit Message Guidelines
-description: Guidelines for writing clear and effective commit messages.
+name: "DOCS.CommitMessages"
+description: "Use when writing commit messages for django_6_blog: conventional prefix, concise summary, optional Russian bullet body for multi-file documentation or feature slices."
 ---
 
-Когда тебя просят написать сообщение коммита, следуй этим рекомендациям:
-Пользователь придерживается англоязычных префиксов:
+# DOCS — Commit messages
 
-- feat: для новых функций
-- bugfix: для исправлений ошибок
-- hotfix: для срочных исправлений ошибок
-- docs: для изменений в документации
-- style: для изменений, не влияющих на смысл кода (пробелы, форматирование, пропущенные точки с запятой и т.д.)
-- refactor: для изменений в коде, которые не исправляют ошибку и не добавляют функцию
+## Prefixes
 
-Мы работаем спринтами. Обычно они называются "фаза". Они делятся на подфазы. Вроде 1.0, 1.1, 1.2 и т.д.
+Use short English prefixes:
 
-Коммиты выглядят примерно так:
+- `feat:` — new feature;
+- `bugfix:` — bug fix;
+- `hotfix:` — urgent fix;
+- `docs:` — documentation changes;
+- `style:` — formatting or visual/style-only changes;
+- `refactor:` — behavior-preserving code restructuring;
+- `test:` — tests-only changes;
+- `chore:` — maintenance.
 
-Мы пишем фазу с подфазой и префикс коммита. Потом расписываем что сделали.
-Обрати внимание на стурктуру.
-`{phase} {подфаза} {префикс}: {краткое описание НА РУССКОМ!!!}:`
+## Summary
 
-```
-phase 1.1 feat: Добавлен новый модуль анализа изображений
-- Создан модуль для анализа изображений с использованием ИИ
-- Созданы функции: analyze_image() и generate_image_description()
-- ... {Таких пунктов может быть 5-10 штук}
+Keep the first line concise and in the imperative/summary style:
+
+```text
+docs: add project documentation and agent instructions
 ```
 
-Так же, могут быть горячие фиксы вне фаз или правки документации. Это допускается. Тогда фазу не указываем.
+For phase-specific work, a phase prefix is allowed if the user or active plan asks for it:
 
-```docs: Обновлена документация по установке
-- Добавлены инструкции по установке для Windows
-- Обновлены ссылки на внешние ресурсы
+```text
+phase 4.3 feat: Добавлены медиа-типы записей
 ```
+
+## Body
+
+Use a body only when it helps future review. Bullets may be in Russian. Do not paste logs.
+
+```text
+docs: add project documentation and agent instructions
+
+- Обновлена README-точка входа
+- Добавлены атомарные документы в doc/
+- Синхронизированы AGENTS.md и .github/instructions/
+```
+
+## Safety
+
+Do not invent a commit message before checking the actual staged diff. The message must describe what is staged, not what was planned.

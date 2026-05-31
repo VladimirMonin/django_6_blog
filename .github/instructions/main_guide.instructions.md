@@ -1,28 +1,20 @@
 ---
 applyTo: "**"
-name: Main Project Guidelines
-description: Most important guidelines for the project.
+name: "CORE.MainGuide"
+description: "Compatibility router for all django_6_blog work: read AGENTS.md first, then the matching .github/instructions/*.instructions.md subsystem files."
 ---
 
-## Проект
+# CORE — Main guide router
 
-Django 6 блог с SSR + HTMX (ощущение SPA без сложности фронтенд-фреймворков), Bootstrap 5, django-components.
+This file exists for tools that only read `.github/instructions/*.instructions.md`.
 
-**Цветовая схема:** белый фон, черные кнопки, желтые акценты для навигации.
+Before editing the project:
 
-**Структура документации:**
+1. Read `AGENTS.md`.
+2. Identify affected subsystems.
+3. Read every matching instruction in `.github/instructions/`.
+4. Use `doc/README.md` as the current documentation catalog.
 
-- `doc/plans/` — планы спринтов/фаз
-- `doc/researches/` — готовые решения по стеку (5 отчетов: Django 6, Templates, Components, HTMX, Markdown)
-- `doc/architecture/` — архитектурный сериал (пишется в процессе разработки)
-- `doc/plans/phase_1/style_guide_html.md` — концепция дизайна и UI-стратегия проекта
+Do not treat historical `doc/plans/`, `doc/architecture/` serials or `doc/researches/` as current operational rules unless a current top-level `doc/*.md` file points there.
 
-## Context7 библиотеки
-
-| Библиотека        | Context7 ID                               |
-| ----------------- | ----------------------------------------- |
-| Django 6          | `/websites/djangoproject_en_6_0`          |
-| HTMX              | `/bigskysoftware/htmx`                    |
-| Bootstrap 5       | `/websites/getbootstrap_5_3`              |
-| django-components | `/django-components/django-components`    |
-| django-htmx       | `/websites/django-htmx_readthedocs_io_en` |
+Project-wide hard rules are in `CORE.project.instructions.md` and `AGENTS.md`.
