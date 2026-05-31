@@ -27,6 +27,10 @@
                 <header class="mb-5">
                     <h1 class="display-5 fw-bold mb-3">{{ post.title }}</h1>
                     <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge text-bg-dark post-type-badge post-type-{{ post.content_type }}">
+                            {% if post.content_type == 'video' %}<i class="bi bi-camera-video"></i>{% elif post.content_type == 'audio' %}<i class="bi bi-soundwave"></i>{% elif post.content_type == 'podcast' %}<i class="bi bi-broadcast-pin"></i>{% else %}<i class="bi bi-file-text"></i>{% endif %}
+                            {{ post.get_content_type_display }}
+                        </span>
                         {% if post.category %}
                         <a class="badge text-bg-warning text-dark text-decoration-none" href="{% url 'post_list' %}?category={{ post.category.slug|urlencode }}">
                             {{ post.category.name }}
@@ -45,6 +49,31 @@
                     </div>
                     {% include "blog/_post_reactions.html" %}
                 </header>
+
+                {% if post.has_media_player %}
+                <section class="post-media-section mb-5" aria-label="Медиа записи">
+                    <div class="post-media-card">
+                        {% if post.uses_video_player %}
+                        <video class="post-media-player" src="{{ post.player_media_url }}" controls preload="metadata" data-timecode-player="post-media-player"></video>
+                        {% elif post.uses_audio_player %}
+                        <audio class="post-media-player w-100" src="{{ post.player_media_url }}" controls preload="metadata" data-timecode-player="post-media-player"></audio>
+                        {% endif %}
+                    </div>
+                    {% if post.timecodes %}
+                    <div class="timecode-list mt-3" aria-label="Таймкоды">
+                        <h2 class="h5 mb-3"><i class="bi bi-clock-history"></i> Таймкоды</h2>
+                        <div class="d-grid gap-2">
+                            {% for item in post.timecodes %}
+                            <button class="timecode-button btn btn-outline-dark text-start" type="button" data-seek-seconds="{{ item.seconds }}" data-timecode-target="post-media-player">
+                                <span class="timecode-time fw-semibold">{{ item.time }}</span>
+                                <span class="timecode-label">{{ item.label }}</span>
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </section>
+                {% endif %}
 
                 <div class="post-content markdown-content">
                     {{ post.body_content_html|safe }}

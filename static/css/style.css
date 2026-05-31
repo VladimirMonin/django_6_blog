@@ -286,7 +286,7 @@ html {
 
 /* Плавное появление контента при поиске */
 #post-container > .col {
-  animation: fadeIn 400ms ease-in;
+  animation: none;
 }
 
 @keyframes fadeIn {
@@ -837,6 +837,37 @@ button[hx-get]:active::after {
   color: #212529;
 }
 
+.post-badge-type {
+  background: #212529;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 0.4rem 1rem rgba(0, 0, 0, 0.18);
+}
+
+.post-badge-type-overlay {
+  position: absolute;
+  top: 0.85rem;
+  left: 0.85rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  backdrop-filter: blur(8px);
+  background: rgba(33, 37, 41, 0.88);
+}
+
+.post-badge-type-video {
+  background: rgba(13, 110, 253, 0.92);
+}
+
+.post-badge-type-audio {
+  background: rgba(25, 135, 84, 0.92);
+}
+
+.post-badge-type-podcast {
+  background: rgba(111, 66, 193, 0.92);
+}
+
 .post-card {
   border: 1px solid rgba(33, 37, 41, 0.08);
   border-radius: 1.25rem;
@@ -848,6 +879,7 @@ button[hx-get]:active::after {
   display: block;
   color: inherit;
   text-decoration: none;
+  position: relative;
 }
 
 .post-card-cover {
@@ -984,3 +1016,56 @@ button[hx-get]:active::after {
     right: 0.75rem;
   }
 }
+
+/* Audio/video post players and clickable timecodes */
+.post-media-section {
+  border-radius: 1.25rem;
+}
+
+.post-media-card {
+  overflow: hidden;
+  border: 1px solid rgba(33, 37, 41, 0.08);
+  border-radius: 1.25rem;
+  background: linear-gradient(135deg, #111827, #343a40);
+  box-shadow: 0 1rem 2.5rem rgba(15, 23, 42, 0.12);
+}
+
+.post-media-player {
+  display: block;
+  width: 100%;
+  max-height: 72vh;
+  border-radius: 1.25rem;
+}
+
+.timecode-list {
+  padding: 1rem;
+  border: 1px solid rgba(33, 37, 41, 0.08);
+  border-radius: 1rem;
+  background: #fff;
+}
+
+.timecode-button {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  border-radius: 0.85rem;
+}
+
+.timecode-button.is-active,
+.timecode-button:focus-visible {
+  color: #111827;
+  background: #fff3cd;
+  border-color: #ffc107;
+  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.2);
+}
+
+.timecode-time {
+  min-width: 4.5rem;
+  color: #0d6efd;
+  font-variant-numeric: tabular-nums;
+}
+
+.timecode-label {
+  flex: 1;
+}
+

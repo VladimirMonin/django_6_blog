@@ -81,8 +81,8 @@ class PostAdmin(ModelAdmin):
     Административный интерфейс для модели Post с Unfold UI.
     """
 
-    list_display = ("title", "category", "status", "view_count", "like_count", "display_created_at")
-    list_filter = ("status", "category", "tags", "created_at")
+    list_display = ("title", "content_type", "category", "status", "view_count", "like_count", "display_created_at")
+    list_filter = ("content_type", "status", "category", "tags", "created_at")
     search_fields = ("title", "description", "content", "category__name", "tags__name")
     prepopulated_fields = {"slug": ("title",)}
     date_hierarchy = "created_at"
@@ -92,6 +92,7 @@ class PostAdmin(ModelAdmin):
 
     fieldsets = (
         ("Основная информация", {"fields": ("title", "slug", "description", "category", "tags", "content")}),
+        ("Тип и медиа", {"fields": ("content_type", "media_url", "timecodes")}),
         (
             "HTML предпросмотр",
             {"fields": ("display_html_preview",), "classes": ("collapse",)},

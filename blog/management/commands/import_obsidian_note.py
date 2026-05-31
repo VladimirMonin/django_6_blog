@@ -40,6 +40,19 @@ class Command(BaseCommand):
             help="Override the post description instead of using frontmatter description.",
         )
         parser.add_argument(
+            "--content-type",
+            dest="content_type",
+            choices=["article", "video", "audio", "podcast"],
+            default=None,
+            help="Override the post type. Defaults to frontmatter type/content_type or article.",
+        )
+        parser.add_argument(
+            "--media-url",
+            dest="media_url",
+            default=None,
+            help="External audio/video URL for the post media player.",
+        )
+        parser.add_argument(
             "--replace",
             action="store_true",
             help="Delete an existing post with the same slug before import.",
@@ -101,6 +114,8 @@ class Command(BaseCommand):
                 slug=slug,
                 title=options["title"],
                 description=options["description"],
+                content_type=options["content_type"],
+                media_url=options["media_url"],
             )
         except ValueError as exc:
             raise CommandError(str(exc)) from exc
@@ -113,7 +128,8 @@ class Command(BaseCommand):
             self.style.SUCCESS(
                 "Imported Obsidian note: "
                 f"url={post.get_absolute_url()}, slug={post.slug}, title={post.title!r}, "
-                f"description={post.description!r}, "
+                f"description={post.description!r}, content_type={post.content_type}, "
+                f"timecodes={len(post.timecodes)}, "
                 f"media={post.media_files.count()}, media_by_type={media_counts}"
             )
         )

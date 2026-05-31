@@ -5,6 +5,8 @@
 через систему процессоров (Beautiful Soup).
 """
 
+import html as html_module
+
 import markdown
 
 from blog.services.markdown_media_preprocessor import MarkdownMediaPreprocessor
@@ -83,7 +85,7 @@ def convert_markdown_to_html(markdown_text: str, post=None) -> str:
                         '<button type="button" class="btn btn-sm btn-light mermaid-reset">Сброс</button>'
                         '<button type="button" class="btn btn-sm btn-dark mermaid-panzoom-fullscreen">На весь экран</button>'
                         '</div>'
-                        f'<div class="mermaid">{source}</div>'
+                        f'<div class="mermaid">{html_module.escape(source)}</div>'
                         '</figure>'
                     ),
                 }

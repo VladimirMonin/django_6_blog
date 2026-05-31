@@ -82,6 +82,51 @@ uv run python manage.py collect_note_assets \
 
 `tests/assets/` игнорируется Git и используется только как локальная рабочая папка для smoke-проверок.
 
+
+## Типы записей и таймкоды
+
+Модель `Post` поддерживает четыре типа контента:
+
+- `article` — обычная статья;
+- `video` — видео с HTML5 video-плеером;
+- `audio` — аудио с HTML5 audio-плеером;
+- `podcast` — подкаст с audio-плеером и отдельным бейджем.
+
+Для медиа-постов можно указать внешний файл во frontmatter:
+
+```yaml
+---
+title: "Видео выпуск"
+description: "Короткое описание для карточки."
+type: video
+media_url: https://cdn.example.test/video.mp4
+cover: cover.webp
+tags: [django, video]
+---
+```
+
+Таймкоды хранятся прямо в Markdown как fenced code block с языком `timecodes`:
+
+````markdown
+```timecodes
+00:00 Вступление
+01:23 — Главная мысль
+1:02:03 | Ответы на вопросы
+```
+````
+
+При импорте блок `timecodes` удаляется из тела статьи, парсится в `Post.timecodes` и на публичной странице рендерится как список кнопок. Клик по кнопке проматывает audio/video-плеер в нужную точку. Для `video`, `audio` и `podcast` CLI валидирует каждую непустую строку блока: формат должен быть `MM:SS Название` или `H:MM:SS Название`, секунды — `00..59`, минуты в часовом формате — `00..59`. Ошибка формата останавливает импорт до записи в БД.
+
+## `create_content_note`
+
+Создаёт Markdown-шаблон для статьи, видео, аудио или подкаста.
+
+```bash
+uv run python manage.py create_content_note notes/podcast.md   --title "Подкаст выпуск 1"   --description "Короткое описание подкаста."   --content-type podcast   --tags "django,agents"   --media-url "https://cdn.example.test/podcast.mp3"   --cover "cover.webp"
+```
+
+Команда создаёт frontmatter с `title`, `description`, `type`, `tags`, опциональными `media_url` и `cover`, а также заготовкой блока `timecodes` для медиа-типов. По умолчанию существующий файл не перезаписывается; для перезаписи есть `--force`.
+
 ## `import_obsidian_note`
 
 Импортирует подготовленную Markdown/Obsidian-заметку в модель `Post` и прикрепляет найденные медиа как `PostMedia`.
@@ -102,6 +147,9 @@ uv run python manage.py import_obsidian_note NOTE [options]
 - `--slug SLUG` — явный slug статьи. Если не указан, slug строится из заголовка.
 - `--title TEXT` — явный заголовок статьи. Приоритет выше frontmatter.
 - `--description TEXT` — явное описание для карточки статьи. Приоритет выше frontmatter.
+- `--content-type article|video|audio|podcast` — тип записи. Приоритет выше frontmatter `content_type`/`type`.
+- `--media-url URL` — внешний URL основного аудио/видео для плеера.
+- `cover` во frontmatter — локальная обложка из `--assets-dir`; поддерживаются `cover.webp`, `images/cover.webp`, `![[cover.webp]]`, `![alt](cover.webp)`. Обложка сохраняется как первый image `PostMedia` и используется в карточке.
 - `--replace` — удалить существующий пост с тем же slug и импортировать заново.
 - `--check-links` — только проверить локальные ссылки, без создания/изменения поста.
 

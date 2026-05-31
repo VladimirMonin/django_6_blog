@@ -3,12 +3,12 @@
 from blog.content_import import (
     collect_broken_local_links,
     collect_local_media_references,
-    import_obsidian_note_to_post,
     split_frontmatter,
 )
 from blog.content_import.obsidian import (
     category_from_metadata,
     humanize_taxonomy_name,
+    import_obsidian_note_to_post,
     normalize_obsidian_note_links,
     tags_from_metadata,
 )

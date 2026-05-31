@@ -1,12 +1,14 @@
 import re
 from pathlib import PurePath
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from django.urls import reverse
 from django.utils.html import strip_tags
 from django.utils.text import Truncator
 
+from blog.content_import.timecodes import time_to_seconds
 from blog.services import convert_markdown_to_html
 from blog.slug_utils import build_slug, build_unique_slug
 
@@ -105,8 +107,28 @@ class Post(models.Model):
         DRAFT = "draft", "Черновик"
         PUBLISHED = "published", "Опубликовано"
 
+    class ContentType(models.TextChoices):
+        ARTICLE = "article", "Статья"
+        VIDEO = "video", "Видео"
+        AUDIO = "audio", "Аудио"
+        PODCAST = "podcast", "Подкаст"
+
     title = models.CharField(max_length=200, verbose_name="Заголовок")
     description = models.TextField(verbose_name="Описание")
+    content_type = models.CharField(
+        max_length=20,
+        choices=ContentType.choices,
+        default=ContentType.ARTICLE,
+        db_index=True,
+        verbose_name="Тип записи",
+    )
+    media_url = models.URLField(blank=True, verbose_name="URL основного медиа")
+    timecodes = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Таймкоды",
+        help_text="Список объектов: time, seconds, label.",
+    )
     slug = models.SlugField(max_length=200, unique=True, verbose_name="URL-slug")
     category = models.ForeignKey(
         Category,
@@ -152,6 +174,35 @@ class Post(models.Model):
         """
         return reverse("post_detail", kwargs={"slug": self.slug})
 
+    def clean(self):
+        super().clean()
+        if self.content_type not in {
+            self.ContentType.VIDEO,
+            self.ContentType.AUDIO,
+            self.ContentType.PODCAST,
+        }:
+            return
+        if not self.timecodes:
+            return
+        if not isinstance(self.timecodes, list):
+            raise ValidationError({"timecodes": "Invalid timecode data: expected a list."})
+        for index, entry in enumerate(self.timecodes, start=1):
+            if not isinstance(entry, dict):
+                raise ValidationError({"timecodes": f"Invalid timecode #{index}: expected an object."})
+            time_text = entry.get("time")
+            label = entry.get("label")
+            seconds = entry.get("seconds")
+            if not isinstance(time_text, str) or not isinstance(label, str) or not label.strip():
+                raise ValidationError({"timecodes": f"Invalid timecode #{index}: time and label are required."})
+            try:
+                expected_seconds = time_to_seconds(time_text)
+            except (TypeError, ValueError) as exc:
+                raise ValidationError({"timecodes": f"Invalid timecode #{index}: {time_text!r}. {exc}"}) from exc
+            if not isinstance(seconds, int) or seconds != expected_seconds:
+                raise ValidationError(
+                    {"timecodes": f"Invalid timecode #{index}: seconds must match {time_text!r}."}
+                )
+
     @property
     def cover_media(self):
         """Return the first attached image as the public cover for list/detail UI."""
@@ -162,6 +213,49 @@ class Post(models.Model):
                 None,
             )
         return self.media_files.filter(media_type=PostMedia.MediaType.IMAGE).first()
+
+    @property
+    def primary_media(self):
+        """Return the first attached media file matching the post content type."""
+        media_type_map = {
+            self.ContentType.VIDEO: PostMedia.MediaType.VIDEO,
+            self.ContentType.AUDIO: PostMedia.MediaType.AUDIO,
+            self.ContentType.PODCAST: PostMedia.MediaType.AUDIO,
+        }
+        expected_type = media_type_map.get(self.content_type)
+        if not expected_type:
+            return None
+        prefetched_media = getattr(self, "_prefetched_objects_cache", {}).get("media_files")
+        if prefetched_media is not None:
+            return next(
+                (media for media in prefetched_media if media.media_type == expected_type),
+                None,
+            )
+        return self.media_files.filter(media_type=expected_type).first()
+
+    @property
+    def player_media_url(self):
+        """Return external media URL or uploaded primary media URL for players."""
+        if self.media_url:
+            return self.media_url
+        media = self.primary_media
+        return media.file.url if media else ""
+
+    @property
+    def has_media_player(self):
+        return self.content_type in {
+            self.ContentType.VIDEO,
+            self.ContentType.AUDIO,
+            self.ContentType.PODCAST,
+        } and bool(self.player_media_url)
+
+    @property
+    def uses_video_player(self):
+        return self.content_type == self.ContentType.VIDEO
+
+    @property
+    def uses_audio_player(self):
+        return self.content_type in {self.ContentType.AUDIO, self.ContentType.PODCAST}
 
     @property
     def body_content_html(self):
@@ -215,6 +309,7 @@ class Post(models.Model):
         if self.content:
             self.content_html = convert_markdown_to_html(self.content, post=self)
 
+        self.clean()
         super().save(*args, **kwargs)
 
 
