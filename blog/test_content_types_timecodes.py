@@ -409,6 +409,12 @@ def test_video_detail_renders_media_player_and_clickable_timecodes(client):
         "03:20 Демо",
     ]
     assert "timecodes.js" in response.content.decode()
+    timecode_panel = page.select_one(".timecode-list")
+    assert timecode_panel is not None
+    assert page.select_one(".timecode-list-header .timecode-list-icon") is not None
+    assert "Клик по пункту перематывает плеер" in timecode_panel.get_text(" ", strip=True)
+    assert page.select_one(".timecode-grid") is not None
+    assert "btn-outline-dark" not in response.content.decode()
 
 
 def test_audio_and_podcast_detail_render_audio_player(client):

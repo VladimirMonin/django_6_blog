@@ -1097,34 +1097,130 @@ button[hx-get]:active::after {
 }
 
 .timecode-list {
-  padding: 1rem;
+  padding: clamp(1rem, 2vw, 1.25rem);
   border: 1px solid rgba(33, 37, 41, 0.08);
-  border-radius: 1rem;
-  background: #fff;
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 193, 7, 0.16), transparent 32%),
+    linear-gradient(135deg, #fffdf5 0%, #ffffff 58%, #f8fafc 100%);
+  box-shadow: 0 1rem 2.25rem rgba(33, 37, 41, 0.06);
+}
+
+.timecode-list-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.timecode-list-icon {
+  width: 2.65rem;
+  height: 2.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 0.9rem;
+  color: #4c3900;
+  background: linear-gradient(135deg, #ffc107 0%, #ffe8a3 100%);
+  box-shadow: 0 0.75rem 1.5rem rgba(255, 193, 7, 0.22);
+}
+
+.timecode-list-subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.timecode-grid {
+  display: grid;
+  gap: 0.65rem;
 }
 
 .timecode-button {
-  display: flex;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(4.5rem, auto) 1fr;
   gap: 0.75rem;
-  align-items: baseline;
-  border-radius: 0.85rem;
+  align-items: center;
+  width: 100%;
+  min-height: 3.15rem;
+  padding: 0.65rem 0.85rem 0.65rem 0.7rem;
+  border: 1px solid rgba(222, 226, 230, 0.92);
+  border-radius: 1rem;
+  color: #343a40;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 0.35rem 1rem rgba(33, 37, 41, 0.04);
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease,
+    color 0.16s ease;
+}
+
+.timecode-button::before {
+  content: "";
+  position: absolute;
+  inset: 0.55rem auto 0.55rem 0.45rem;
+  width: 0.22rem;
+  border-radius: 999px;
+  background: transparent;
+  transition: background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.timecode-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 193, 7, 0.72);
+  color: #212529;
+  background: #fffaf0;
+  box-shadow: 0 0.75rem 1.4rem rgba(33, 37, 41, 0.07);
 }
 
 .timecode-button.is-active,
 .timecode-button:focus-visible {
   color: #111827;
-  background: #fff3cd;
+  background: linear-gradient(135deg, #fff7df 0%, #ffffff 100%);
   border-color: #ffc107;
-  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.2);
+  box-shadow:
+    0 0 0 0.2rem rgba(255, 193, 7, 0.18),
+    0 0.9rem 1.8rem rgba(255, 193, 7, 0.16);
+  outline: none;
+}
+
+.timecode-button.is-active::before,
+.timecode-button:focus-visible::before {
+  background: #ffc107;
+  box-shadow: 0 0 0.9rem rgba(255, 193, 7, 0.55);
 }
 
 .timecode-time {
-  min-width: 4.5rem;
-  color: #0d6efd;
+  min-width: 4.35rem;
+  justify-self: start;
+  padding: 0.32rem 0.55rem;
+  border-radius: 999px;
+  color: #4c3900;
+  background: #fff3cd;
+  font-size: 0.88rem;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .timecode-label {
   flex: 1;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+@media (max-width: 576px) {
+  .timecode-button {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .timecode-time {
+    min-width: 0;
+  }
 }
 

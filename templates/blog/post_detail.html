@@ -61,11 +61,17 @@
                     </div>
                     {% if post.timecodes %}
                     <div class="timecode-list mt-3" aria-label="Таймкоды">
-                        <h2 class="h5 mb-3"><i class="bi bi-clock-history"></i> Таймкоды</h2>
-                        <div class="d-grid gap-2">
+                        <div class="timecode-list-header">
+                            <span class="timecode-list-icon" aria-hidden="true"><i class="bi bi-clock-history"></i></span>
+                            <div>
+                                <h2 class="h5 mb-0">Таймкоды</h2>
+                                <p class="timecode-list-subtitle mb-0">Клик по пункту перематывает плеер</p>
+                            </div>
+                        </div>
+                        <div class="timecode-grid">
                             {% for item in post.timecodes %}
-                            <button class="timecode-button btn btn-outline-dark text-start" type="button" data-seek-seconds="{{ item.seconds }}" data-timecode-target="post-media-player">
-                                <span class="timecode-time fw-semibold">{{ item.time }}</span>
+                            <button class="timecode-button" type="button" data-seek-seconds="{{ item.seconds }}" data-timecode-target="post-media-player">
+                                <span class="timecode-time">{{ item.time }}</span>
                                 <span class="timecode-label">{{ item.label }}</span>
                             </button>
                             {% endfor %}
