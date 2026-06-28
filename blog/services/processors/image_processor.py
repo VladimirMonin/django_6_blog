@@ -18,7 +18,8 @@ class ImageProcessor(HTMLProcessor):
     - d-block: display: block
     - mx-auto: центровка по горизонтали (margin: 0 auto)
 
-    Также добавляет атрибут loading="lazy" для оптимизации загрузки.
+    Также добавляет атрибуты loading="lazy" и decoding="async" для оптимизации
+    загрузки и декодирования изображений.
 
     Референс из doc/samples/assets/js/main.js:14:
         img: ["img-fluid", "d-block", "mx-auto"]
@@ -37,6 +38,8 @@ class ImageProcessor(HTMLProcessor):
         >>> 'class="img-fluid d-block mx-auto"' in str(soup)
         True
         >>> 'loading="lazy"' in str(soup)
+        True
+        >>> 'decoding="async"' in str(soup)
         True
     """
 
@@ -77,6 +80,10 @@ class ImageProcessor(HTMLProcessor):
             # Добавляем lazy loading если не задан
             if "loading" not in img.attrs:
                 img["loading"] = "lazy"
+
+            # Добавляем async decoding если не задан
+            if "decoding" not in img.attrs:
+                img["decoding"] = "async"
 
     def get_name(self) -> str:
         """Возвращает имя процессора для логирования.

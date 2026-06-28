@@ -1,12 +1,63 @@
+import hashlib
 from urllib.parse import urlencode
 
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.decorators import method_decorator
+from django.views.decorators.http import condition
 from django.views.generic import DetailView, ListView, TemplateView, View
 
 from .models import Category, Post, Tag
 from .session_interactions import SessionInteractionMixin
+
+
+def _post_detail_probe(request, slug):
+    """Single lightweight DB probe shared by etag/last-modified funcs.
+
+    Returns ``(pk, updated_at)`` for the published post with ``slug``, cached
+    on the request object so the ``condition`` decorator does not run two
+    separate ``values_list`` queries on every fresh request.
+    """
+    cache_attr = f"_post_detail_probe_{slug}"
+    if not hasattr(request, cache_attr):
+        row = Post.objects.filter(
+            slug=slug,
+            status=Post.Status.PUBLISHED,
+        ).values_list("pk", "updated_at").first()
+        setattr(request, cache_attr, row)
+    return getattr(request, cache_attr)
+
+
+def _post_detail_last_modified(request, *args, **kwargs):
+    """Last-Modified probe for PostDetailView conditional rendering.
+
+    Runs BEFORE the view body; shares a single ``values_list`` query with
+    ``_post_detail_etag`` via ``_post_detail_probe``.
+    """
+    slug = kwargs.get("slug")
+    if not slug:
+        return None
+    row = _post_detail_probe(request, slug)
+    return row[1] if row else None
+
+
+def _post_detail_etag(request, *args, **kwargs):
+    """ETag probe for PostDetailView conditional rendering.
+
+    Returns an md5 of ``post:{pk}:{updated_at.isoformat()}`` so the tag
+    changes whenever the post is saved (``updated_at`` is ``auto_now=True``).
+    Shares the probe query with ``_post_detail_last_modified``.
+    """
+    slug = kwargs.get("slug")
+    if not slug:
+        return None
+    row = _post_detail_probe(request, slug)
+    if row is None:
+        return None
+    pk, updated_at = row
+    raw = f"post:{pk}:{updated_at.isoformat()}"
+    return hashlib.md5(raw.encode()).hexdigest()
 
 
 def _needs_python_casefold(value):
@@ -128,8 +179,24 @@ class PostListView(ListView):
         return [self.template_name]
 
 
+@method_decorator(
+    condition(
+        last_modified_func=_post_detail_last_modified,
+        etag_func=_post_detail_etag,
+    ),
+    name="dispatch",
+)
 class PostDetailView(SessionInteractionMixin, DetailView):
-    """Detail page for a published post with session-based view counting."""
+    """Detail page for a published post with session-based view counting.
+
+    Conditional rendering (ETag / Last-Modified) is applied via the
+    ``condition`` decorator on ``dispatch``. When the client sends a matching
+    ``If-None-Match`` or ``If-Modified-Since`` header, Django short-circuits
+    the response to 304 *before* the view body runs — which means
+    ``register_post_view`` is skipped on cached re-requests. This is the
+    intended behaviour: view counting is a first-visit signal, while 304s
+    serve browser-cache revalidation.
+    """
 
     model = Post
     template_name = "blog/post_detail.html"
@@ -137,6 +204,13 @@ class PostDetailView(SessionInteractionMixin, DetailView):
     slug_url_kwarg = "slug"
 
     def get_queryset(self):
+        # prefetch_related("media_files") is correct for the detail view:
+        # ``Post.cover_media`` and ``Post.primary_media`` iterate the
+        # prefetched cache (_prefetched_objects_cache) to pick the cover
+        # image and the primary audio/video player, avoiding extra queries.
+        # A typical post has 1-3 media items, so fetching all of them in a
+        # single prefetch is cheaper and simpler than two targeted filtered
+        # prefetches. No optimization is needed here.
         return (
             Post.objects.filter(status=Post.Status.PUBLISHED)
             .select_related("category")

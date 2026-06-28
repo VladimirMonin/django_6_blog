@@ -7,7 +7,7 @@
       </span>
       {% with cover=post.cover_media %}
         {% if cover %}
-          <img class="post-card-cover" src="{{ cover.file.url }}" alt="Обложка статьи {{ post.title }}" loading="lazy">
+          <img class="post-card-cover" src="{{ cover.thumbnail_card_url }}" alt="Обложка статьи {{ post.title }}" loading="lazy">
         {% else %}
           <div class="post-card-cover post-card-cover-placeholder post-card-cover-placeholder-{{ post.content_type }}" aria-hidden="true">
             <div class="post-card-cover-placeholder-mark">

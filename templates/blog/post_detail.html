@@ -11,10 +11,10 @@
 <meta property="og:description" content="{{ post.description }}">
 <meta property="og:url" content="{{ request.build_absolute_uri }}">
 {% with cover=post.cover_media %}{% if cover %}
-<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ cover.file.url }}">
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ cover.thumbnail_og_url }}">
 <meta property="og:image:alt" content="Обложка статьи {{ post.title }}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ cover.file.url }}">
+<meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ cover.thumbnail_og_url }}">
 {% else %}
 <meta name="twitter:card" content="summary">
 {% endif %}{% endwith %}

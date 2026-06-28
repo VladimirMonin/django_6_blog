@@ -16,6 +16,7 @@ dependencies = [
     "markdown>=3.10,<4.0",
     "pymdown-extensions>=10.19,<11.0",
     "beautifulsoup4>=4.14.3,<5.0.0",
+    "pillow>=12.2.0",
 ]
 
 [tool.uv]

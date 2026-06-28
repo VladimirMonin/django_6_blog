@@ -1,12 +1,17 @@
 import re
+from io import BytesIO
 from pathlib import PurePath
 
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.db import models
 from django.utils import timezone
 from django.urls import reverse
 from django.utils.html import strip_tags
 from django.utils.text import Truncator
+
+from PIL import Image, ImageOps
 
 from blog.content_import.timecodes import time_to_seconds
 from blog.services import convert_markdown_to_html
@@ -259,7 +264,22 @@ class Post(models.Model):
 
     @property
     def body_content_html(self):
-        """Return rendered HTML without duplicate title or raw service media embeds."""
+        """Return rendered HTML without duplicate title or raw service media embeds.
+
+        The result is cached per-post for 1 hour. The cache is invalidated
+        in ``save()`` so stale HTML is never served after content changes.
+        """
+        if not self.pk:
+            return ""
+        cache_key = f"post:{self.pk}:body_html"
+        return cache.get_or_set(
+            cache_key,
+            lambda: self._compute_body_content_html(),
+            timeout=3600,
+        )
+
+    def _compute_body_content_html(self):
+        """Compute body_content_html from ``content_html`` (uncached)."""
         html = self.content_html or ""
         match = re.match(r"\s*<h1[^>]*>(.*?)</h1>", html, flags=re.IGNORECASE | re.DOTALL)
         if match and strip_tags(match.group(1)).strip().casefold() == self.title.strip().casefold():
@@ -318,6 +338,11 @@ class Post(models.Model):
         self.clean()
         super().save(*args, **kwargs)
 
+        # Invalidate cached body_content_html so stale HTML is never served
+        # after content changes.
+        if self.pk:
+            cache.delete(f"post:{self.pk}:body_html")
+
 
 class PostMedia(models.Model):
     """Media file attached to a single blog post."""
@@ -357,6 +382,18 @@ class PostMedia(models.Model):
         default=MediaType.OTHER,
         verbose_name="Тип медиа",
     )
+    thumbnail_og = models.FileField(
+        upload_to="posts/thumbnails/",
+        blank=True,
+        null=True,
+        verbose_name="OG-превью (1200×630)",
+    )
+    thumbnail_card = models.FileField(
+        upload_to="posts/thumbnails/",
+        blank=True,
+        null=True,
+        verbose_name="Карточное превью (400×300)",
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата загрузки")
 
     class Meta:
@@ -393,6 +430,29 @@ class PostMedia(models.Model):
             return self.MediaType.DOCUMENT
         return self.MediaType.OTHER
 
+    @property
+    def thumbnail_og_url(self):
+        """Return OG thumbnail URL if available, falling back to original file."""
+        if self.thumbnail_og:
+            return self.thumbnail_og.url
+        return self.file.url
+
+    @property
+    def thumbnail_card_url(self):
+        """Return card thumbnail URL if available, falling back to original file."""
+        if self.thumbnail_card:
+            return self.thumbnail_card.url
+        return self.file.url
+
+    def _generate_thumbnail(self, size, quality=85):
+        """Generate a cover-cropped JPEG thumbnail ContentFile of the given size."""
+        with Image.open(self.file.path) as img:
+            img = img.convert("RGB")
+            img = ImageOps.fit(img, size, method=Image.LANCZOS, centering=(0.5, 0.4))
+            buffer = BytesIO()
+            img.save(buffer, format="JPEG", quality=quality, optimize=True)
+            return ContentFile(buffer.getvalue())
+
     def save(self, *args, **kwargs):
         if self.file and not self.original_filename:
             self.original_filename = PurePath(self.file.name).name
@@ -400,6 +460,43 @@ class PostMedia(models.Model):
             self.file_slug = build_file_slug(self.original_filename)
         self.media_type = self.detect_media_type()
         super().save(*args, **kwargs)
+
+        # Generate thumbnails for images after the initial save, but avoid
+        # recursion and skip SVG (Pillow cannot open SVG) and any file that
+        # Pillow cannot read (e.g. test stubs with fake bytes).
+        if getattr(self, "_generating_thumbnails", False):
+            return
+        if self.media_type != self.MediaType.IMAGE:
+            return
+        if not self.file:
+            return
+        if self.thumbnail_og and self.thumbnail_card:
+            return
+        extension = PurePath(self.file_slug or self.file.name).suffix.lower()
+        if extension == ".svg":
+            return
+        try:
+            self._generating_thumbnails = True
+            update_fields = []
+            if not self.thumbnail_og:
+                og_thumb = self._generate_thumbnail((1200, 630))
+                og_name = f"{self.file_slug}_og.jpg"
+                self.thumbnail_og.save(og_name, og_thumb, save=False)
+                update_fields.append("thumbnail_og")
+            if not self.thumbnail_card:
+                card_thumb = self._generate_thumbnail((400, 300))
+                card_name = f"{self.file_slug}_card.jpg"
+                self.thumbnail_card.save(card_name, card_thumb, save=False)
+                update_fields.append("thumbnail_card")
+            if update_fields:
+                super().save(update_fields=update_fields)
+        except Exception:
+            # Pillow could not open the file (corrupt, fake bytes, etc.)
+            # Silently skip — thumbnail fields stay empty and URL properties
+            # fall back to the original file URL.
+            pass
+        finally:
+            self._generating_thumbnails = False
 
 
 class SessionPostInteraction(models.Model):
