@@ -9,9 +9,12 @@
 - [`content-import.md`](content-import.md) — Markdown/Obsidian импорт, frontmatter, локальные ссылки, media bundle.
 - [`media-content.md`](media-content.md) — `article`/`video`/`audio`/`podcast`, HTML5-плееры, cover, `timecodes`.
 - [`public-ui.md`](public-ui.md) — публичная лента, карточки, detail page, HTMX, реакции, визуальные gates.
-- [`api.md`](api.md) — API endpoints, auth, token management.
+- [`api.md`](api.md) — API endpoints, auth, token management, permissions, rate limits.
 - [`cli.md`](cli.md) — management commands и рабочие CLI-сценарии.
 - [`seo.md`](seo.md) — sitemap, robots.txt, RSS/Atom, OG/Twitter, JSON-LD, canonical.
+- [`navigation.md`](navigation.md) — related posts, breadcrumbs, TOC, series landing, content type filter.
+- [`analytics.md`](analytics.md) — PostView tracking, read-depth, AuditLog, stats endpoint.
+- [`infrastructure.md`](infrastructure.md) — CI, health, backup, env vars, Makefile, logging.
 - [`agent-workflow.md`](agent-workflow.md) — правила для агентов и поддержка `instructions/`.
 
 ## Исторические материалы

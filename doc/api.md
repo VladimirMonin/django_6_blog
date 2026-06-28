@@ -77,16 +77,34 @@ curl -X POST https://blog.example.com/api/v1/posts/publish/ \
 
 ## Дополнительные эндпоинты
 
+### POST /api/v1/posts/bulk/
+
+Массовая публикация нескольких постов одним запросом.
+
+**Permission:** `publish`
+
+```json
+{
+  "posts": [
+    {"title": "Post 1", "description": "...", "content": "..."},
+    {"title": "Post 2", "description": "...", "content": "..."}
+  ]
+}
+```
+
+Возвращает `results` с успехом/ошибкой для каждого поста.
+
 ### GET /api/v1/posts/
 
 Список постов для агентов.
 
 Поддерживает фильтры:
 
-- `status=published|draft`
+- `status=published|draft|archived`
 - `content_type=article|video|audio|podcast`
 - `category=<slug-or-name>`
 - `search=<text>`
+- `sort=created_at|-created_at|title|-title|view_count|-view_count|published_at|-published_at`
 - `page=<n>`
 - `per_page=<1..100>`
 
@@ -96,15 +114,52 @@ curl -X POST https://blog.example.com/api/v1/posts/publish/ \
 
 Возвращает полную serialized-структуру поста, включая `content`, `timecodes`, `series`, `series_order`.
 
+**Permission:** `delete` (DELETE requires delete permission)
+
 ### PATCH /api/v1/posts/<slug>/status/
 
-Меняет статус поста между `published` и `draft`.
+Меняет статус поста: `published`, `draft` или `archived`.
+
+**Permission:** `status`
 
 ### DELETE /api/v1/posts/<slug>/
 
-Удаляет пост по slug.
+Мягкое удаление (soft delete): устанавливает `deleted_at` и переводит в `archived`. Пост остаётся в БД, но скрыт с публичного сайта и из API.
 
-## Planned
+**Permission:** `delete`
 
-- `GET /api/v1/stats/` — статистика посещений и реакций
-- multipart upload для медиа через API
+### GET /api/v1/stats/
+
+Агрегатная статистика: количество постов по статусам, типам, топ-5 категорий, суммарные просмотры/лайки, featured count.
+
+**Permission:** `stats`
+
+### GET /api/v1/health/
+
+Публичный health-check. Без API ключа. Возвращает status, DB status, post count, version.
+
+### POST /api/v1/posts/<slug>/read-depth/
+
+Публичный endpoint для трекинга глубины чтения. Без API ключа. Принимает `{"read_depth": 0.0-1.0}`.
+
+## Permissions
+
+API keys имеют список разрешений (JSON field `permissions`):
+
+| Permission | Endpoints |
+|---|---|
+| `read` | GET list, GET detail |
+| `publish` | POST publish, POST bulk |
+| `delete` | DELETE post |
+| `status` | PATCH status |
+| `stats` | GET stats |
+
+Новые ключи по умолчанию получают все разрешения.
+
+## Rate Limiting
+
+Each API key is limited to 60 requests per minute. Exceeding returns `429` with `{"error": "Rate limit exceeded", "retry_after": N}`.
+
+## Idempotent Publishing
+
+Если в payload указан `source_id`, и пост с таким `source_id` уже существует, он будет обновлён (эквивалент `replace=true`).

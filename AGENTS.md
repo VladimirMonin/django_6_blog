@@ -59,9 +59,12 @@ Use smaller tests first when the change is narrow.
 | Public list/detail UI, HTMX, reactions, visual QA | `instructions/UI.public_blog.instructions.md` |
 | Tests, smoke gates, browser evidence | `instructions/TEST.quality_gates.instructions.md` |
 | README, `doc/`, instructions style | `instructions/DOCS.documentation.instructions.md` |
-| API endpoints, auth, token management | `instructions/API.publish.instructions.md` |
+| API endpoints, auth, token management, permissions | `instructions/API.publish.instructions.md` |
 | Publisher CLI, Markdown parser, agent workflow | `instructions/PUBLISHER.cli.instructions.md` |
 | SEO, sitemap, feeds, meta tags, JSON-LD | `instructions/SEO.meta.instructions.md` |
+| Navigation, related posts, TOC, series landing | `doc/navigation.md` |
+| Analytics, PostView, read-depth, AuditLog | `doc/analytics.md` |
+| Infrastructure, CI, backup, health, env | `doc/infrastructure.md` |
 
 If no instruction clearly matches, read `doc/README.md`, inspect the current code, then update instructions only if the discovered rule is fundamental.
 
@@ -76,6 +79,9 @@ If no instruction clearly matches, read `doc/README.md`, inspect the current cod
 - `doc/public-ui.md` — public UI and interactions.
 - `doc/api.md` — API endpoints and auth.
 - `doc/cli.md` — management commands.
+- `doc/navigation.md` — related posts, breadcrumbs, TOC, series landing.
+- `doc/analytics.md` — view tracking, read-depth, audit log, stats.
+- `doc/infrastructure.md` — CI, backup, health, env, Makefile.
 - `doc/agent-workflow.md` — instruction maintenance workflow.
 
 Historical plans, research and architecture serials are references, not current operational rules.
