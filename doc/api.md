@@ -1,87 +1,126 @@
 # Blog API
 
-API для агент-управляемой публикации постов. Все эндпоинты под `/api/v1/` с namespace `api`.
+API для агент-управляемой публикации постов. Все эндпоинты живут под `/api/v1/` в отдельном приложении `api/`.
+
+## Контур API
+
+```mermaid
+flowchart LR
+    A[Agent / Publisher CLI] --> B[/api/v1/]
+    B --> C[ApiKey verify]
+    C --> D[permission check]
+    D --> E[rate limit]
+    E --> F[Post / Category / Tag / Series]
+    F --> G[AuditLog]
+    F --> H[JsonResponse]
+    F --> I[api.* JSON logs]
+```
 
 ## Авторизация
 
-Token-based auth через заголовок `Authorization: Bearer TOKEN`.
+Token-based auth через заголовок:
 
-API ключи создаются и управляются через Django admin (`/admin/api/apikey/`). Каждый ключ:
-
-- **name** — название (например «Hermes agent»)
-- **token** — автогенерируется через `secrets.token_urlsafe(32)` (43 символа)
-- **is_active** — можно отозвать одним кликом
-- **last_used_at** — обновляется при каждом запросе
-
-## Endpoints
-
-### POST /api/v1/posts/publish/
-
-Создаёт или обновляет пост из JSON-payload.
-
-**Заголовки:**
-
+```http
+Authorization: Bearer <token>
 ```
-Authorization: Bearer TOKEN
+
+API ключи создаются и управляются через Django admin (`/admin/api/apikey/`). Каждый ключ имеет:
+
+- `name`
+- `token`
+- `is_active`
+- `expires_at`
+- `permissions`
+- `last_used_at`
+- `revoked_at`
+
+### Permissions
+
+| Permission | Endpoints |
+|---|---|
+| `read` | list, detail |
+| `publish` | publish, bulk publish |
+| `delete` | soft delete |
+| `status` | status transition |
+| `stats` | stats endpoint |
+
+## Rate limiting
+
+Each API key is limited to **60 requests per minute**. Exceeding returns:
+
+```json
+{"error": "Rate limit exceeded", "retry_after": 17}
+```
+
+## Публичные endpoints
+
+### `GET /api/v1/health/`
+
+Публичный health-check. API key не нужен.
+
+Ответ:
+
+```json
+{
+  "status": "ok",
+  "db": "ok",
+  "post_count": 42,
+  "version": "1.0"
+}
+```
+
+### `POST /api/v1/posts/<slug>/read-depth/`
+
+Публичный telemetry endpoint. API key не нужен.
+
+```http
+POST /api/v1/posts/<slug>/read-depth/
 Content-Type: application/json
+
+{"read_depth": 0.75}
 ```
 
-**Обязательные поля:**
+Работает только для опубликованных и не удалённых постов.
+
+## Агентские endpoints
+
+### `POST /api/v1/posts/publish/`
+
+Создаёт или обновляет пост из JSON payload.
+
+**Required:**
 
 | Поле | Тип | Описание |
 |---|---|---|
-| `title` | string | Заголовок поста |
-| `description` | string | Описание (для карточек, OG meta, excerpt) |
-| `content` | string | Markdown-контент поста |
+| `title` | string | Заголовок |
+| `description` | string | Описание для карточек / OG |
+| `content` | string | Markdown body |
 
-**Опциональные поля:**
+**Optional:**
 
 | Поле | Тип | Default | Описание |
 |---|---|---|---|
-| `content_type` | string | `article` | article/video/audio/podcast |
-| `media_url` | string | `""` | Внешний URL медиа для плеера |
-| `timecodes` | list | `[]` | `[{time: "0:00", label: "Intro"}, ...]` |
-| `tags` | list | `[]` | Список строк, создаются если не существуют |
-| `category` | string | `null` | Название категории, создаётся если не существует |
-| `series` | string | `null` | Название серии, создаётся если не существует |
-| `series_order` | int | `0` | Порядок поста внутри серии |
-| `status` | string | `published` | `published` или `draft` |
-| `slug` | string | auto | Явный slug, иначе генерируется из title |
-| `replace` | bool | `false` | Переписать существующий пост с тем же slug |
+| `content_type` | string | `article` | `article/video/audio/podcast` |
+| `media_url` | string | `""` | Обязателен для `video/audio/podcast` |
+| `timecodes` | list | `[]` | `[{time, label}, ...]` |
+| `tags` | list | `[]` | Список строк |
+| `category` | string | `null` | Категория, создаётся если не существует |
+| `series` | string | `null` | Серия, создаётся если не существует |
+| `series_order` | int | `0` | Порядок в серии |
+| `status` | string | `published` | `published/draft/archived` |
+| `slug` | string | auto | Явный slug |
+| `replace` | bool | `false` | Перезаписать существующий slug |
+| `source_id` | string | `null` | Внешний идемпотентный ключ |
 
-**Ответы:**
+**Behavior:**
 
-| Код | Описание |
-|---|---|
-| 201 | Пост создан, возвращает serialized post |
-| 400 | Ошибка валидации — отсутствуют обязательные поля |
-| 401 | Неверный или отсутствует API ключ |
-| 409 | Slug занят и `replace=false` |
+- если slug занят и `replace=false`, возвращается `409`
+- если передан `source_id`, и активный пост с ним уже существует, publish работает идемпотентно
+- mutating actions пишут `AuditLog`
 
-**Пример:**
+### `POST /api/v1/posts/bulk/`
 
-```bash
-curl -X POST https://blog.example.com/api/v1/posts/publish/ \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Новый пост",
-    "description": "Краткое описание",
-    "content": "# Привет\n\nТекст поста.",
-    "tags": ["Python", "Django"],
-    "category": "Testing",
-    "series": "Python Basics",
-    "series_order": 2
-  }'
-```
-
-## Дополнительные эндпоинты
-
-### POST /api/v1/posts/bulk/
-
-Массовая публикация нескольких постов одним запросом.
-
-**Permission:** `publish`
+Массовая публикация нескольких постов:
 
 ```json
 {
@@ -92,9 +131,9 @@ curl -X POST https://blog.example.com/api/v1/posts/publish/ \
 }
 ```
 
-Возвращает `results` с успехом/ошибкой для каждого поста.
+Возвращает per-item `results`, `created`, `errors`.
 
-### GET /api/v1/posts/
+### `GET /api/v1/posts/`
 
 Список постов для агентов.
 
@@ -110,56 +149,56 @@ curl -X POST https://blog.example.com/api/v1/posts/publish/ \
 
 Ответ содержит `results` и `pagination`.
 
-### GET /api/v1/posts/<slug>/
+### `GET /api/v1/posts/<slug>/`
 
 Возвращает полную serialized-структуру поста, включая `content`, `timecodes`, `series`, `series_order`.
 
-**Permission:** `delete` (DELETE requires delete permission)
+### `PATCH /api/v1/posts/<slug>/status/`
 
-### PATCH /api/v1/posts/<slug>/status/
+Меняет статус поста между `published`, `draft`, `archived`.
 
-Меняет статус поста: `published`, `draft` или `archived`.
+### `DELETE /api/v1/posts/<slug>/`
 
-**Permission:** `status`
+Мягкое удаление (soft delete):
 
-### DELETE /api/v1/posts/<slug>/
+- ставит `deleted_at`
+- переводит пост в `archived`
+- сохраняет строку в БД
+- пишет audit trail
 
-Мягкое удаление (soft delete): устанавливает `deleted_at` и переводит в `archived`. Пост остаётся в БД, но скрыт с публичного сайта и из API.
+### `GET /api/v1/stats/`
 
-**Permission:** `delete`
+Агрегатная статистика:
 
-### GET /api/v1/stats/
+- количество постов по статусам
+- количество по content type
+- top-5 категорий
+- total views
+- total likes
+- featured count
 
-Агрегатная статистика: количество постов по статусам, типам, топ-5 категорий, суммарные просмотры/лайки, featured count.
+## Validation rules
 
-**Permission:** `stats`
+- JSON in, JSON out
+- Timecodes нормализуются до `{time, seconds, label}`
+- Для `video`, `audio`, `podcast` `media_url` обязателен
+- Timecodes должны соответствовать допустимому clock format (`M:SS`, `MM:SS`, `H:MM:SS`, `HH:MM:SS`)
+- Public site и list/detail API не должны показывать soft-deleted записи как активные
 
-### GET /api/v1/health/
+## Пример curl
 
-Публичный health-check. Без API ключа. Возвращает status, DB status, post count, version.
-
-### POST /api/v1/posts/<slug>/read-depth/
-
-Публичный endpoint для трекинга глубины чтения. Без API ключа. Принимает `{"read_depth": 0.0-1.0}`.
-
-## Permissions
-
-API keys имеют список разрешений (JSON field `permissions`):
-
-| Permission | Endpoints |
-|---|---|
-| `read` | GET list, GET detail |
-| `publish` | POST publish, POST bulk |
-| `delete` | DELETE post |
-| `status` | PATCH status |
-| `stats` | GET stats |
-
-Новые ключи по умолчанию получают все разрешения.
-
-## Rate Limiting
-
-Each API key is limited to 60 requests per minute. Exceeding returns `429` with `{"error": "Rate limit exceeded", "retry_after": N}`.
-
-## Idempotent Publishing
-
-Если в payload указан `source_id`, и пост с таким `source_id` уже существует, он будет обновлён (эквивалент `replace=true`).
+```bash
+curl -X POST https://blog.example.com/api/v1/posts/publish/ \
+  -H "Authorization: Bearer $BLOG_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Новый пост",
+    "description": "Краткое описание",
+    "content": "# Привет\n\nТекст поста.",
+    "tags": ["Python", "Django"],
+    "category": "Testing",
+    "series": "Python Basics",
+    "series_order": 2,
+    "source_id": "obsidian:python-basics:02"
+  }'
+```

@@ -4,11 +4,11 @@
 
 ## Стек
 
-- Python `>=3.12`, выбирается через `uv`.
-- Django `6.0.x`; зависимость ограничена как `django>=6.0.5,<6.1`, чтобы не подтянуть будущие alpha/beta версии Django 6.1.
-- SQLite — текущая рабочая база. PostgreSQL, `DATABASE_URL` и Docker Compose не используются, пока миграция на Postgres не станет отдельной задачей.
-- `django-components` закреплён на `0.143.x`, потому что более новая ветка меняет поведение компонентов.
-- `pytest` + `pytest-django` — основной тестовый запуск.
+- Python `>=3.12`, выбирается через `uv`
+- Django `6.0.x`; зависимость ограничена как `django>=6.0.5,<6.1`
+- SQLite — текущая рабочая база
+- `django-components` закреплён на `0.143.x`
+- `pytest` + `pytest-django` — основной тестовый запуск
 
 ## Установка и запуск
 
@@ -38,9 +38,39 @@ cp .env.example .env
 
 Настройки читаются из process environment:
 
-- `DJANGO_SECRET_KEY` — секрет Django.
-- `DJANGO_DEBUG` — `true` / `false`.
-- `DJANGO_ALLOWED_HOSTS` — hosts через запятую.
+- `DJANGO_SECRET_KEY` — секрет Django
+- `DJANGO_DEBUG` — `true` / `false`
+- `DJANGO_ALLOWED_HOSTS` — hosts через запятую
+- `SITE_AUTHOR` — публичный автор по умолчанию
+
+## Команды для разработки
+
+```bash
+# Быстрый старт
+make setup
+make migrate
+make run
+
+# Проверки
+make check
+make test
+
+# Операционные команды
+uv run python manage.py backup --output backup.json
+uv run python manage.py publish_scheduled
+```
+
+## Quality gate
+
+```mermaid
+flowchart LR
+    A[Code / docs change] --> B[uv lock --check]
+    B --> C[manage.py check]
+    C --> D[focused tests]
+    D --> E[full pytest -q]
+    E --> F[git diff --check]
+    F --> G[stage / commit]
+```
 
 ## Проверки перед коммитом
 
@@ -63,29 +93,49 @@ git ls-files | grep -E '(^|/)poetry\.lock$' && exit 1 || true
 
 ## Публичный блог
 
-Публичная часть показывает только опубликованные посты:
+Публичная часть показывает только записи, которые одновременно:
 
-- `Post.status = published` — виден в списке и детальной странице;
-- `Post.status = draft` — скрыт и отдаёт `404` на детальной странице.
+- `Post.status = published`
+- `Post.deleted_at IS NULL`
 
 Поддерживаются:
 
-- категории;
-- теги;
-- поиск по заголовку, Markdown-контенту, категории и тегам;
-- SEO-friendly пагинация обычными ссылками;
-- HTMX-частичные ответы для поиска и догрузки карточек;
-- class-based views для списка, деталки, страницы «О блоге» и toggle-like endpoint;
-- счётчик просмотров: один просмотр поста на одну anonymous session;
-- лайки: один переключаемый лайк поста на одну anonymous session;
-- централизованная история взаимодействий в `SessionPostInteraction`, чтобы позже расширить сессионные сценарии без разбрасывания логики по view.
+- категории
+- теги
+- поиск по заголовку, Markdown-контенту, категории и тегам
+- content-type filter (`article` / `video` / `audio` / `podcast`)
+- series landing + series navigation
+- SEO-friendly пагинация обычными ссылками
+- HTMX-частичные ответы для поиска и догрузки карточек
+- class-based views для списка, деталки, страницы «О блоге» и toggle-like endpoint
+- счётчик просмотров: один просмотр поста на одну anonymous session
+- лайки: один переключаемый лайк поста на одну anonymous session
+- централизованная история взаимодействий в `SessionPostInteraction`
+- read-depth telemetry в `PostView`
 
 Фильтры передаются query-string параметрами:
 
 - `?search=...`
 - `?category=slug`
 - `?tag=slug`
+- `?type=video`
 - `?page=2`
+
+## API и агентская публикация
+
+Agent API lives under `/api/v1/` and uses `ApiKey` tokens.
+
+Поддерживаются:
+
+- publish / bulk publish
+- list / detail
+- status transitions
+- soft delete
+- stats
+- public health
+- public read-depth endpoint
+
+API keys имеют permissions + expiry. На mutating endpoints пишутся `AuditLog` записи и structured JSON logs.
 
 ## Импорт Obsidian-заметки
 
@@ -105,7 +155,7 @@ uv run python manage.py collect_note_assets \
   --description "Короткое описание для карточки."
 ```
 
-Команда поддерживает Obsidian embeds, Markdown image paths, vault-relative пути и note-relative пути. Выходная папка плоская, чтобы её можно было передать в `import_obsidian_note --assets-dir`.
+Дальше:
 
 ```bash
 uv run python manage.py import_obsidian_note \
@@ -117,16 +167,15 @@ uv run python manage.py import_obsidian_note \
 
 Команда:
 
-- читает Markdown-файл;
-- требует `description` во frontmatter и сохраняет его в `Post.description`;
-- берёт `title` из frontmatter, затем из первого H1 в теле заметки, затем из имени файла;
-- не требует и не сохраняет автора в Obsidian/frontmatter: публичный автор задаётся дефолтом сайта (`SITE_AUTHOR`);
-- копирует найденные медиа в `media/posts/<post-slug>/`;
-- понимает Obsidian embeds `![[image.webp]]`, `![[image|alt]]` и стандартные Markdown images `![alt](image.webp)`;
-- ищет изображения по полному имени или stem: `![[cover]]` может найти `cover.webp`;
-- проверяет битые локальные ссылки перед импортом;
-- создаёт/заменяет пост при `--replace`;
-- конвертирует Markdown в HTML при сохранении `Post`.
+- читает Markdown-файл
+- требует `description` во frontmatter и сохраняет его в `Post.description`
+- берёт `title` из frontmatter, затем из первого H1 в теле заметки, затем из имени файла
+- не требует и не сохраняет автора в Obsidian/frontmatter: публичный автор задаётся дефолтом сайта (`SITE_AUTHOR`)
+- копирует найденные медиа в `media/posts/<post-slug>/`
+- понимает Obsidian embeds и стандартные Markdown images
+- проверяет битые локальные ссылки перед импортом
+- создаёт/заменяет пост при `--replace`
+- конвертирует Markdown в HTML при сохранении `Post`
 
 Отдельно проверить ссылки без создания поста:
 
@@ -140,9 +189,9 @@ uv run python manage.py import_obsidian_note path/to/article.md \
 
 Перед `git add` проверяй, что в staged-файлы не попали:
 
-- `.env`;
-- `.venv/`;
-- `db.sqlite3`;
-- `media/posts/*` и другие локальные загрузки;
-- `tests/assets/*` с локальными исходниками для smoke-проверок;
-- `__pycache__/` и `*.pyc`.
+- `.env`
+- `.venv/`
+- `db.sqlite3`
+- `media/posts/*` и другие локальные загрузки
+- `tests/assets/*` с локальными исходниками для smoke-проверок
+- `__pycache__/` и `*.pyc`

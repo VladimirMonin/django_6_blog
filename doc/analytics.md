@@ -45,7 +45,7 @@ Called by `static/js/read-depth-tracking.js` on scroll, page hide, and every 15 
 
 ```
 GET /api/v1/stats/
-Authorization: Bearer <token>
+Authorization: Bearer ***
 ```
 
 Returns aggregate counts: by status, by content type, top 5 categories, total views/likes, featured count.

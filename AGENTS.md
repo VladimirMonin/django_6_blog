@@ -15,6 +15,7 @@ Core stack:
 - Bootstrap 5, django-components, HTMX.
 - Markdown/Obsidian import with local media.
 - Public content types: `article`, `video`, `audio`, `podcast`.
+- Agent API under `/api/v1/` with token auth, permissions, rate limits, and audit logging.
 
 ## Commands
 
@@ -39,13 +40,14 @@ Use smaller tests first when the change is narrow.
 
 1. Use `uv`; do not introduce Poetry, system Python setup, Docker or Postgres unless the user explicitly asks for that slice.
 2. Do not commit `.env`, `.venv/`, `db.sqlite3`, `media/posts/*`, `tests/assets/*`, `__pycache__/` or `*.pyc`.
-3. Public views must expose only `Post.status = published`; drafts stay hidden and return `404` on detail URLs.
+3. Public views must expose only posts where `status = published` **and** `deleted_at IS NULL`; drafts, archived posts and soft-deleted posts must stay hidden and return `404` on detail URLs.
 4. `Post.description` is the public card excerpt source. Do not fall back to raw Markdown excerpts in cards.
 5. Author is a site default from Django settings/context, not Obsidian/frontmatter metadata.
 6. Markdown rendered with `|safe` is a security boundary: escape embedded user source and keep local asset paths inside `assets_dir`.
 7. Media posts must render exactly one primary audio/video player on detail pages.
 8. UI changes need relevant tests and browser/visual QA when the user asks to see the result.
 9. Commit and push only on explicit user request.
+10. API changes must keep docs/instructions synchronized in the same slice; do not let `instructions/API.publish.instructions.md` drift from real endpoints.
 
 ## Instruction routing
 
@@ -81,7 +83,7 @@ If no instruction clearly matches, read `doc/README.md`, inspect the current cod
 - `doc/cli.md` — management commands.
 - `doc/navigation.md` — related posts, breadcrumbs, TOC, series landing.
 - `doc/analytics.md` — view tracking, read-depth, audit log, stats.
-- `doc/infrastructure.md` — CI, backup, health, env, Makefile.
+- `doc/infrastructure.md` — CI, backup, health, env, Makefile, logging.
 - `doc/agent-workflow.md` — instruction maintenance workflow.
 
 Historical plans, research and architecture serials are references, not current operational rules.

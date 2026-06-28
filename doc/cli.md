@@ -36,6 +36,27 @@ uv run pytest -q
 git diff --check
 ```
 
+## Операционные команды
+
+### `backup`
+
+Сохраняет JSON-дамп постов для recovery/export:
+
+```bash
+uv run python manage.py backup
+uv run python manage.py backup --output backup.json
+```
+
+### `publish_scheduled`
+
+Публикует черновики, у которых `published_at <= now()`:
+
+```bash
+uv run python manage.py publish_scheduled
+```
+
+Удобно запускать из cron или scheduler.
+
 ## `collect_note_assets`
 
 Собирает Obsidian/Markdown-заметку и все локальные файлы, на которые она ссылается, в одну плоскую папку assets. Это удобно перед импортом статьи в Django.
