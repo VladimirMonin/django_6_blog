@@ -268,12 +268,16 @@ description: "Описание для карточки"
 content_type: video   # или type: video
 media_url: https://example.com/v.mp4
 tags: Python, Django
-series: testing       # → category
+category: testing
+series: python-basics
+series_order: 2
 status: published     # или draft
 ---
 ```
 
 Поддерживаются русские алиасы: `видео`, `аудио`, `подкаст`, `статья`.
+
+`category` и `series` независимы: категория нужна для группировки в ленте, серия — для линейной навигации `prev/next` на detail page. `series_order` определяет позицию поста внутри серии.
 
 ### Таймкоды
 

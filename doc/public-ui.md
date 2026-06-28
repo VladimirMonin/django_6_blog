@@ -11,6 +11,7 @@
 - `search` — поиск по заголовку, Markdown-контенту, категории и тегам;
 - `category` — slug категории;
 - `tag` — slug тега;
+- `type` — тип контента (`article`, `video`, `audio`, `podcast`);
 - `page` — номер страницы.
 
 Пагинация остаётся обычными ссылками. HTMX используется для частичного обновления списка и догрузки карточек, но не должен ломать обычную навигацию без JavaScript.
@@ -50,9 +51,12 @@ Detail page отвечает за:
 
 - header с title, badges, tags и author meta;
 - session reactions;
-- основной media player для media posts;
+- optional media player;
 - timecodes panel;
 - rendered Markdown body;
+- reading progress bar;
+- lightbox для изображений в `.markdown-content`;
+- series navigation (`prev` / `next` / position), если пост входит в серию;
 - back link к списку.
 
 `draft` записи не должны открываться публично.

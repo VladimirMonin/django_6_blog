@@ -43,7 +43,9 @@ publisher/
 | `content_type` / `type` | Post.content_type | article/video/audio/podcast, Russian aliases supported |
 | `media_url` | Post.media_url | External URL for player |
 | `tags` | Post.tags (M2M) | Comma-separated or `[a, b]` |
-| `series` | Post.category (FK) | Kebab → humanized (lm-studio → LM Studio) |
+| `category` | Post.category | Humanized category name |
+| `series` | Post.series | Humanized series name |
+| `series_order` | Post.series_order | Integer order inside the series |
 | `status` | Post.status | `published` (default) or `draft` |
 | `cover` | PostMedia | Only used by `import_obsidian_note` management command, NOT by publisher CLI |
 

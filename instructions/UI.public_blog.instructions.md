@@ -14,6 +14,7 @@ The public blog is SSR-first. HTMX is progressive enhancement, not the only navi
 - Search/filter URLs remain shareable query strings.
 - HTMX partials return only the intended fragment.
 - Full-page responses must work without JavaScript.
+- Content-type filters (`?type=article|video|audio|podcast`) must preserve SSR and shareable URLs.
 
 ## Public visibility
 
@@ -30,7 +31,7 @@ When search behavior changes, test Cyrillic queries separately. SQLite `icontain
 
 ## Detail page
 
-Detail page includes header, badges, session reactions, optional media player, optional timecodes and rendered Markdown body. Avoid duplicate H1 in body.
+Detail page includes header, badges, session reactions, optional media player, optional timecodes, rendered Markdown body, series navigation, reading progress and image lightbox. Avoid duplicate H1 in body.
 
 ## Reactions
 
