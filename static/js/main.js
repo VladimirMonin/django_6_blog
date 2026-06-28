@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Инициализируем модули для markdown страниц
   if (window.enableFullscreenImages) enableFullscreenImages();
+  if (window.initReadingProgress) initReadingProgress();
   if (window.initMediaPlayers) initMediaPlayers();
   if (window.generateTableOfContents) generateTableOfContents();
   if (window.initDynamicBreadcrumbs) initDynamicBreadcrumbs();
