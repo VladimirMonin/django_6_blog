@@ -11,6 +11,7 @@
 - [`public-ui.md`](public-ui.md) — публичная лента, карточки, detail page, HTMX, реакции, визуальные gates.
 - [`api.md`](api.md) — API endpoints, auth, token management.
 - [`cli.md`](cli.md) — management commands и рабочие CLI-сценарии.
+- [`seo.md`](seo.md) — sitemap, robots.txt, RSS/Atom, OG/Twitter, JSON-LD, canonical.
 - [`agent-workflow.md`](agent-workflow.md) — правила для агентов и поддержка `instructions/`.
 
 ## Исторические материалы

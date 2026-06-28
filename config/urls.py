@@ -17,15 +17,29 @@ Including another URLconf
 
 from django.conf import settings
 from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path, re_path
 
 from blog.dev_media import serve_media_with_range
+from blog.feeds import AtomLatestPostsFeed, LatestPostsFeed
+from blog.sitemaps import PostSitemap, StaticViewSitemap
+from blog.views import robots_txt
+
+sitemaps = {
+    "posts": PostSitemap,
+    "static": StaticViewSitemap,
+}
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     # Приложение блога (главная страница и все маршруты)
     path("", include("blog.urls")),
     path("api/v1/", include("api.urls", namespace="api")),
+    # SEO
+    path("sitemap.xml", sitemap, {"sitemaps": sitemaps}, name="sitemap"),
+    path("robots.txt", robots_txt, name="robots_txt"),
+    path("feed/rss/", LatestPostsFeed(), name="feed_rss"),
+    path("feed/atom/", AtomLatestPostsFeed(), name="feed_atom"),
 ]
 
 # Раздача медиа-файлов в режиме разработки с поддержкой HTTP Range для seek в audio/video.
