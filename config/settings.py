@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "django_htmx",
     # Local apps
     "blog",
+    "api",
 ]
 
 MIDDLEWARE = [

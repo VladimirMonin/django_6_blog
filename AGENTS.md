@@ -59,6 +59,7 @@ Use smaller tests first when the change is narrow.
 | Public list/detail UI, HTMX, reactions, visual QA | `instructions/UI.public_blog.instructions.md` |
 | Tests, smoke gates, browser evidence | `instructions/TEST.quality_gates.instructions.md` |
 | README, `doc/`, instructions style | `instructions/DOCS.documentation.instructions.md` |
+| API endpoints, auth, token management | `instructions/API.publish.instructions.md` |
 
 If no instruction clearly matches, read `doc/README.md`, inspect the current code, then update instructions only if the discovered rule is fundamental.
 
@@ -71,6 +72,7 @@ If no instruction clearly matches, read `doc/README.md`, inspect the current cod
 - `doc/content-import.md` — content import.
 - `doc/media-content.md` — media posts and timecodes.
 - `doc/public-ui.md` — public UI and interactions.
+- `doc/api.md` — API endpoints and auth.
 - `doc/cli.md` — management commands.
 - `doc/agent-workflow.md` — instruction maintenance workflow.
 

@@ -25,6 +25,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # Приложение блога (главная страница и все маршруты)
     path("", include("blog.urls")),
+    path("api/v1/", include("api.urls", namespace="api")),
 ]
 
 # Раздача медиа-файлов в режиме разработки с поддержкой HTTP Range для seek в audio/video.
