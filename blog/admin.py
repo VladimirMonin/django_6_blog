@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 from unfold.decorators import display
-from .models import Category, Post, PostMedia, SessionPostInteraction, Tag
+from .models import Category, Post, PostMedia, Series, SessionPostInteraction, Tag
 
 
 class PostMediaInline(admin.TabularInline):
@@ -59,6 +59,17 @@ class TagAdmin(ModelAdmin):
     prepopulated_fields = {"slug": ("name",)}
 
 
+@admin.register(Series)
+class SeriesAdmin(ModelAdmin):
+    list_display = ("name", "slug", "post_count", "created_at")
+    search_fields = ("name", "description")
+    prepopulated_fields = {"slug": ("name",)}
+
+    @display(description="Постов")
+    def post_count(self, obj):
+        return obj.posts.count()
+
+
 @admin.register(PostMedia)
 class PostMediaAdmin(ModelAdmin):
     list_display = ("original_filename", "post", "media_type", "created_at")
@@ -91,7 +102,7 @@ class PostAdmin(ModelAdmin):
     inlines = [PostMediaInline]
 
     fieldsets = (
-        ("Основная информация", {"fields": ("title", "slug", "description", "category", "tags", "content")}),
+        ("Основная информация", {"fields": ("title", "slug", "description", "category", "series", "series_order", "tags", "content")}),
         ("Тип и медиа", {"fields": ("content_type", "media_url", "timecodes")}),
         (
             "HTML предпросмотр",

@@ -92,6 +92,28 @@ class Tag(models.Model):
         super().save(*args, **kwargs)
 
 
+class Series(models.Model):
+    """Ordered group of posts — courses, podcast sequences, article series."""
+
+    name = models.CharField(max_length=200, unique=True, verbose_name="Название")
+    slug = models.SlugField(max_length=220, unique=True, verbose_name="URL-slug")
+    description = models.TextField(blank=True, verbose_name="Описание")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Серия"
+        verbose_name_plural = "Серии"
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = build_unique_slug(self, self.name, fallback="series")
+        super().save(*args, **kwargs)
+
+
 class Post(models.Model):
     """
     Модель поста блога.
@@ -142,6 +164,19 @@ class Post(models.Model):
         blank=True,
         related_name="posts",
         verbose_name="Категория",
+    )
+    series = models.ForeignKey(
+        Series,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="posts",
+        verbose_name="Серия",
+    )
+    series_order = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Порядок в серии",
+        help_text="Порядковый номер поста в серии (0, 1, 2, ...).",
     )
     tags = models.ManyToManyField(
         Tag,

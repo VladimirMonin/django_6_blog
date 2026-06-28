@@ -15,9 +15,29 @@
     </section>
 
     <section class="filter-panel mb-4" aria-label="Фильтры постов">
+        {% if content_type_choices %}
+        <div class="content-type-tabs mb-3">
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-sm {% if not content_type_filter %}btn-dark{% else %}btn-outline-dark{% endif %}"
+                   href="{% url 'post_list' %}{% if search_query or category_slug or tag_slug %}?{% if search_query %}search={{ search_query|urlencode }}{% endif %}{% if category_slug %}{% if search_query %}&{% endif %}category={{ category_slug|urlencode }}{% endif %}{% if tag_slug %}{% if search_query or category_slug %}&{% endif %}tag={{ tag_slug|urlencode }}{% endif %}{% endif %}"
+                   hx-get="{% url 'post_list' %}{% if search_query or category_slug or tag_slug %}?{% if search_query %}search={{ search_query|urlencode }}{% endif %}{% if category_slug %}{% if search_query %}&{% endif %}category={{ category_slug|urlencode }}{% endif %}{% if tag_slug %}{% if search_query or category_slug %}&{% endif %}tag={{ tag_slug|urlencode }}{% endif %}{% endif %}"
+                   hx-target="#post-container" hx-swap="innerHTML" hx-push-url="true">Все</a>
+                {% for ct_value, ct_label in content_type_choices %}
+                <a class="btn btn-sm {% if content_type_filter == ct_value %}btn-dark{% else %}btn-outline-dark{% endif %}"
+                   href="{% url 'post_list' %}?type={{ ct_value }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if category_slug %}&category={{ category_slug|urlencode }}{% endif %}{% if tag_slug %}&tag={{ tag_slug|urlencode }}{% endif %}"
+                   hx-get="{% url 'post_list' %}?type={{ ct_value }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if category_slug %}&category={{ category_slug|urlencode }}{% endif %}{% if tag_slug %}&tag={{ tag_slug|urlencode }}{% endif %}"
+                   hx-target="#post-container" hx-swap="innerHTML" hx-push-url="true">
+                   {% if ct_value == 'video' %}<i class="bi bi-camera-video"></i> {% elif ct_value == 'audio' %}<i class="bi bi-soundwave"></i> {% elif ct_value == 'podcast' %}<i class="bi bi-broadcast-pin"></i> {% else %}<i class="bi bi-file-text"></i> {% endif %}{{ ct_label }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <form id="post-filters" class="blog-search-form" action="{% url 'post_list' %}" method="get">
             {% if category_slug %}<input type="hidden" name="category" value="{{ category_slug }}">{% endif %}
             {% if tag_slug %}<input type="hidden" name="tag" value="{{ tag_slug }}">{% endif %}
+            {% if content_type_filter %}<input type="hidden" name="type" value="{{ content_type_filter }}">{% endif %}
             <div class="input-group blog-search-group">
                 <span class="input-group-text blog-search-icon">
                     <i class="bi bi-search"></i>

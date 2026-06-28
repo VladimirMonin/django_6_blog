@@ -75,7 +75,7 @@ def _post_matches_casefold(post, needle):
     return needle in " ".join(filter(None, chunks)).casefold()
 
 
-def _filter_query_string(*, search="", category="", tag=""):
+def _filter_query_string(*, search="", category="", tag="", content_type=""):
     """Build a stable query string for links that should preserve filters."""
     params = {}
     if search:
@@ -84,6 +84,8 @@ def _filter_query_string(*, search="", category="", tag=""):
         params["category"] = category
     if tag:
         params["tag"] = tag
+    if content_type:
+        params["type"] = content_type
     return urlencode(params)
 
 
@@ -99,6 +101,7 @@ class PostListView(ListView):
         self.search = request.GET.get("search", "").strip()
         self.category_slug = request.GET.get("category", "").strip()
         self.tag_slug = request.GET.get("tag", "").strip()
+        self.content_type_filter = request.GET.get("type", "").strip()
         self.active_category = None
         self.active_tag = None
         return super().dispatch(request, *args, **kwargs)
@@ -117,6 +120,11 @@ class PostListView(ListView):
         if self.tag_slug:
             self.active_tag = get_object_or_404(Tag, slug=self.tag_slug)
             posts = posts.filter(tags=self.active_tag)
+
+        if self.content_type_filter:
+            valid_types = dict(Post.ContentType.choices).keys()
+            if self.content_type_filter in valid_types:
+                posts = posts.filter(content_type=self.content_type_filter)
 
         if self.search:
             search_filter = (
@@ -149,10 +157,12 @@ class PostListView(ListView):
                 "search_query": self.search,
                 "category_slug": self.category_slug,
                 "tag_slug": self.tag_slug,
+                "content_type_filter": self.content_type_filter,
                 "filter_query": _filter_query_string(
                     search=self.search,
                     category=self.category_slug,
                     tag=self.tag_slug,
+                    content_type=self.content_type_filter,
                 ),
                 "active_category": self.active_category,
                 "active_tag": self.active_tag,
@@ -165,6 +175,7 @@ class PostListView(ListView):
                         distinct=True,
                     )
                 ).filter(public_post_count__gt=0),
+                "content_type_choices": Post.ContentType.choices,
                 "is_post_list": True,
                 "is_about": False,
             }
@@ -231,6 +242,27 @@ class PostDetailView(SessionInteractionMixin, DetailView):
                 "is_about": False,
             }
         )
+        # Series navigation: prev/next posts in the same series
+        post = self.object
+        if post.series:
+            series_posts = list(
+                post.series.posts.filter(status=Post.Status.PUBLISHED)
+                .order_by("series_order", "created_at")
+                .values_list("pk", "slug", "title")
+            )
+            current_index = next(
+                (i for i, (pk, _, _) in enumerate(series_posts) if pk == post.pk),
+                None,
+            )
+            if current_index is not None:
+                if current_index > 0:
+                    _, prev_slug, prev_title = series_posts[current_index - 1]
+                    context["series_prev"] = {"slug": prev_slug, "title": prev_title}
+                if current_index < len(series_posts) - 1:
+                    _, next_slug, next_title = series_posts[current_index + 1]
+                    context["series_next"] = {"slug": next_slug, "title": next_title}
+                context["series_total"] = len(series_posts)
+                context["series_position"] = current_index + 1
         return context
 
 

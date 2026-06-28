@@ -238,8 +238,13 @@ def parse_markdown_file(
     resolved_status = "draft" if resolved_status == "draft" else "published"
 
     tags = parse_tags(metadata.get("tags", ""))
-    category = metadata.get("series", "").strip()
-    category = humanize_taxonomy_name(category.removesuffix("-course")) if category else ""
+    category = metadata.get("category", "").strip()
+    category = humanize_taxonomy_name(category) if category else ""
+    series_name = metadata.get("series", "").strip()
+    series_name = humanize_taxonomy_name(series_name.removesuffix("-course")) if series_name else ""
+    if not category and series_name:
+        category = series_name
+    series_order = int(metadata.get("series_order", 0) or 0)
 
     payload: dict[str, Any] = {
         "title": resolved_title,
@@ -258,6 +263,9 @@ def parse_markdown_file(
         payload["tags"] = tags
     if category:
         payload["category"] = category
+    if series_name:
+        payload["series"] = series_name
+        payload["series_order"] = series_order
     if slug:
         payload["slug"] = slug
 

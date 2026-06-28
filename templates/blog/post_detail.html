@@ -142,6 +142,33 @@
 
             <hr class="my-5">
 
+            {% if post.series %}
+            <section class="series-nav mb-4" aria-label="Навигация по серии">
+                <div class="series-nav-card">
+                    <div class="series-nav-header">
+                        <span class="series-nav-label"><i class="bi bi-collection"></i> Серия: {{ post.series.name }}</span>
+                        {% if series_total %}<span class="series-nav-position">{{ series_position }} / {{ series_total }}</span>{% endif %}
+                    </div>
+                    <div class="series-nav-buttons d-flex justify-content-between gap-2 mt-3">
+                        <div>
+                            {% if series_prev %}
+                            <a class="btn btn-outline-dark btn-sm" href="{% url 'post_detail' slug=series_prev.slug %}">
+                                <i class="bi bi-arrow-left"></i> {{ series_prev.title|truncatechars:40 }}
+                            </a>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if series_next %}
+                            <a class="btn btn-outline-dark btn-sm" href="{% url 'post_detail' slug=series_next.slug %}">
+                                {{ series_next.title|truncatechars:40 }} <i class="bi bi-arrow-right"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
             <div class="d-flex justify-content-between align-items-center">
                 {% component "button" text="Назад к списку" url="post_list" icon="arrow-left" mobile_icon_only=True / %}
             </div>
