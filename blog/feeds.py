@@ -14,7 +14,7 @@ class LatestPostsFeed(Feed):
     description = "Заметки, эксперименты и материалы разработки Владимира Монина."
 
     def items(self):
-        return Post.objects.filter(status=Post.Status.PUBLISHED)[:20]
+        return Post.objects.filter(status=Post.Status.PUBLISHED, deleted_at__isnull=True)[:20]
 
     def item_title(self, item):
         return item.title

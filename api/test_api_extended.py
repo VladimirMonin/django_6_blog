@@ -122,7 +122,8 @@ def test_api_delete_post_removes_it(api_client):
         HTTP_AUTHORIZATION="Bearer " + key.token,
     )
     assert response.status_code == 204
-    assert not Post.objects.filter(slug=post.slug).exists()
+    # Soft delete: record still exists but marked as deleted
+    assert not Post.objects.filter(slug=post.slug, deleted_at__isnull=True).exists()
 
     again = client.get(
         f"/api/v1/posts/{post.slug}/",
@@ -186,4 +187,4 @@ def test_api_e2e_publish_list_detail_unpublish_delete(api_client):
         HTTP_AUTHORIZATION="Bearer " + key.token,
     )
     assert delete.status_code == 204
-    assert not Post.objects.filter(slug=slug).exists()
+    assert not Post.objects.filter(slug=slug, deleted_at__isnull=True).exists()

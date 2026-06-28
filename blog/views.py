@@ -1,4 +1,5 @@
 import hashlib
+import re
 from urllib.parse import urlencode
 
 from django.core.paginator import Paginator
@@ -6,10 +7,11 @@ from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
+from django.utils.text import slugify
 from django.views.decorators.http import condition
 from django.views.generic import DetailView, ListView, TemplateView, View
 
-from .models import Category, Post, Tag
+from .models import Category, Post, Series, Tag
 from .session_interactions import SessionInteractionMixin
 
 
@@ -25,6 +27,7 @@ def _post_detail_probe(request, slug):
         row = Post.objects.filter(
             slug=slug,
             status=Post.Status.PUBLISHED,
+            deleted_at__isnull=True,
         ).values_list("pk", "updated_at").first()
         setattr(request, cache_attr, row)
     return getattr(request, cache_attr)
@@ -89,6 +92,52 @@ def _filter_query_string(*, search="", category="", tag="", content_type=""):
     return urlencode(params)
 
 
+def _build_toc(html_content):
+    """Extract h2/h3 headings from rendered HTML and return a TOC list.
+
+    Returns a list of ``{"level", "text", "id"}`` dicts. Returns an empty
+    list when fewer than 3 headings are found (per task spec).
+    """
+    heading_re = re.compile(r"<h([23])[^>]*>(.*?)</h\1>", re.IGNORECASE | re.DOTALL)
+    entries = []
+    for match in heading_re.finditer(html_content):
+        level = int(match.group(1))
+        raw_text = match.group(2)
+        text = re.sub(r"<[^>]+>", "", raw_text).strip()
+        entry_id = slugify(text)
+        entries.append({"level": level, "text": text, "id": entry_id})
+    if len(entries) < 3:
+        return []
+    return entries
+
+
+def _get_related_posts(post, limit=3):
+    """Return up to ``limit`` published, non-deleted posts related to ``post``.
+
+    Related = same category OR shared tags, excluding the current post.
+    """
+    related = (
+        Post.objects.filter(
+            status=Post.Status.PUBLISHED,
+            deleted_at__isnull=True,
+        )
+        .exclude(pk=post.pk)
+        .select_related("category")
+        .prefetch_related("tags")
+    )
+    category_q = Q(category=post.category) if post.category_id else Q()
+    tag_q = Q(tags__in=post.tags.all()) if post.tags.exists() else Q()
+    combined = category_q | tag_q
+    if not combined:
+        return []
+    # Use distinct to avoid duplicates from tag join; annotate for stable order
+    return list(
+        related.filter(combined)
+        .distinct()
+        .order_by("-created_at")[:limit]
+    )
+
+
 class PostListView(ListView):
     """Public post list with filters, SEO pagination, and HTMX partials."""
 
@@ -108,7 +157,7 @@ class PostListView(ListView):
 
     def get_queryset(self):
         posts = (
-            Post.objects.filter(status=Post.Status.PUBLISHED)
+            Post.objects.filter(status=Post.Status.PUBLISHED, deleted_at__isnull=True)
             .select_related("category")
             .prefetch_related("tags", "media_files")
         )
@@ -224,7 +273,7 @@ class PostDetailView(SessionInteractionMixin, DetailView):
         # single prefetch is cheaper and simpler than two targeted filtered
         # prefetches. No optimization is needed here.
         return (
-            Post.objects.filter(status=Post.Status.PUBLISHED)
+            Post.objects.filter(status=Post.Status.PUBLISHED, deleted_at__isnull=True)
             .select_related("category")
             .prefetch_related("tags", "media_files")
         )
@@ -263,6 +312,25 @@ class PostDetailView(SessionInteractionMixin, DetailView):
                     context["series_next"] = {"slug": next_slug, "title": next_title}
                 context["series_total"] = len(series_posts)
                 context["series_position"] = current_index + 1
+
+        # Related posts (same category or shared tags, excluding current)
+        context["related_posts"] = _get_related_posts(post, limit=3)
+
+        # Breadcrumbs: Home > Category (if any) > Title
+        breadcrumbs = [{"url": "/", "title": "Главная"}]
+        if post.category:
+            breadcrumbs.append(
+                {
+                    "url": f"/?category={post.category.slug}",
+                    "title": post.category.name,
+                }
+            )
+        breadcrumbs.append({"title": post.title})
+        context["breadcrumbs"] = breadcrumbs
+
+        # Table of contents (only for posts with 3+ h2/h3 headings)
+        context["toc"] = _build_toc(post.body_content_html)
+
         return context
 
 
@@ -290,6 +358,31 @@ class AboutView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update({"is_post_list": False, "is_about": True})
+        return context
+
+
+class SeriesDetailView(DetailView):
+    """Landing page for a Series — lists all published posts in order."""
+
+    model = Series
+    template_name = "blog/series_detail.html"
+    context_object_name = "series"
+    slug_url_kwarg = "slug"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        posts = (
+            self.object.posts.filter(
+                status=Post.Status.PUBLISHED,
+                deleted_at__isnull=True,
+            )
+            .select_related("category")
+            .prefetch_related("tags")
+            .order_by("series_order", "created_at")
+        )
+        context["series_posts"] = posts
+        context["is_post_list"] = False
+        context["is_about"] = False
         return context
 
 

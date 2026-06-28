@@ -7,7 +7,7 @@ from .models import ApiKey
 
 @admin.register(ApiKey)
 class ApiKeyAdmin(ModelAdmin):
-    list_display = ("name", "display_token", "is_active", "created_at", "revoked_at", "last_used_at")
+    list_display = ("name", "display_token", "is_active", "display_permissions", "display_expires", "created_at", "revoked_at", "last_used_at")
     list_filter = ("is_active", "created_at")
     search_fields = ("name", "notes")
     readonly_fields = ("token", "created_at", "revoked_at", "last_used_at")
@@ -15,6 +15,8 @@ class ApiKeyAdmin(ModelAdmin):
 
     fieldsets = (
         ("Основное", {"fields": ("name", "token", "notes")}),
+        ("Разрешения", {"fields": ("permissions",)}),
+        ("Срок действия", {"fields": ("expires_at",)}),
         ("Статус", {"fields": ("is_active", "created_at", "revoked_at", "last_used_at")}),
     )
 
@@ -23,6 +25,20 @@ class ApiKeyAdmin(ModelAdmin):
         if obj and obj.token:
             return obj.token[:8] + "…" + obj.token[-4:]
         return "—"
+
+    @display(description="Права")
+    def display_permissions(self, obj):
+        if obj and obj.permissions:
+            return ", ".join(obj.permissions)
+        return "—"
+
+    @display(description="Истекает")
+    def display_expires(self, obj):
+        if obj and obj.expires_at:
+            from django.utils import timezone
+            expired = "⚠" if obj.is_expired else ""
+            return f"{obj.expires_at:%d.%m.%Y} {expired}".strip()
+        return "∞"
 
     @admin.action(description="Отозвать выбранные ключи")
     def revoke_keys(self, request, queryset):

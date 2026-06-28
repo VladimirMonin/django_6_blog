@@ -27,6 +27,12 @@ document.addEventListener("DOMContentLoaded", function () {
   console.log("✨ Frontend модули инициализированы");
 });
 
+// Lazy-load images on ALL pages (not just markdown)
+document.addEventListener("DOMContentLoaded", function () {
+  if (window.initLazyLoadImages) initLazyLoadImages();
+  if (window.initReadDepthTracking) initReadDepthTracking();
+});
+
 // HTMX интеграция
 document.body.addEventListener("htmx:afterSwap", function (event) {
   console.log("🔄 HTMX контент обновлен, реинициализация...");

@@ -133,6 +133,7 @@ class Post(models.Model):
     class Status(models.TextChoices):
         DRAFT = "draft", "Черновик"
         PUBLISHED = "published", "Опубликовано"
+        ARCHIVED = "archived", "В архиве"
 
     class ContentType(models.TextChoices):
         ARTICLE = "article", "Статья"
@@ -199,6 +200,34 @@ class Post(models.Model):
     )
     view_count = models.PositiveIntegerField(default=0, verbose_name="Просмотры")
     like_count = models.PositiveIntegerField(default=0, verbose_name="Лайки")
+    source_id = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        db_index=True,
+        unique=True,
+        verbose_name="Внешний ID",
+        help_text="Идемпотентный ключ для агентских публикаций.",
+    )
+    published_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name="Дата публикации",
+        help_text="Заполняется при переходе в published. Для scheduled publishing.",
+    )
+    is_featured = models.BooleanField(
+        default=False,
+        db_index=True,
+        verbose_name="Рекомендуемый",
+    )
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name="Удалён",
+        help_text="Soft delete timestamp. Null = active.",
+    )
 
     class Meta:
         ordering = ["-created_at"]
@@ -213,6 +242,20 @@ class Post(models.Model):
         Возвращает абсолютный URL для детального просмотра поста.
         """
         return reverse("post_detail", kwargs={"slug": self.slug})
+
+    def soft_delete(self):
+        """Mark this post as deleted without removing it from the database."""
+        self.deleted_at = timezone.now()
+        self.status = self.Status.ARCHIVED
+        self.save(update_fields=["deleted_at", "status", "updated_at"])
+
+    def hard_delete(self, *args, **kwargs):
+        """Actually remove this post from the database."""
+        return super().delete(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """Default to soft delete. Use hard_delete() to truly remove."""
+        self.soft_delete()
 
     def clean(self):
         super().clean()
@@ -366,9 +409,12 @@ class Post(models.Model):
         if not self.slug:
             self.slug = build_unique_slug(self, self.title, fallback="post")
 
-        # Конвертация Markdown → HTML при каждом сохранении
         if self.content:
             self.content_html = convert_markdown_to_html(self.content, post=self)
+
+        # Auto-fill published_at when transitioning to published
+        if self.status == self.Status.PUBLISHED and not self.published_at:
+            self.published_at = timezone.now()
 
         self.clean()
         super().save(*args, **kwargs)
@@ -586,3 +632,119 @@ class SessionPostInteraction(models.Model):
         self.liked_at = None
         self.save(update_fields=["liked_at", "updated_at"])
         return False
+
+
+class AuditLog(models.Model):
+    """Append-only audit trail for API-driven post actions."""
+
+    class Action(models.TextChoices):
+        PUBLISHED = "published", "Опубликовано"
+        UPDATED = "updated", "Обновлено"
+        STATUS_CHANGED = "status_changed", "Смена статуса"
+        DELETED = "deleted", "Удалено"
+        RESTORED = "restored", "Восстановлено"
+
+    action = models.CharField(
+        max_length=20,
+        choices=Action.choices,
+        db_index=True,
+        verbose_name="Действие",
+    )
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_entries",
+        verbose_name="Пост",
+    )
+    post_title = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Заголовок поста (снапшот)",
+    )
+    post_slug = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Slug поста (снапшот)",
+    )
+    api_key = models.ForeignKey(
+        "api.ApiKey",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_entries",
+        verbose_name="API ключ",
+    )
+    api_key_name = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Имя ключа (снапшот)",
+    )
+    detail = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Детали",
+        help_text="Дополнительные данные: old_status, new_status, source_id и т.д.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name="Дата")
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Запись аудита"
+        verbose_name_plural = "Записи аудита"
+
+    def __str__(self):
+        return f"{self.action} — {self.post_slug or self.post_title} — {self.created_at:%Y-%m-%d %H:%M}"
+
+    @classmethod
+    def log(cls, *, action, post=None, api_key=None, detail=None):
+        """Create an audit entry with snapshot fields."""
+        entry = cls(action=action, detail=detail or {})
+        if post:
+            entry.post = post
+            entry.post_title = post.title
+            entry.post_slug = post.slug
+        if api_key:
+            entry.api_key = api_key
+            entry.api_key_name = api_key.name
+        entry.save()
+        return entry
+
+
+class PostView(models.Model):
+    """Individual post view event for analytics (one row per session+post+day)."""
+
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name="view_events",
+        verbose_name="Пост",
+    )
+    session_key = models.CharField(
+        max_length=40,
+        db_index=True,
+        verbose_name="Ключ сессии",
+    )
+    viewed_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        verbose_name="Дата просмотра",
+    )
+    read_depth = models.FloatField(
+        default=0.0,
+        verbose_name="Глубина чтения",
+        help_text="Доля прочитанного контента: 0.0 — 1.0.",
+    )
+
+    class Meta:
+        ordering = ["-viewed_at"]
+        indexes = [
+            models.Index(fields=["post", "viewed_at"]),
+            models.Index(fields=["session_key", "viewed_at"]),
+        ]
+        verbose_name = "Просмотр поста"
+        verbose_name_plural = "Просмотры постов"
+
+    def __str__(self):
+        return f"{self.post_id} — {self.session_key[:8]} — {self.viewed_at:%Y-%m-%d}"

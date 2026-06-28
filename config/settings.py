@@ -35,7 +35,9 @@ ALLOWED_HOSTS = env_list(
     ["localhost", "127.0.0.1", "testserver"],
 )
 
-SITE_AUTHOR = "Владимир Монин"
+SITE_AUTHOR = env("SITE_AUTHOR", "Владимир Монин")
+
+APP_VERSION = "1.0"
 
 
 # Application definition
@@ -225,5 +227,60 @@ UNFOLD = {
                 ],
             },
         ],
+    },
+}
+
+# Structured JSON logging for API actions.
+# The api.* loggers emit JSON lines to console, suitable for log aggregation.
+import json as _json
+import logging as _logging
+
+
+class _JsonFormatter(_logging.Formatter):
+    """Minimal JSON formatter: emits a single-line JSON object per log record."""
+
+    def format(self, record):
+        payload = {
+            "timestamp": _logging.Formatter.formatTime(self, record),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        # Merge in extra fields (action, post_slug, api_key, etc.)
+        for key, value in record.__dict__.items():
+            if key not in payload and not key.startswith("_") and key not in {
+                "args", "msg", "name", "levelname", "levelno", "pathname",
+                "filename", "module", "exc_info", "exc_text", "stack_info",
+                "lineno", "funcName", "created", "msecs", "relativeCreated",
+                "thread", "threadName", "processName", "process", "taskName",
+            }:
+                try:
+                    _json.dumps(value)
+                    payload[key] = value
+                except (TypeError, ValueError):
+                    payload[key] = str(value)
+        return _json.dumps(payload, ensure_ascii=False)
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "()": "config.settings._JsonFormatter",
+        },
+    },
+    "handlers": {
+        "console_json": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+        },
+    },
+    "loggers": {
+        "api": {
+            "handlers": ["console_json"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }

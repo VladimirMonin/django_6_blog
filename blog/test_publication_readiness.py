@@ -84,12 +84,12 @@ def test_rendered_public_page_has_core_visual_landmarks(client):
     assert page.select_one(".post-card-stats") is not None
 
 
-def test_project_does_not_add_github_actions_or_alternative_database_stack():
-    workflows_dir = PROJECT_ROOT / ".github" / "workflows"
+def test_project_does_not_add_alternative_database_stack():
     pyproject = (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8").lower()
     settings = (PROJECT_ROOT / "config" / "settings.py").read_text(encoding="utf-8")
 
-    assert not workflows_dir.exists()
+    # CI workflow is now intentionally present
+    # Postgres/psycopg is still not part of this project stage
     assert "psycopg" not in pyproject
     assert "postgres" not in pyproject
     assert "DATABASE_URL" not in settings

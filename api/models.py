@@ -20,6 +20,19 @@ class ApiKey(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создан")
     revoked_at = models.DateTimeField(null=True, blank=True, verbose_name="Отозван")
     last_used_at = models.DateTimeField(null=True, blank=True, verbose_name="Последнее использование")
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name="Истекает",
+        help_text="Пусто = бессрочно.",
+    )
+    permissions = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Разрешения",
+        help_text='Список: ["read", "publish", "delete", "status", "stats"].',
+    )
     notes = models.TextField(blank=True, verbose_name="Заметки")
 
     class Meta:
@@ -31,9 +44,13 @@ class ApiKey(models.Model):
         masked = self.token[:8] + "…" if len(self.token) > 8 else self.token
         return f"{self.name} ({masked})"
 
+    DEFAULT_PERMISSIONS = ["read", "publish", "delete", "status", "stats"]
+
     def save(self, *args, **kwargs):
         if not self.token:
             self.token = secrets.token_urlsafe(32)
+        if not self.permissions:
+            self.permissions = list(self.DEFAULT_PERMISSIONS)
         super().save(*args, **kwargs)
 
     def revoke(self):
@@ -45,13 +62,22 @@ class ApiKey(models.Model):
         self.last_used_at = timezone.now()
         self.save(update_fields=["last_used_at"])
 
+    @property
+    def is_expired(self):
+        return self.expires_at is not None and timezone.now() >= self.expires_at
+
+    def has_permission(self, perm: str) -> bool:
+        return perm in (self.permissions or [])
+
     @classmethod
     def verify(cls, token: str) -> "ApiKey | None":
-        """Return active ApiKey for token, or None if invalid/revoked."""
+        """Return active, non-expired ApiKey for token, or None if invalid/revoked/expired."""
         if not token:
             return None
         try:
             key = cls.objects.get(token=token, is_active=True)
+            if key.is_expired:
+                return None
             key.touch()
             return key
         except cls.DoesNotExist:

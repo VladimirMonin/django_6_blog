@@ -55,7 +55,7 @@ def test_api_key_verify_returns_none_for_revoked_key():
 def test_require_api_key_returns_401_without_header():
     client = Client()
 
-    @require_api_key
+    @require_api_key("read")
     def view(request):
         return JsonResponse({"ok": True})
 
@@ -69,7 +69,7 @@ def test_require_api_key_returns_401_without_header():
 def test_require_api_key_returns_401_with_invalid_token():
     client = Client()
 
-    @require_api_key
+    @require_api_key("read")
     def view(request):
         return JsonResponse({"ok": True})
 
@@ -83,7 +83,7 @@ def test_require_api_key_passes_with_valid_token():
     key = ApiKey.objects.create(name="Agent")
     client = Client()
 
-    @require_api_key
+    @require_api_key("read")
     def view(request):
         return JsonResponse({"ok": True, "key": request.api_key.name})
 
@@ -101,7 +101,7 @@ def test_require_api_key_rejects_revoked_key():
     key.revoke()
     client = Client()
 
-    @require_api_key
+    @require_api_key("read")
     def view(request):
         return JsonResponse({"ok": True})
 

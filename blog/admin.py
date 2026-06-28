@@ -2,7 +2,16 @@ from django.contrib import admin
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 from unfold.decorators import display
-from .models import Category, Post, PostMedia, Series, SessionPostInteraction, Tag
+from .models import (
+    AuditLog,
+    Category,
+    Post,
+    PostMedia,
+    PostView,
+    Series,
+    SessionPostInteraction,
+    Tag,
+)
 
 
 class PostMediaInline(admin.TabularInline):
@@ -92,8 +101,8 @@ class PostAdmin(ModelAdmin):
     Административный интерфейс для модели Post с Unfold UI.
     """
 
-    list_display = ("title", "content_type", "category", "status", "view_count", "like_count", "display_created_at")
-    list_filter = ("content_type", "status", "category", "tags", "created_at")
+    list_display = ("title", "content_type", "category", "status", "is_featured", "view_count", "like_count", "display_created_at")
+    list_filter = ("content_type", "status", "is_featured", "category", "tags", "created_at")
     search_fields = ("title", "description", "content", "category__name", "tags__name")
     prepopulated_fields = {"slug": ("title",)}
     date_hierarchy = "created_at"
@@ -108,22 +117,48 @@ class PostAdmin(ModelAdmin):
             "HTML предпросмотр",
             {"fields": ("display_html_preview",), "classes": ("collapse",)},
         ),
-        ("Статус и реакции", {"fields": ("status", "view_count", "like_count")}),
-        ("Даты", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+        ("Статус и публикации", {"fields": ("status", "published_at", "is_featured", "source_id", "view_count", "like_count")}),
+        ("Даты", {"fields": ("created_at", "updated_at", "deleted_at"), "classes": ("collapse",)}),
     )
 
-    readonly_fields = ("created_at", "updated_at", "view_count", "like_count", "display_html_preview")
+    readonly_fields = ("created_at", "updated_at", "deleted_at", "published_at", "view_count", "like_count", "display_html_preview")
 
     # Custom actions
     @admin.action(description="Опубликовать выбранные посты")
     def publish_posts(self, request, queryset):
-        queryset.update(status=Post.Status.PUBLISHED)
+        from django.utils import timezone
+        for post in queryset:
+            post.status = Post.Status.PUBLISHED
+            if not post.published_at:
+                post.published_at = timezone.now()
+            post.save(update_fields=["status", "published_at", "updated_at"])
 
     @admin.action(description="Перевести в черновики")
     def unpublish_posts(self, request, queryset):
         queryset.update(status=Post.Status.DRAFT)
 
-    actions = [publish_posts, unpublish_posts]
+    @admin.action(description="В архив")
+    def archive_posts(self, request, queryset):
+        queryset.update(status=Post.Status.ARCHIVED)
+
+    @admin.action(description="Отметить как рекомендуемые")
+    def feature_posts(self, request, queryset):
+        queryset.update(is_featured=True)
+
+    @admin.action(description="Снять отметку «рекомендуемый»")
+    def unfeature_posts(self, request, queryset):
+        queryset.update(is_featured=False)
+
+    @admin.action(description="Мягко удалить (в архив + deleted_at)")
+    def soft_delete_posts(self, request, queryset):
+        from django.utils import timezone
+        now = timezone.now()
+        for post in queryset:
+            post.deleted_at = now
+            post.status = Post.Status.ARCHIVED
+            post.save(update_fields=["deleted_at", "status", "updated_at"])
+
+    actions = [publish_posts, unpublish_posts, archive_posts, feature_posts, unfeature_posts, soft_delete_posts]
 
     # Display methods with Unfold decorators
     @display(description="Дата создания")
@@ -141,3 +176,29 @@ class PostAdmin(ModelAdmin):
                 obj.content_html,
             )
         return "—"
+
+
+@admin.register(AuditLog)
+class AuditLogAdmin(ModelAdmin):
+    list_display = ("action", "post_slug", "api_key_name", "created_at")
+    list_filter = ("action", "created_at", "api_key")
+    search_fields = ("post_slug", "post_title", "api_key_name")
+    readonly_fields = ("action", "post", "post_title", "post_slug", "api_key", "api_key_name", "detail", "created_at")
+    date_hierarchy = "created_at"
+    ordering = ("-created_at",)
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(PostView)
+class PostViewAdmin(ModelAdmin):
+    list_display = ("post", "session_key", "viewed_at", "read_depth")
+    list_filter = ("viewed_at",)
+    search_fields = ("post__title", "session_key")
+    readonly_fields = ("post", "session_key", "viewed_at", "read_depth")
+    date_hierarchy = "viewed_at"
+    ordering = ("-viewed_at",)
+
+    def has_add_permission(self, request):
+        return False
