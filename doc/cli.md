@@ -227,6 +227,92 @@ uv run python manage.py import_obsidian_note \
 
 Локальные результаты импорта — `db.sqlite3`, `media/posts/*`, `tests/assets/*` — не коммитятся.
 
+## Publisher CLI (`publisher/`)
+
+ standalone-пакет для агентов: читает Markdown/Obsidian-заметку, парсит frontmatter и таймкоды, отправляет JSON через `POST /api/v1/posts/publish/`. Не зависит от Django — только стандартная библиотека (`urllib`, `argparse`, `json`).
+
+### Запуск
+
+```bash
+python -m publisher publish note.md --url http://127.0.0.1:8036 --key TOKEN
+```
+
+### Переменные окружения
+
+| Переменная | Аналог CLI | Описание |
+|---|---|---|
+| `BLOG_API_URL` | `--url` | Base URL блога |
+| `BLOG_API_KEY` | `--key` | API токен (Bearer) |
+
+### Опции
+
+| Опция | Описание |
+|---|---|
+| `--title TEXT` | Переопределить заголовок (приоритет над frontmatter) |
+| `--description TEXT` | Переопределить описание |
+| `--content-type article\|video\|audio\|podcast` | Переопределить тип контента |
+| `--media-url URL` | Переопределить URL медиа |
+| `--status published\|draft` | Переопределить статус |
+| `--slug SLUG` | Явный slug |
+| `--replace` | Перезаписать существующий пост с тем же slug |
+| `--dry-run` | Парсить и вывести payload без отправки на API |
+
+### Frontmatter
+
+Парсер читает стандартный YAML frontmatter:
+
+```yaml
+---
+title: "Заголовок"
+description: "Описание для карточки"
+content_type: video   # или type: video
+media_url: https://example.com/v.mp4
+tags: Python, Django
+series: testing       # → category
+status: published     # или draft
+---
+```
+
+Поддерживаются русские алиасы: `видео`, `аудио`, `подкаст`, `статья`.
+
+### Таймкоды
+
+Блок ````timecodes` извлекается, парсится и отправляется как JSON-массив:
+
+````markdown
+```timecodes
+0:00 Intro
+2:57 Demo
+1:00:00 One hour
+```
+````
+
+### Dry run
+
+```bash
+python -m publisher publish note.md --dry-run
+```
+
+Выводит JSON payload без отправки на API — удобно для отладки парсинга.
+
+### Примеры
+
+```bash
+# Опубликовать заметку
+python -m publisher publish path/to/note.md
+
+# Как черновик
+python -m publisher publish note.md --status draft
+
+# Перезаписать существующий
+python -m publisher publish note.md --replace
+
+# Через env vars
+export BLOG_API_URL=http://127.0.0.1:8036
+export BLOG_API_KEY=your-token-here
+python -m publisher publish note.md
+```
+
 ## Что нельзя коммитить
 
 Перед коммитом проверь staged-файлы:

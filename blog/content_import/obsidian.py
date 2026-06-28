@@ -277,7 +277,7 @@ def humanize_taxonomy_name(value: str) -> str:
     """Convert frontmatter slugs such as 'lm-studio' to readable labels."""
 
     words = re.split(r"[-_/\s]+", value.strip())
-    acronyms = {"ai", "api", "llm", "lm", "ui", "uv"}
+    acronyms = {"ai", "api", "llm", "lm", "ui", "uv", "e2e"}
     return " ".join(
         word.upper() if word.casefold() in acronyms else word.capitalize()
         for word in words

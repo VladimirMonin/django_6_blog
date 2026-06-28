@@ -60,6 +60,7 @@ Use smaller tests first when the change is narrow.
 | Tests, smoke gates, browser evidence | `instructions/TEST.quality_gates.instructions.md` |
 | README, `doc/`, instructions style | `instructions/DOCS.documentation.instructions.md` |
 | API endpoints, auth, token management | `instructions/API.publish.instructions.md` |
+| Publisher CLI, Markdown parser, agent workflow | `instructions/PUBLISHER.cli.instructions.md` |
 
 If no instruction clearly matches, read `doc/README.md`, inspect the current code, then update instructions only if the discovered rule is fundamental.
 
