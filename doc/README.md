@@ -5,6 +5,7 @@
 ## Актуальные документы
 
 - [`development.md`](development.md) — локальная разработка, проверки, dependency policy, что нельзя коммитить.
+- [`kanban.md`](kanban.md) — Hermes Kanban workflow для проектных слайсов, карточек, зависимостей, dispatch boundary и финального commit/push gate.
 - [`architecture.md`](architecture.md) — текущая архитектура Django-приложения, модели, services, templates, static assets.
 - [`content-import.md`](content-import.md) — Markdown/Obsidian импорт, frontmatter, локальные ссылки, media bundle.
 - [`media-content.md`](media-content.md) — `article`/`video`/`audio`/`podcast`, HTML5-плееры, cover, `timecodes`.
@@ -31,3 +32,4 @@
 3. Большие исторические серии и планы не смешиваются с текущими operational docs.
 4. Если меняется поведение CLI, импорта, публичного UI, медиа или тестовых gates — обновляй соответствующий документ в том же слайсе.
 5. Фундаментальные правила для агентов обновляй в `AGENTS.md` и `instructions/*.instructions.md`, а не в длинных чатовых отчётах.
+6. Если меняется порядок работы через Hermes Kanban, синхронизируй `doc/kanban.md`, `instructions/AGENT.kanban.instructions.md` и kanban-блок в `AGENTS.md`.

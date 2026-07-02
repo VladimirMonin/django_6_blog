@@ -56,6 +56,7 @@ Use smaller tests first when the change is narrow.
 | Area | Instruction |
 |---|---|
 | Project setup, dependencies, commit safety | `instructions/CORE.project.instructions.md` |
+| Hermes Kanban board, card contract, dispatch boundary | `instructions/AGENT.kanban.instructions.md` |
 | Markdown/Obsidian import, frontmatter, local media | `instructions/CONTENT.import.instructions.md` |
 | Video/audio/podcast, player, cover, timecodes | `instructions/CONTENT.media.instructions.md` |
 | Public list/detail UI, HTMX, reactions, visual QA | `instructions/UI.public_blog.instructions.md` |
@@ -75,6 +76,7 @@ If no instruction clearly matches, read `doc/README.md`, inspect the current cod
 - `README.md` — short human entry point.
 - `doc/README.md` — current documentation catalog.
 - `doc/development.md` — local development and safety gates.
+- `doc/kanban.md` — Hermes Kanban board workflow for project slices.
 - `doc/architecture.md` — current architecture.
 - `doc/content-import.md` — content import.
 - `doc/media-content.md` — media posts and timecodes.
@@ -87,6 +89,19 @@ If no instruction clearly matches, read `doc/README.md`, inspect the current cod
 - `doc/agent-workflow.md` — instruction maintenance workflow.
 
 Historical plans, research and architecture serials are references, not current operational rules.
+
+## Kanban workflow
+
+Project kanban work uses the dedicated Hermes board:
+
+```text
+slug: django-6-blog
+default workdir: /home/v/code/django_6_blog
+```
+
+Use Kanban CLI/database as the source of truth. Browser dashboard and Telegram notifications are reporting layers only.
+
+Before creating, dispatching, reviewing or closing kanban cards, read `instructions/AGENT.kanban.instructions.md` and `doc/kanban.md`. Cards must include exact files/instructions to read, a narrow task, measurable done conditions, and evidence gates. Creating cards does not imply autonomous dispatch; run dispatch only when the user expects workers to start.
 
 ## Git discipline
 
