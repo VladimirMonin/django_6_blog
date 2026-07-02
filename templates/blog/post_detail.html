@@ -46,34 +46,27 @@
 {% endblock %}
 
 {% block content %}
-<nav aria-label="Навигация по статье" class="breadcrumbs-dynamic article-breadcrumbs-sticky">
+<nav aria-label="Хлебные крошки" class="breadcrumbs-dynamic article-breadcrumbs-sticky">
     <div class="container d-flex align-items-center gap-2 overflow-hidden">
-        <span class="breadcrumbs-root breadcrumb-item"><a href="{% url 'post_list' %}">Главная</a></span>
-        <span class="breadcrumb-separator">/</span>
-        <span class="breadcrumbs-current breadcrumb-item active text-truncate">{{ post.title }}</span>
+        <ol class="breadcrumb small mb-0 flex-nowrap overflow-hidden">
+            {% for crumb in breadcrumbs %}
+                {% if forloop.last %}
+                    <li class="breadcrumbs-current breadcrumb-item active text-truncate" aria-current="page">{{ crumb.title }}</li>
+                {% else %}
+                    <li class="breadcrumbs-root breadcrumb-item"><a href="{{ crumb.url }}">{{ crumb.title }}</a></li>
+                {% endif %}
+            {% endfor %}
+        </ol>
         <span class="breadcrumbs-section ms-auto text-truncate"></span>
     </div>
 </nav>
 
-<div class="container py-5">
+<div class="container post-detail-container py-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <nav aria-label="Хлебные крошки" class="mb-4">
-                <ol class="breadcrumb small mb-0">
-                    {% for crumb in breadcrumbs %}
-                        {% if forloop.last %}
-                            <li class="breadcrumb-item active" aria-current="page">{{ crumb.title }}</li>
-                        {% else %}
-                            <li class="breadcrumb-item"><a href="{{ crumb.url }}">{{ crumb.title }}</a></li>
-                        {% endif %}
-                    {% endfor %}
-                </ol>
-            </nav>
-            
             <article data-post-slug="{{ post.slug }}">
-                <header class="mb-5">
-                    <h1 class="display-5 fw-bold mb-3">{{ post.title }}</h1>
-                    <div class="d-flex flex-wrap gap-2 mb-3">
+                <header class="post-detail-header mb-4">
+                    <div class="post-detail-kicker d-flex flex-wrap gap-2 mb-2">
                         <span class="badge text-bg-dark post-type-badge post-type-{{ post.content_type }}">
                             {% if post.content_type == 'video' %}<i class="bi bi-camera-video"></i>{% elif post.content_type == 'audio' %}<i class="bi bi-soundwave"></i>{% elif post.content_type == 'podcast' %}<i class="bi bi-broadcast-pin"></i>{% else %}<i class="bi bi-file-text"></i>{% endif %}
                             {{ post.get_content_type_display }}
@@ -89,13 +82,12 @@
                         </a>
                         {% endfor %}
                     </div>
-                    <div class="post-detail-meta text-muted mb-3">
+                    <h1 class="post-detail-title display-5 fw-bold mb-2">{{ post.title }}</h1>
+                    <div class="post-detail-meta post-detail-actions d-flex flex-wrap align-items-center gap-2 text-muted">
                         <span class="post-detail-meta-item post-detail-author">
                             <i class="bi bi-person"></i> Автор: {{ site_author }}
                         </span>
-                    </div>
-                    {% include "blog/_post_reactions.html" %}
-                    <div class="post-share-panel mt-3" aria-label="Поделиться постом">
+                        {% include "blog/_post_reactions.html" %}
                         <button
                             class="share-link-button share-link-button-detail"
                             type="button"
@@ -140,15 +132,16 @@
                 {% endif %}
 
                 {% if toc %}
-                <section class="post-toc mb-4" aria-label="Содержание">
-                    <div class="card">
-                        <div class="card-header d-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#post-toc-collapse" aria-expanded="true" aria-controls="post-toc-collapse" role="button" style="cursor:pointer">
+                <section class="post-toc post-toc-compact mb-4" aria-label="Содержание">
+                    <div class="card post-toc-card">
+                        <button class="post-toc-toggle card-header d-flex align-items-center w-100" type="button" data-bs-toggle="collapse" data-bs-target="#post-toc-collapse" aria-expanded="false" aria-controls="post-toc-collapse">
                             <i class="bi bi-list-ul me-2"></i>
                             <span class="fw-semibold">Содержание</span>
-                            <i class="bi bi-chevron-down ms-auto"></i>
-                        </div>
-                        <div class="collapse show" id="post-toc-collapse">
-                            <nav class="card-body">
+                            <span class="post-toc-count ms-2">{{ toc|length }} разделов</span>
+                            <i class="bi bi-chevron-down ms-auto" aria-hidden="true"></i>
+                        </button>
+                        <div class="collapse" id="post-toc-collapse">
+                            <nav class="card-body post-toc-body">
                                 <ul class="post-toc-list list-unstyled mb-0">
                                     {% for entry in toc %}
                                         <li class="post-toc-item post-toc-level-{{ entry.level }} ms-{{ entry.level|add:'-2'|floatformat:0 }}{{ entry.level|add:'-2'|floatformat:0 }}">
@@ -163,7 +156,7 @@
                 {% endif %}
 
                 <div class="post-content markdown-content">
-                    {{ post.body_content_html|safe }}
+                    {{ body_html|safe }}
                 </div>
 
             </article>

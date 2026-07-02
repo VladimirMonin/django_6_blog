@@ -1,11 +1,35 @@
 // static/js/table-of-contents.js
 /**
- * Генерация оглавления из H2 и H3 заголовков
+ * Сервер рендерит TOC, этот модуль только делает якорную прокрутку надежной.
  */
+
+function initPostTocAnchors() {
+  const toc = document.querySelector(".post-toc");
+  if (!toc) return;
+
+  toc.querySelectorAll('a[href^="#"]').forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const rawId = link.getAttribute("href").slice(1);
+      if (!rawId) return;
+
+      const target = document.getElementById(rawId);
+      if (!target) return;
+
+      event.preventDefault();
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      history.pushState(null, "", `#${rawId}`);
+      target.setAttribute("tabindex", "-1");
+      target.focus({ preventScroll: true });
+    });
+  });
+}
 
 function generateTableOfContents() {
   const tocContainer = document.getElementById("table-of-contents");
-  if (!tocContainer) return;
+  if (!tocContainer) {
+    initPostTocAnchors();
+    return;
+  }
 
   const headings = document.querySelectorAll(
     ".markdown-content h2, .markdown-content h3"
@@ -16,9 +40,8 @@ function generateTableOfContents() {
   tocList.className = "list-unstyled";
 
   headings.forEach((heading, index) => {
-    // Добавляем ID к заголовку (если нет)
     if (!heading.id) {
-      heading.id = `heading-${index}`;
+      heading.id = `post-section-${index + 1}`;
     }
 
     const tocItem = document.createElement("li");
@@ -34,7 +57,9 @@ function generateTableOfContents() {
   });
 
   tocContainer.appendChild(tocList);
+  initPostTocAnchors();
   console.log(`✓ TOC создано (${headings.length} заголовков)`);
 }
 
 window.generateTableOfContents = generateTableOfContents;
+window.initPostTocAnchors = initPostTocAnchors;

@@ -7,12 +7,14 @@ from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
-from django.utils.text import slugify
 from django.views.decorators.http import condition
 from django.views.generic import DetailView, ListView, TemplateView, View
 
 from .models import Category, Post, Series, Tag
 from .session_interactions import SessionInteractionMixin
+
+
+POST_DETAIL_RENDER_VERSION = "compact-toc-breadcrumbs-v5"
 
 
 def _post_detail_probe(request, slug):
@@ -49,9 +51,9 @@ def _post_detail_last_modified(request, *args, **kwargs):
 def _post_detail_etag(request, *args, **kwargs):
     """ETag probe for PostDetailView conditional rendering.
 
-    Returns an md5 of ``post:{pk}:{updated_at.isoformat()}`` so the tag
-    changes whenever the post is saved (``updated_at`` is ``auto_now=True``).
-    Shares the probe query with ``_post_detail_last_modified``.
+    Returns an md5 of post state plus the detail-render version. The render
+    version intentionally invalidates browser HTML caches when templates or
+    TOC/header behaviour changes without touching the post row.
     """
     slug = kwargs.get("slug")
     if not slug:
@@ -60,7 +62,7 @@ def _post_detail_etag(request, *args, **kwargs):
     if row is None:
         return None
     pk, updated_at = row
-    raw = f"post:{pk}:{updated_at.isoformat()}"
+    raw = f"post:{pk}:{updated_at.isoformat()}:{POST_DETAIL_RENDER_VERSION}"
     return hashlib.md5(raw.encode()).hexdigest()
 
 
@@ -92,23 +94,48 @@ def _filter_query_string(*, search="", category="", tag="", content_type=""):
     return urlencode(params)
 
 
-def _build_toc(html_content):
-    """Extract h2/h3 headings from rendered HTML and return a TOC list.
+def _build_body_html_and_toc(html_content):
+    """Return body HTML with heading ids plus a TOC for h2/h3 headings.
 
-    Returns a list of ``{"level", "text", "id"}`` dicts. Returns an empty
-    list when fewer than 3 headings are found (per task spec).
+    TOC links and rendered headings must be produced in the same pass. Use
+    deterministic ASCII ids instead of text-derived Cyrillic ids so native
+    anchors, copied links and JS scrolling behave the same across browsers.
     """
-    heading_re = re.compile(r"<h([23])[^>]*>(.*?)</h\1>", re.IGNORECASE | re.DOTALL)
+    heading_re = re.compile(
+        r"<h([23])(?P<attrs>[^>]*)>(?P<body>.*?)</h\1>",
+        re.IGNORECASE | re.DOTALL,
+    )
+    id_re = re.compile(r'\sid=["\']([^"\']+)["\']', re.IGNORECASE)
     entries = []
-    for match in heading_re.finditer(html_content):
+    used_ids = set()
+
+    def unique_id(index):
+        stem = f"post-section-{index + 1}"
+        candidate = stem
+        counter = 2
+        while candidate in used_ids:
+            candidate = f"{stem}-{counter}"
+            counter += 1
+        used_ids.add(candidate)
+        return candidate
+
+    def replace_heading(match):
         level = int(match.group(1))
-        raw_text = match.group(2)
-        text = re.sub(r"<[^>]+>", "", raw_text).strip()
-        entry_id = slugify(text)
+        attrs = match.group("attrs") or ""
+        body = match.group("body") or ""
+        text = re.sub(r"<[^>]+>", "", body).strip()
+        existing_id = id_re.search(attrs)
+        entry_id = unique_id(len(entries))
+        if existing_id:
+            attrs_with_id = id_re.sub(f' id="{entry_id}"', attrs, count=1)
+        else:
+            attrs_with_id = f'{attrs} id="{entry_id}"'
         entries.append({"level": level, "text": text, "id": entry_id})
-    if len(entries) < 3:
-        return []
-    return entries
+        return f"<h{level}{attrs_with_id}>{body}</h{level}>"
+
+    html_with_ids = heading_re.sub(replace_heading, html_content or "")
+    toc = entries if len(entries) >= 3 else []
+    return html_with_ids, toc
 
 
 def _get_related_posts(post, limit=3):
@@ -328,8 +355,11 @@ class PostDetailView(SessionInteractionMixin, DetailView):
         breadcrumbs.append({"title": post.title})
         context["breadcrumbs"] = breadcrumbs
 
-        # Table of contents (only for posts with 3+ h2/h3 headings)
-        context["toc"] = _build_toc(post.body_content_html)
+        # Body HTML and table of contents are built together so TOC anchors
+        # always point to actual heading ids in the rendered article.
+        body_html, toc = _build_body_html_and_toc(post.body_content_html)
+        context["body_html"] = body_html
+        context["toc"] = toc
 
         return context
 

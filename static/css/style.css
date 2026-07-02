@@ -158,6 +158,136 @@ article h1 {
   transform: translateY(1px) scale(0.98);
 }
 
+/* Compact post detail header */
+.post-detail-container {
+  padding-top: clamp(0.85rem, 1.6vw, 1.35rem) !important;
+}
+
+.post-detail-header {
+  border-bottom: 1px solid rgba(33, 37, 41, 0.08);
+  padding-bottom: 0.8rem;
+}
+
+.post-detail-kicker .badge {
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.post-detail-title {
+  font-size: clamp(1.65rem, 3vw, 2.35rem);
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+}
+
+.post-detail-actions {
+  font-size: 0.88rem;
+}
+
+.post-detail-actions .post-reactions {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  width: auto;
+  gap: 0.55rem !important;
+}
+
+.post-detail-actions .post-reaction-stat {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.post-detail-actions .post-like-button {
+  padding: 0.15rem 0.48rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.post-detail-actions .share-link-button-detail {
+  min-height: 0;
+  padding: 0.2rem 0.52rem;
+  font-size: 0.8rem;
+}
+
+.post-toc-card {
+  border-color: rgba(33, 37, 41, 0.10);
+  box-shadow: none;
+}
+
+.post-toc-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.post-toc-toggle {
+  color: var(--text-dark);
+  background: #f8f9fa;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.post-toc-toggle:hover,
+.post-toc-toggle:focus-visible {
+  background: #fff8e1;
+}
+
+.post-toc-count {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.post-toc-body {
+  max-height: min(48vh, 28rem);
+  overflow-y: auto;
+  padding-block: 0.85rem;
+}
+
+.post-toc-list {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.post-toc-item a {
+  display: block;
+  padding: 0.18rem 0;
+  color: var(--text-dark);
+  line-height: 1.35;
+}
+
+.post-toc-item a:hover,
+.post-toc-item a:focus-visible {
+  color: #6f5200;
+  text-decoration: underline !important;
+  text-decoration-color: var(--accent-yellow) !important;
+  text-underline-offset: 0.18em;
+}
+
+.post-toc-level-3 a {
+  color: var(--text-muted);
+  font-size: 0.94em;
+}
+
+.markdown-content h2,
+.markdown-content h3 {
+  scroll-margin-top: 7rem;
+}
+
+@media (max-width: 576px) {
+  .post-detail-actions {
+    align-items: flex-start !important;
+  }
+
+  .post-detail-actions .post-reactions {
+    width: 100%;
+  }
+
+  .post-detail-actions .share-link-button-detail [data-share-label] {
+    display: none;
+  }
+}
+
 /* Footer */
 footer {
   margin-top: auto;
@@ -660,26 +790,29 @@ button[hx-get]:active::after {
   .lightbox-img { max-width: 96vw; max-height: 78vh; }
 }
 
-/* Динамические breadcrumbs */
+/* Sticky breadcrumbs */
 .breadcrumbs-dynamic {
   position: sticky;
   top: 56px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(10px);
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #dee2e6;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(33, 37, 41, 0.08);
   z-index: 1020;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
 }
 
 .article-breadcrumbs-sticky {
-  box-shadow: 0 0.35rem 1rem rgba(33, 37, 41, 0.05);
+  box-shadow: 0 0.25rem 0.9rem rgba(33, 37, 41, 0.035);
 }
 
-.breadcrumbs-section {
-  min-width: 0;
-  max-width: 48%;
-  font-size: 0.85rem;
+.breadcrumbs-dynamic .container {
+  min-height: 2rem;
+}
+
+.breadcrumbs-dynamic .breadcrumb {
+  max-width: min(58%, 42rem);
+  color: var(--text-muted);
 }
 
 .breadcrumb-item {
@@ -688,144 +821,121 @@ button[hx-get]:active::after {
 }
 
 .breadcrumb-item a {
+  color: #495057;
+  text-decoration: none;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.breadcrumb-item a:hover,
+.breadcrumb-item a:focus-visible {
   color: var(--text-dark);
-  transition: color 0.2s ease;
+  text-decoration: underline;
+  text-decoration-color: rgba(33, 37, 41, 0.35);
+  text-underline-offset: 0.18em;
 }
 
-.breadcrumb-item a:hover {
-  color: var(--accent-yellow);
+.breadcrumb-item.active,
+.breadcrumbs-current {
+  color: #6c757d;
+  font-weight: 500;
 }
 
-.breadcrumb-item.active {
-  color: var(--accent-yellow);
-  font-weight: 600;
+.breadcrumb-separator,
+.breadcrumb-item + .breadcrumb-item::before {
+  color: #adb5bd;
 }
 
-.breadcrumb-separator {
+.breadcrumbs-section {
+  min-width: 0;
+  max-width: 42%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
   color: var(--text-muted);
-  margin: 0 0.5rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
 }
 
-/* Dropdown для H2 breadcrumbs */
-.breadcrumb-dropdown {
-  position: relative;
-  display: inline-block;
+.breadcrumbs-section.is-empty {
+  display: none;
+}
+
+.article-section-label {
+  color: #adb5bd;
+  flex: 0 0 auto;
+}
+
+.article-section-link {
+  min-width: 0;
+  max-width: 18rem;
+  overflow: hidden;
+  color: #495057;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.article-section-link:hover,
+.article-section-link:focus-visible {
+  color: var(--text-dark);
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 193, 7, 0.85);
+  text-underline-offset: 0.18em;
+}
+
+.article-section-link-h3 {
+  color: #6c757d;
+}
+
+.article-section-separator {
+  color: #ced4da;
+  flex: 0 0 auto;
+}
+
+/* Backward guard: if a browser still has old breadcrumbs.js cached, do not let
+   the retired H2 dropdown expand into the sticky bar. */
+.breadcrumb-dropdown-menu {
+  display: none !important;
 }
 
 .breadcrumb-h2-link {
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  display: inline-block;
-  transition: all 0.2s ease;
-}
-
-.breadcrumb-h2-link:hover {
-  background-color: var(--accent-yellow);
-  color: var(--text-dark) !important;
-}
-
-.breadcrumb-dropdown-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 0.375rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  min-width: 250px;
-  max-width: 400px;
-  max-height: 400px;
-  overflow-y: auto;
-  display: none;
-  z-index: 1001;
-  margin-top: 0.25rem;
-  /* Убираем gap между ссылкой и меню */
-}
-
-.breadcrumb-dropdown-menu.show {
-  display: block;
-  animation: dropdownFadeIn 0.2s ease;
-}
-
-@keyframes dropdownFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.breadcrumb-dropdown-item {
-  display: block;
-  padding: 0.5rem 1rem;
-  color: var(--text-dark);
+  color: #495057;
   text-decoration: none;
-  transition: all 0.2s ease;
-  border-left: 3px solid transparent;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.breadcrumb-dropdown-item:hover {
-  background-color: rgba(255, 193, 7, 0.1);
-  border-left-color: var(--accent-yellow);
-  padding-left: 1.25rem;
-}
-
-.breadcrumb-dropdown-item.active {
-  background-color: var(--accent-yellow);
-  border-left-color: var(--text-dark);
-  font-weight: 600;
-}
-
-.breadcrumb-dropdown-menu::-webkit-scrollbar {
-  width: 6px;
-}
-
-.breadcrumb-dropdown-menu::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.breadcrumb-dropdown-menu::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 3px;
-}
-
-.breadcrumb-dropdown-menu::-webkit-scrollbar-thumb:hover {
-  background: #555;
+.breadcrumb-h2-link:hover,
+.breadcrumb-h2-link:focus-visible {
+  color: var(--text-dark) !important;
+  background: transparent !important;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 193, 7, 0.85);
+  text-underline-offset: 0.18em;
 }
 
 /* Мобильная адаптивность для breadcrumbs */
 @media (max-width: 768px) {
   .breadcrumbs-dynamic {
-    font-size: 0.8rem;
-    padding: 0.5rem 0;
+    font-size: 0.78rem;
+    padding: 0.4rem 0;
   }
 
-  /* Скрываем H3 на мобильных */
-  .breadcrumb-item.active {
+  .breadcrumbs-dynamic .breadcrumb {
+    max-width: 52%;
+  }
+
+  .breadcrumbs-section {
+    max-width: 46%;
+  }
+
+  .article-section-label {
     display: none;
   }
 
-  .breadcrumb-separator:last-of-type {
+  .article-section-link-h3,
+  .article-section-separator {
     display: none;
-  }
-
-  /* Упрощаем dropdown */
-  .breadcrumb-dropdown-menu {
-    min-width: 200px;
-    max-width: 90vw;
-    max-height: 300px;
-    font-size: 0.85rem;
-  }
-
-  .breadcrumb-dropdown-item {
-    padding: 0.4rem 0.75rem;
   }
 }
 

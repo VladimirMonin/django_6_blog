@@ -42,7 +42,7 @@ def test_detail_page_has_sticky_dynamic_breadcrumb_bar(client):
     response = client.get(post.get_absolute_url())
 
     page = soup(response)
-    sticky_nav = page.select_one("nav.breadcrumbs-dynamic[aria-label='Навигация по статье']")
+    sticky_nav = page.select_one("nav.breadcrumbs-dynamic[aria-label='Хлебные крошки']")
     assert sticky_nav is not None
     assert sticky_nav.select_one(".breadcrumbs-root a").get_text(strip=True) == "Главная"
     assert sticky_nav.select_one(".breadcrumbs-current").get_text(strip=True) == post.title

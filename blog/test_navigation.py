@@ -139,6 +139,8 @@ def test_breadcrumbs_detail_page_has_links(client):
     assert "breadcrumb" in body.lower()
     assert "Главная" in body
     assert "Tutorial" in body
+    assert 'aria-label="Хлебные крошки"' in body
+    assert body.count('class="breadcrumbs-dynamic article-breadcrumbs-sticky"') == 1
 
 
 @pytest.mark.django_db
@@ -182,6 +184,44 @@ def test_toc_with_four_h2_headings(client):
 
     body = response.content.decode()
     assert "Содержание" in body
+    assert 'id="post-toc-collapse"' in body
+    assert 'class="collapse show" id="post-toc-collapse"' not in body
+    assert 'aria-expanded="false"' in body
+    for entry in toc:
+        href = f'href="#{entry["id"]}"'
+        target = f'id="{entry["id"]}"'
+        assert href in body
+        assert target in body
+
+
+@pytest.mark.django_db
+def test_toc_cyrillic_headings_have_real_body_anchors(client):
+    """Cyrillic TOC links should point to actual h2/h3 ids, not empty # anchors."""
+    content = (
+        "# Заголовок\n\n"
+        "## Первый раздел\n\nТекст.\n\n"
+        "## Второй раздел\n\nТекст.\n\n"
+        "### Важная деталь\n\nТекст.\n\n"
+        "## Третий раздел\n\nТекст.\n"
+    )
+    post = create_post("Кириллический TOC", content=content)
+
+    response = client.get(post.get_absolute_url())
+    assert response.status_code == 200
+    toc = response.context["toc"]
+    body_html = response.context["body_html"]
+
+    assert len(toc) == 4
+    assert all(entry["id"] for entry in toc)
+    assert [entry["id"] for entry in toc] == [
+        "post-section-1",
+        "post-section-2",
+        "post-section-3",
+        "post-section-4",
+    ]
+    for entry in toc:
+        assert f'href="#{entry["id"]}"' in response.content.decode()
+        assert f'id="{entry["id"]}"' in body_html
 
 
 @pytest.mark.django_db
