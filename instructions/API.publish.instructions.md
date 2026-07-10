@@ -33,7 +33,7 @@ scope: api/
 | Permission | Endpoints |
 |---|---|
 | `read` | `GET /api/v1/posts/`, `GET /api/v1/posts/<slug>/` |
-| `publish` | `POST /api/v1/posts/publish/`, `POST /api/v1/posts/bulk/` |
+| `publish` | `POST /api/v1/posts/publish/`, `POST /api/v1/posts/publish-package/`, `POST /api/v1/posts/bulk/` |
 | `delete` | `DELETE /api/v1/posts/<slug>/` |
 | `status` | `PATCH /api/v1/posts/<slug>/status/` |
 | `stats` | `GET /api/v1/stats/` |
@@ -65,6 +65,14 @@ New keys currently default to the full permission set.
   - Returns 201 with serialized post, 400 on validation error, 409 if slug exists without `replace=true`.
   - If `source_id` matches an existing active post, publish behaves idempotently and updates that logical post.
 
+- `POST /api/v1/posts/publish-package/` — publish one post and local assets as authenticated `multipart/form-data`.
+  - Requires the `publish` permission and a valid `Idempotency-Key` header (8–128 characters: letters, digits, `.`, `_`, `-`).
+  - The `manifest` form field uses protocol version 1 and contains `post`, `assets`, and canonical `package_sha256`; every declared asset has one matching `asset_<id>` file part.
+  - A new package returns `201`; an exact completed replay for the same API key and idempotency key returns the original response with `200`.
+  - Reusing the key for a different package, or replaying a pending/failed package, returns `409`. Validation errors return `400`; unexpected finalization failures return a generic `500`.
+  - The post stays draft until files, `PostMedia`, tags and audit state are finalized; only then is the requested `published` status applied.
+  - Replacement removes old `PostMedia` rows transactionally. Old object deletion runs after commit as best-effort cleanup, so a storage cleanup outage does not roll back the accepted replacement.
+
 - `POST /api/v1/posts/bulk/` — publish multiple posts from `{"posts": [...]}`.
   - Returns per-item success/error entries.
 
@@ -90,9 +98,18 @@ New keys currently default to the full permission set.
   - total likes
   - featured count
 
-## Validation rules
+## Package validation and limits
 
-- JSON in, JSON out. No multipart media upload yet.
+- JSON publish remains backward-compatible for posts without local assets. Multipart publish is used for local covers, body images and local primary audio/video.
+- Default package limits (overridable through matching Django settings): manifest 256 KiB, Markdown content 2 MiB, 32 assets, 512 MiB total; images 20 MiB each, audio 200 MiB each, video 500 MiB each.
+- Accepted files: JPEG, PNG, WebP, GIF, MP4, WebM, MP3, OGG/Opus, WAV, FLAC and M4A. Extension, declared MIME, byte signature, size and SHA-256 must agree.
+- Logical source references must be relative and must not contain traversal or host paths. Undeclared file parts, duplicate normalized filenames, duplicate cover/primary roles and type-incompatible primary media are rejected.
+- A media post must have exactly one external HTTP(S) `media_url` or one matching local primary asset. An article cannot have a primary player asset.
+- Package files are written through the configured Django storage API under deterministic names; no local filesystem `.path` assumption is allowed.
+
+## JSON validation rules
+
+- `POST /posts/publish/` remains JSON in, JSON out.
 - `serialize_post()` in `api/serializers.py` is the source of truth for JSON shape.
 - Error responses: `{"error": "message"}` or `{"errors": ["msg1", "msg2"]}`.
 - Timecodes are normalized from `{time, label}` to `{time, seconds, label}`.
@@ -105,6 +122,12 @@ New keys currently default to the full permission set.
 - API actions are also emitted through structured JSON logging on the `api.*` loggers.
 - Log payloads include action-level metadata such as `action`, `post_slug`, `api_key` when available.
 
+## Failure recovery
+
+- Failed package finalization deletes newly owned files best-effort and records the ledger row as `failed`.
+- `uv run python manage.py cleanup_publish_packages --dry-run` reports stale pending/failed package files; without `--dry-run`, it deletes only names recorded by those packages. Default age is 24 hours; override it with `--older-than-hours N`.
+- Do not delete arbitrary storage prefixes as recovery. `PublishPackage.storage_names` is the ownership boundary.
+
 ## Public visibility / deletion rules
 
 - Public site views must only expose `Post.status = published` and `deleted_at IS NULL`.
@@ -116,6 +139,9 @@ API changes are covered across:
 - `api/test_api.py`
 - `api/test_api_extended.py`
 - `api/test_api_operational.py`
+- `api/test_publish_package.py`
+- `api/test_remote_media_e2e.py`
+- `api/test_cleanup_publish_packages.py`
 
 When changing API behavior:
 1. Run focused API tests first.

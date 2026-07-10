@@ -31,11 +31,37 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
-from .client import ApiError, publish_post
+from .client import ApiError, publish_package, publish_post
+from .package import build_publish_package
 from .parser import parse_markdown_file
+
+
+_GENERATED_API_KEY_RE = re.compile(r"[A-Za-z0-9_-]{43}\Z")
+
+
+def _normalize_generated_api_key_argument(argv: list[str]) -> list[str]:
+    """Keep ``--key TOKEN`` usable when a generated token starts with a dash.
+
+    ``argparse`` otherwise interprets such a token as another option. Restrict
+    normalization to the exact URL-safe shape produced by
+    ``secrets.token_urlsafe(32)`` so missing values and ordinary option typos
+    retain argparse's normal error handling.
+    """
+    normalized = list(argv)
+    for index in range(len(normalized) - 1):
+        token = normalized[index + 1]
+        if (
+            normalized[index] == "--key"
+            and token.startswith("-")
+            and _GENERATED_API_KEY_RE.fullmatch(token)
+        ):
+            normalized[index : index + 2] = [f"--key={token}"]
+            break
+    return normalized
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -87,6 +113,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Replace existing post with the same slug.",
     )
     pub.add_argument(
+        "--assets-dir",
+        type=Path,
+        default=None,
+        help="Root for local embedded assets (default: note directory).",
+    )
+    pub.add_argument(
+        "--idempotency-key",
+        default=None,
+        help="Override the deterministic package idempotency key.",
+    )
+    pub.add_argument(
         "--dry-run",
         action="store_true",
         help="Parse and print the payload without sending to API.",
@@ -115,8 +152,30 @@ def cmd_publish(args: argparse.Namespace) -> int:
         print(f"Parse error: {exc}", file=sys.stderr)
         return 1
 
+    try:
+        manifest, package_files, default_idempotency_key = build_publish_package(
+            args.file,
+            payload,
+            assets_dir=args.assets_dir,
+            replace=args.replace,
+        )
+    except ValueError as exc:
+        print(f"Asset error: {exc}", file=sys.stderr)
+        return 1
+
     if args.dry_run:
-        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        if package_files:
+            output = {
+                "manifest": manifest,
+                "validation": {
+                    "asset_count": len(manifest["assets"]),
+                    "total_bytes": sum(asset["size"] for asset in manifest["assets"]),
+                    "idempotency_key": args.idempotency_key or default_idempotency_key,
+                },
+            }
+        else:
+            output = payload
+        print(json.dumps(output, indent=2, ensure_ascii=False))
         return 0
 
     if not args.url:
@@ -127,12 +186,21 @@ def cmd_publish(args: argparse.Namespace) -> int:
         return 1
 
     try:
-        result = publish_post(
-            url=args.url,
-            api_key=args.key,
-            payload=payload,
-            replace=args.replace,
-        )
+        if package_files:
+            result = publish_package(
+                url=args.url,
+                api_key=args.key,
+                manifest=manifest,
+                files=package_files,
+                idempotency_key=args.idempotency_key or default_idempotency_key,
+            )
+        else:
+            result = publish_post(
+                url=args.url,
+                api_key=args.key,
+                payload=payload,
+                replace=args.replace,
+            )
     except ApiError as exc:
         print(f"API error ({exc.status_code}): {exc}", file=sys.stderr)
         return 1
@@ -150,7 +218,8 @@ def cmd_publish(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point."""
     parser = build_parser()
-    args = parser.parse_args(argv)
+    raw_argv = sys.argv[1:] if argv is None else argv
+    args = parser.parse_args(_normalize_generated_api_key_argument(raw_argv))
 
     if args.command == "publish":
         return cmd_publish(args)

@@ -37,6 +37,8 @@ Sitemap, robots.txt, RSS/Atom фиды, Open Graph, Twitter Card, JSON-LD, canon
    `<script type="application/ld+json">` символы `<`, `>` и `&` экранируются,
    чтобы пользовательский текст не мог закрыть script-блок; результат обязан
    оставаться валидным JSON и round-trip сохранять Unicode, кавычки и слеши.
+10. Social image URLs use `request.build_absolute_uri(storage_url)`: relative media URLs become absolute, while already absolute S3/CDN URLs remain unchanged and must never become `https://hosthttps://cdn/...`.
+11. Local secure-host tests prove generated canonical/OG/Twitter/JSON-LD markup only. Telegram/VK preview readiness requires a separately approved live check against a public HTTPS URL reachable by those crawlers.
 
 ## Добавление новых статических страниц в sitemap
 

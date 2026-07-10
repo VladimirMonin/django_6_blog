@@ -57,6 +57,17 @@ uv run python manage.py publish_scheduled
 
 Удобно запускать из cron или scheduler.
 
+### `cleanup_publish_packages`
+
+Показывает или удаляет storage-объекты, записанные за stale remote-publish пакетами в состояниях `pending`/`failed`:
+
+```bash
+uv run python manage.py cleanup_publish_packages --dry-run
+uv run python manage.py cleanup_publish_packages --older-than-hours 24
+```
+
+Минимальный возраст — 1 час, default — 24 часа. Команда не сканирует и не удаляет произвольные storage prefixes: граница владения задаётся `PublishPackage.storage_names`.
+
 ## `collect_note_assets`
 
 Собирает Obsidian/Markdown-заметку и все локальные файлы, на которые она ссылается, в одну плоскую папку assets. Это удобно перед импортом статьи в Django.
@@ -250,7 +261,7 @@ uv run python manage.py import_obsidian_note \
 
 ## Publisher CLI (`publisher/`)
 
- standalone-пакет для агентов: читает Markdown/Obsidian-заметку, парсит frontmatter и таймкоды, отправляет JSON через `POST /api/v1/posts/publish/`. Не зависит от Django — только стандартная библиотека (`urllib`, `argparse`, `json`).
+Standalone-пакет для агентов: читает Markdown/Obsidian-заметку, парсит frontmatter и таймкоды. Без локальных файлов он сохраняет совместимый JSON-путь через `POST /api/v1/posts/publish/`; при локальных embeds/cover/primary media строит и потоково отправляет multipart package в `POST /api/v1/posts/publish-package/`. Не зависит от Django и внешних библиотек — только Python stdlib.
 
 ### Запуск
 
@@ -276,6 +287,8 @@ python -m publisher publish note.md --url http://127.0.0.1:8036 --key TOKEN
 | `--status published\|draft` | Переопределить статус |
 | `--slug SLUG` | Явный slug |
 | `--replace` | Перезаписать существующий пост с тем же slug |
+| `--assets-dir PATH` | Корень локальных assets; default — папка заметки |
+| `--idempotency-key KEY` | Переопределить детерминированный package hash/key |
 | `--dry-run` | Парсить и вывести payload без отправки на API |
 
 ### Frontmatter
@@ -318,7 +331,15 @@ status: published     # или draft
 python -m publisher publish note.md --dry-run
 ```
 
-Выводит JSON payload без отправки на API — удобно для отладки парсинга.
+Без локальных файлов выводит JSON payload. Для asset package выводит manifest и validation summary (`asset_count`, `total_bytes`, `idempotency_key`) без сети. Token, бинарные данные и абсолютный путь `--assets-dir` в output не попадают.
+
+### Локальные assets
+
+Publisher находит Obsidian embeds и Markdown images в body, локальный `cover` и локальный `media_url`. Все пути разрешаются только внутри `--assets-dir`; абсолютные пути, traversal, symlink escape, missing/empty files, неподдерживаемые типы и дубли basename завершают команду до сетевого запроса.
+
+Для `video`, `audio`, `podcast` локальный `media_url` становится primary upload. Если `media_url` не задан, единственный локальный audio/video подходящего типа может быть выбран автоматически. Внешний HTTP(S) `media_url` нельзя смешивать с локальным primary.
+
+Multipart body потоковый и повторяемый. При transport timeout/connection failure клиент делает один повтор с тем же idempotency key; ответы API автоматически не повторяются.
 
 ### Примеры
 
@@ -331,6 +352,9 @@ python -m publisher publish note.md --status draft
 
 # Перезаписать существующий
 python -m publisher publish note.md --replace
+
+# Проверить локальные assets без сети
+python -m publisher publish note.md --assets-dir path/to/assets --dry-run
 
 # Через env vars
 export BLOG_API_URL=http://127.0.0.1:8036

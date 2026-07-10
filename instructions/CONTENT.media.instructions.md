@@ -20,10 +20,14 @@ description: "Use for article/video/audio/podcast content types, Post.media_url,
 
 Detail pages must render exactly one primary player for media posts. Imported local audio/video embeds that become the primary player must not remain as standalone body embeds.
 
+The same rule applies to remote multipart publication: a local primary asset becomes `PostMedia`, `Post.media_url` stays empty, and its standalone Markdown embed is stripped. An external HTTP(S) `media_url` and a local primary asset are mutually exclusive.
+
 ## Cover
 
 - Cover comes from frontmatter `cover` or the first image `PostMedia`.
 - Cover path must stay inside `assets_dir`.
+- Publisher CLI resolves the same local cover contract inside `--assets-dir` and uploads it with the `cover` role.
+- Thumbnail generation must read with the Django storage file API, not `file.path`, so S3-compatible pathless storage works.
 - No-cover media cards should use the project placeholder style.
 
 ## Timecodes

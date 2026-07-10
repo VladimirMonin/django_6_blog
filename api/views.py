@@ -16,6 +16,13 @@ from blog.models import AuditLog, Category, Post, PostView, Series, Tag
 from blog.slug_utils import build_slug
 
 from .decorators import require_api_key
+from .package_publish import (
+    PackageConflict,
+    PackageError,
+    parse_manifest,
+    publish_validated_package,
+    validate_request,
+)
 from .serializers import serialize_post, serialize_post_list_item
 
 logger = logging.getLogger("api.views")
@@ -245,6 +252,46 @@ def publish_post(request):
     )
 
     return JsonResponse(serialize_post(post), status=201)
+
+
+@csrf_exempt
+@require_POST
+@require_api_key("publish")
+def publish_package(request):
+    """Publish one validated post and its local assets from a multipart package."""
+    if not (request.content_type or "").startswith("multipart/form-data"):
+        return JsonResponse({"error": "Content-Type must be multipart/form-data"}, status=400)
+    try:
+        manifest = parse_manifest(request)
+        post_data, assets, payload_hash = validate_request(request, manifest)
+        response, status = publish_validated_package(
+            request=request,
+            manifest=manifest,
+            post_data=post_data,
+            assets=assets,
+            payload_hash=payload_hash,
+        )
+    except PackageConflict as exc:
+        return JsonResponse({"error": str(exc)}, status=409)
+    except PackageError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    except Exception:
+        logger.exception(
+            "api.publish_package.failed",
+            extra={"api_key": getattr(getattr(request, "api_key", None), "name", None)},
+        )
+        return JsonResponse({"error": "Package publication failed"}, status=500)
+    logger.info(
+        "api.action",
+        extra={
+            "action": "publish_package",
+            "post_slug": response.get("slug"),
+            "api_key": request.api_key.name,
+            "asset_count": len(assets),
+            "package_hash": payload_hash[:12],
+        },
+    )
+    return JsonResponse(response, status=status)
 
 
 @csrf_exempt

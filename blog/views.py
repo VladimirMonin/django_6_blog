@@ -17,7 +17,7 @@ from .models import Category, Post, Series, Tag
 from .session_interactions import SessionInteractionMixin
 
 
-POST_DETAIL_RENDER_VERSION = "json-ld-v6"
+POST_DETAIL_RENDER_VERSION = "social-image-v7"
 
 _JSON_SCRIPT_ESCAPES = {
     ord("<"): "\\u003C",
@@ -338,10 +338,16 @@ class PostDetailView(SessionInteractionMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        cover = self.object.cover_media
         context.update(
             {
                 "post_is_liked": self.is_post_liked(self.object),
                 "post_json_ld": _build_post_json_ld(self.request, self.object),
+                "social_image_url": (
+                    self.request.build_absolute_uri(cover.thumbnail_og_url)
+                    if cover
+                    else ""
+                ),
                 "is_post_list": False,
                 "is_about": False,
             }

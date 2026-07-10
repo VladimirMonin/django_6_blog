@@ -527,12 +527,13 @@ class PostMedia(models.Model):
 
     def _generate_thumbnail(self, size, quality=85):
         """Generate a cover-cropped JPEG thumbnail ContentFile of the given size."""
-        with Image.open(self.file.path) as img:
-            img = img.convert("RGB")
-            img = ImageOps.fit(img, size, method=Image.LANCZOS, centering=(0.5, 0.4))
-            buffer = BytesIO()
-            img.save(buffer, format="JPEG", quality=quality, optimize=True)
-            return ContentFile(buffer.getvalue())
+        with self.file.open("rb") as source_file:
+            with Image.open(source_file) as img:
+                img = img.convert("RGB")
+                img = ImageOps.fit(img, size, method=Image.LANCZOS, centering=(0.5, 0.4))
+                buffer = BytesIO()
+                img.save(buffer, format="JPEG", quality=quality, optimize=True)
+                return ContentFile(buffer.getvalue())
 
     def save(self, *args, **kwargs):
         if self.file and not self.original_filename:

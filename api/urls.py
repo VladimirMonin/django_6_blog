@@ -5,6 +5,7 @@ from .views import (
     health,
     list_posts,
     post_detail_api,
+    publish_package,
     publish_post,
     read_depth,
     stats,
@@ -16,6 +17,7 @@ app_name = "api"
 urlpatterns = [
     path("health/", health, name="health"),
     path("posts/publish/", publish_post, name="publish_post"),
+    path("posts/publish-package/", publish_package, name="publish_package"),
     path("posts/bulk/", bulk_publish, name="bulk_publish"),
     path("posts/", list_posts, name="list_posts"),
     path("posts/<slug:slug>/", post_detail_api, name="post_detail_api"),

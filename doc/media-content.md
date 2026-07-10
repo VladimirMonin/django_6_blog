@@ -18,6 +18,8 @@
 
 Если медиа-пост импортирует локальный `![[file.mp4]]` или `![[file.opus]]`, этот файл становится primary media, а standalone embed удаляется из Markdown body, чтобы на detail page был ровно один player.
 
+Это одинаково для локального `import_obsidian_note` и remote Publisher multipart package. В remote path локальный `media_url` или единственный media candidate загружается как `PostMedia` с ролью `primary`, а `Post.media_url` остаётся пустым. Внешний HTTP(S) `media_url` и локальный primary взаимоисключающие.
+
 ## Обложки
 
 Обложка задаётся во frontmatter:
@@ -29,6 +31,20 @@ cover: cover.webp
 Поддерживаются простые пути, Obsidian embeds и Markdown image syntax. Обложка должна быть изображением внутри `assets_dir`. Первый image `PostMedia` используется как cover в карточках.
 
 Если у video-поста нет cover, карточка показывает проектный video placeholder. Это нормальное состояние и его нужно проверять отдельно от карточек с обложкой.
+
+Publisher CLI загружает локальный `cover` из `--assets-dir` с ролью `cover`. Путь не может выйти за этот корень. Изображения и thumbnails читаются/пишутся через Django Storage API без `file.path`, поэтому тот же контракт работает с локальным filesystem и pathless S3-compatible storage.
+
+## Remote publication flow
+
+```mermaid
+flowchart LR
+    N[Markdown note] --> P[Publisher parses refs]
+    P --> V[Local path and hash validation]
+    V --> A[Multipart package API]
+    A --> S[Django storage]
+    S --> M[PostMedia with cover and primary roles]
+    M --> R[Public body, social cover and one player]
+```
 
 ## Timecodes block
 

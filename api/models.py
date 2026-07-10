@@ -1,4 +1,4 @@
-"""API key model for token-based agent authentication."""
+"""API key and publishing ledger models for agent authentication."""
 
 import secrets
 
@@ -10,12 +10,7 @@ class ApiKey(models.Model):
     """API key for agent access to blog API endpoints."""
 
     name = models.CharField(max_length=100, verbose_name="Название")
-    token = models.CharField(
-        max_length=64,
-        unique=True,
-        db_index=True,
-        verbose_name="Токен",
-    )
+    token = models.CharField(max_length=64, unique=True, db_index=True, verbose_name="Токен")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создан")
     revoked_at = models.DateTimeField(null=True, blank=True, verbose_name="Отозван")
@@ -82,3 +77,37 @@ class ApiKey(models.Model):
             return key
         except cls.DoesNotExist:
             return None
+
+
+class PublishPackage(models.Model):
+    """Durable idempotency ledger for multipart post publication."""
+
+    class State(models.TextChoices):
+        PENDING = "pending", "В обработке"
+        DONE = "done", "Завершён"
+        FAILED = "failed", "Ошибка"
+
+    api_key = models.ForeignKey(ApiKey, on_delete=models.CASCADE, related_name="publish_packages")
+    idempotency_key = models.CharField(max_length=128)
+    payload_sha256 = models.CharField(max_length=64)
+    state = models.CharField(max_length=16, choices=State.choices, default=State.PENDING, db_index=True)
+    storage_names = models.JSONField(default=list, blank=True)
+    response = models.JSONField(default=dict, blank=True)
+    post = models.ForeignKey(
+        "blog.Post",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="publish_packages",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["api_key", "idempotency_key"],
+                name="unique_publish_package_key",
+            )
+        ]
+        ordering = ["-created_at"]

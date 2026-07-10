@@ -25,7 +25,7 @@ git diff --check
 - Media/timecodes: `blog/test_content_types_timecodes.py`.
 - Rendered links and quality: `blog/test_rendered_links.py`, `blog/test_quality_gates.py`.
 - Model/domain regressions: `blog/test_model_regressions.py`, `blog/test_content_strategy.py`, `blog/test_analytics.py`.
-- API: `api/test_api.py`, `api/test_api_extended.py`, `api/test_api_operational.py`.
+- API: `api/test_api.py`, `api/test_api_extended.py`, `api/test_api_operational.py`, `api/test_publish_package.py`, `api/test_remote_media_e2e.py`, `api/test_cleanup_publish_packages.py`.
 - Infra/ops: `blog/test_infra.py`.
 
 ## API / operational evidence
@@ -37,6 +37,7 @@ When API behavior changes, verify more than status codes:
 - list/detail visibility rules for soft-deleted and unpublished posts
 - real DB side effects (AuditLog / PostView / counters) when applicable
 - public site behavior when the API affects what should appear on the site
+- for remote assets: real `live_server` HTTP through the stdlib Publisher CLI, storage existence/cleanup, `PostMedia`, single-player render, secure-host social URLs and idempotent replay
 
 ## Browser/visual QA
 

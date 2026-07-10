@@ -48,6 +48,7 @@ Use smaller tests first when the change is narrow.
 8. UI changes need relevant tests and browser/visual QA when the user asks to see the result.
 9. Commit and push only on explicit user request.
 10. API changes must keep docs/instructions synchronized in the same slice; do not let `instructions/API.publish.instructions.md` drift from real endpoints.
+11. Remote local-asset publishing uses the authenticated multipart package endpoint. Paths must stay inside `--assets-dir`, packages must be idempotent, and storage code must not require a local filesystem `.path`.
 
 ## Instruction routing
 

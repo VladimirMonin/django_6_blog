@@ -29,8 +29,8 @@ publisher/
 
 1. Agent calls `python -m publisher publish note.md --url URL --key TOKEN`
 2. `parser.py` reads the `.md` file, splits frontmatter, extracts timecodes
-3. `cli.py` builds a JSON payload (or prints it with `--dry-run`)
-4. `client.py` sends `POST /api/v1/posts/publish/` with Bearer auth
+3. `package.py` resolves local embeds inside `--assets-dir`, builds the manifest and hashes files
+4. `cli.py` prints a safe validation result with `--dry-run`, sends JSON when there are no local assets, or streams multipart to `POST /api/v1/posts/publish-package/`
 5. API verifies token, permission, expiry and rate limit
 6. API creates or updates the `Post`, writes `AuditLog`, and the post becomes visible if `status=published`
 
@@ -48,11 +48,15 @@ publisher/
 | `series_order` | `Post.series_order` | Integer order inside the series |
 | `status` | `Post.status` | `published` (default), `draft`, `archived` |
 | `source_id` | `Post.source_id` | Idempotent external key |
-| `cover` | `PostMedia` | Only used by `import_obsidian_note`, **not** by publisher CLI |
+| `cover` | `PostMedia` | Local image resolved inside `--assets-dir` and sent in a multipart package |
 
 ## CLI overrides
 
 All frontmatter fields can be overridden via CLI args (`--title`, `--description`, `--content-type`, `--media-url`, `--status`, `--slug`). CLI args take precedence.
+
+- `--assets-dir PATH` sets the local asset root; the note directory is the default.
+- `--idempotency-key KEY` overrides the deterministic package hash used as the idempotency key.
+- A non-HTTP(S) `media_url` for a media post is treated as a local primary asset path.
 
 ## Env vars
 
@@ -80,6 +84,8 @@ E2E should prove more than the API response:
 1. **Zero Django dependency** in `publisher/` — only stdlib. The package must work without `DJANGO_SETTINGS_MODULE`.
 2. **No external packages** — no `requests`, no `click`, no `rich`. Only `urllib`, `argparse`, `json`.
 3. **Parser is a copy, not an import** — `publisher/parser.py` duplicates frontmatter/timecode parsing logic from Django-side import code to stay Django-free. Keep them in sync when parsing logic changes.
-4. **CLI is JSON-only** — no local media upload boundary. Covers and embedded local files belong to `import_obsidian_note`, not to publisher CLI.
-5. **`--dry-run` is safe** — it never sends anything to the API, just prints the parsed payload as JSON.
+4. **Local paths are bounded** — absolute paths, traversal, symlink escapes, missing/empty files and duplicate normalized basenames fail before any network request.
+5. **`--dry-run` is safe** — it never sends anything and never prints the token, binary bytes or absolute asset root. Asset packages print the manifest plus asset count, total bytes and idempotency key.
 6. **Series and category are independent** — do not overload one field into the other in new behavior. Backward compatibility may still exist server-side for legacy frontmatter, but new docs and new behavior should treat them as separate concepts.
+7. **Retries are narrow** — multipart transport failures are retried once with the same replayable body and idempotency key. HTTP/API errors are not retried.
+8. **Storage is abstract** — uploaded media and thumbnails must work with filesystem and pathless S3-compatible storage backends.

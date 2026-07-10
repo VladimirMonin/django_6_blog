@@ -1,6 +1,7 @@
 """Tests for the publisher CLI package — parser, client, and E2E CLI."""
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -249,12 +250,17 @@ class TestParseMarkdownFile:
 
 
 class TestCLIDryRun:
-    def _run_cli(self, *args: str) -> subprocess.CompletedProcess:
+    def _run_cli(
+        self,
+        *args: str,
+        env: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess:
         return subprocess.run(
             [sys.executable, "-m", "publisher", *args],
             capture_output=True,
             text=True,
             timeout=10,
+            env=env,
         )
 
     def test_dry_run_prints_payload(self, tmp_path):
@@ -314,6 +320,50 @@ class TestCLIDryRun:
         result = self._run_cli("publish", str(note))
         assert result.returncode == 1
         assert "url" in result.stderr.casefold()
+
+    @pytest.mark.parametrize(
+        "token",
+        [
+            "normal-token",
+            "-" + "a" * 42,
+        ],
+    )
+    def test_key_argument_compatibility_does_not_expose_token(self, tmp_path, token):
+        note = tmp_path / "note.md"
+        note.write_text("---\ndescription: Test\n---\nBody.\n", encoding="utf-8")
+
+        result = self._run_cli(
+            "publish",
+            str(note),
+            "--key",
+            token,
+            "--dry-run",
+        )
+
+        assert result.returncode == 0, result.stderr
+        assert token not in result.stdout
+        assert token not in result.stderr
+
+    def test_leading_dash_key_from_environment_remains_compatible(self, tmp_path):
+        note = tmp_path / "note.md"
+        note.write_text("---\ndescription: Test\n---\nBody.\n", encoding="utf-8")
+        token = "-" + "b" * 42
+        env = {**os.environ, "BLOG_API_KEY": token}
+
+        result = self._run_cli("publish", str(note), "--dry-run", env=env)
+
+        assert result.returncode == 0, result.stderr
+        assert token not in result.stdout
+        assert token not in result.stderr
+
+    def test_missing_key_value_keeps_argparse_error(self, tmp_path):
+        note = tmp_path / "note.md"
+        note.write_text("---\ndescription: Test\n---\nBody.\n", encoding="utf-8")
+
+        result = self._run_cli("publish", str(note), "--key", "--dry-run")
+
+        assert result.returncode == 2
+        assert "--key: expected one argument" in result.stderr
 
 
 # ── E2E: CLI → live server → public site ─────────────────────────────────────
