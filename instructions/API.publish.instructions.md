@@ -22,6 +22,7 @@ scope: api/
   - `403` when the key exists but lacks the required permission
   - `429` when the per-key rate limit is exceeded
 - API keys are managed via Django admin (`/admin/api/apikey/`), NOT hardcoded in code or settings.
+- Consumers must treat the token as an opaque secret. A valid `secrets.token_urlsafe(32)` value may begin with `-`; CLI parsing must preserve it rather than interpreting it as another option.
 - `ApiKey.verify(token)` returns the active, non-expired key or `None`, updates `last_used_at`.
 - Revocation sets `is_active=False` and `revoked_at=now()`.
 - Keys have:

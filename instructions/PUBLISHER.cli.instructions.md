@@ -4,7 +4,7 @@ version: 1
 scope: publisher/
 status: active
 canonical: doc/cli.md#publisher-cli-publisher
-last_updated: 2026-06-29
+last_updated: 2026-07-10
 ---
 
 # Publisher CLI — Agent Workflow
@@ -89,3 +89,4 @@ E2E should prove more than the API response:
 6. **Series and category are independent** — do not overload one field into the other in new behavior. Backward compatibility may still exist server-side for legacy frontmatter, but new docs and new behavior should treat them as separate concepts.
 7. **Retries are narrow** — multipart transport failures are retried once with the same replayable body and idempotency key. HTTP/API errors are not retried.
 8. **Storage is abstract** — uploaded media and thumbnails must work with filesystem and pathless S3-compatible storage backends.
+9. **API keys are opaque** — `--key TOKEN` and `BLOG_API_KEY` must accept every valid current/legacy `secrets.token_urlsafe(32)` token, including a 43-character token beginning with `-`. Normalizing that exact value must not weaken argparse handling for missing values or other options, and the token must never enter output.

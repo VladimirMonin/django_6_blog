@@ -276,6 +276,8 @@ python -m publisher publish note.md --url http://127.0.0.1:8036 --key TOKEN
 | `BLOG_API_URL` | `--url` | Base URL блога |
 | `BLOG_API_KEY` | `--key` | API токен (Bearer) |
 
+API-ключ считается opaque value. Сгенерированный `secrets.token_urlsafe(32)` токен может начинаться с `-`; стандартный вызов `--key TOKEN` и переменная `BLOG_API_KEY` поддерживают такой ключ. Токен не должен попадать в stdout/stderr, включая dry-run и ошибки.
+
 ### Опции
 
 | Опция | Описание |

@@ -50,7 +50,9 @@ git diff --check
 - [`doc/content-import.md`](doc/content-import.md) — импорт Markdown/Obsidian заметок и локальных медиа;
 - [`doc/media-content.md`](doc/media-content.md) — типы записей, плееры, обложки и таймкоды;
 - [`doc/public-ui.md`](doc/public-ui.md) — публичный UI, карточки, фильтры, HTMX и реакции;
+- [`doc/api.md`](doc/api.md) — API публикации, авторизация, JSON и multipart-пакеты с локальными файлами;
 - [`doc/cli.md`](doc/cli.md) — management commands и примеры запуска;
+- [`doc/seo.md`](doc/seo.md) — sitemap, robots.txt, RSS/Atom, canonical, OG/Twitter и JSON-LD;
 - [`doc/agent-workflow.md`](doc/agent-workflow.md) — как агентам работать с проектом и инструкциями.
 
 Исторические планы и исследовательские материалы остаются в [`doc/plans/`](doc/plans/), [`doc/architecture/`](doc/architecture/) и [`doc/researches/`](doc/researches/). Они не заменяют актуальные документы верхнего уровня.
@@ -65,11 +67,14 @@ git diff --check
 - Карточки используют обязательное `Post.description`, а не сырой Markdown excerpt.
 - Markdown рендерится в HTML при сохранении, включая таблицы, code blocks, callouts, изображения и Mermaid pan/zoom.
 - Obsidian/Markdown импорт поддерживает frontmatter, локальные медиа, обложки, wikilinks, Markdown images и dry link-check.
+- Отдельный stdlib Publisher CLI публикует Markdown через API: JSON для записей без локальных файлов и идемпотентный multipart-пакет для изображений, обложки и primary audio/video.
+- API защищён Bearer-ключами, permissions, rate limits и AuditLog; неудачный asset package не оставляет публичную полупубликацию или бесхозные новые файлы.
 - Типы записей: `article`, `video`, `audio`, `podcast`.
 - HTML5-плееры для видео/аудио/подкастов через `media_url` или импортированный локальный файл.
 - Кликабельные таймкоды из Markdown-блока ```` ```timecodes ```` с промоткой плеера.
 - Просмотры и лайки через anonymous Django sessions с централизованной историей `SessionPostInteraction`.
 - Автор публичного сайта задаётся дефолтом проекта, а не хранится в Obsidian/frontmatter.
+- SEO-контур включает sitemap, robots.txt, RSS/Atom, canonical, Open Graph, Twitter Card и безопасный JSON-LD для статьи, видео, аудио и подкаста.
 
 ## Инструкции для агентов
 

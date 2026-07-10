@@ -38,6 +38,7 @@ When API behavior changes, verify more than status codes:
 - real DB side effects (AuditLog / PostView / counters) when applicable
 - public site behavior when the API affects what should appear on the site
 - for remote assets: real `live_server` HTTP through the stdlib Publisher CLI, storage existence/cleanup, `PostMedia`, single-player render, secure-host social URLs and idempotent replay
+- Publisher auth compatibility: deterministic normal and leading-`-` API keys via `--key` and `BLOG_API_KEY`; missing `--key` value must still fail in argparse and no token may appear in stdout/stderr
 
 ## Browser/visual QA
 
