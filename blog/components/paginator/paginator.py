@@ -4,15 +4,13 @@ Paginator Component
 SEO-friendly компонент пагинации с поддержкой HTMX.
 
 Использование:
-    {% component "paginator" page_obj=page_obj search_query=search_query %}
+    {% component "paginator" page_obj=page_obj filter_params=filter_params %}
 
 Параметры:
     - page_obj: Django Paginator page object
-    - search_query: текущий поисковый запрос (опционально)
+    - filter_params: текущий QueryDict фильтров
     - show_load_more: показывать кнопку "Загрузить еще" (по умолчанию True)
 """
-
-from urllib.parse import urlencode
 
 from django_components import Component, register
 
@@ -27,13 +25,11 @@ class Paginator(Component):
 
         Args:
             page_obj: Django Paginator page object (обязательно)
-            search_query: текущий поисковый запрос
+            filter_params: QueryDict, общий для SSR- и HTMX-ссылок
             show_load_more: показывать ли кнопку "Загрузить еще"
         """
         page_obj = kwargs.get("page_obj")
-        search_query = kwargs.get("search_query", "")
-        category_slug = kwargs.get("category_slug", "")
-        tag_slug = kwargs.get("tag_slug", "")
+        filter_params = kwargs.get("filter_params")
         show_load_more = kwargs.get("show_load_more", True)
 
         if page_obj is None:
@@ -57,26 +53,12 @@ class Paginator(Component):
             else:
                 page_range = list(range(current_page - 2, current_page + 3))
 
-        query_params = {}
-        if search_query:
-            query_params["search"] = search_query
-        if category_slug:
-            query_params["category"] = category_slug
-        if tag_slug:
-            query_params["tag"] = tag_slug
-        search_param = f"&{urlencode(query_params)}" if query_params else ""
-        load_more_params = {"page": next_page}
-        load_more_params.update(query_params)
-        load_more_params["load_more"] = "true"
-        load_more_query = urlencode(load_more_params)
-
         return {
             "page_obj": page_obj,
             "current_page": current_page,
             "total_pages": total_pages,
             "page_range": page_range,
-            "search_param": search_param,
-            "load_more_query": load_more_query,
+            "filter_params": filter_params,
             "show_load_more": show_load_more,
             "has_previous": page_obj.has_previous(),
             "has_next": page_obj.has_next(),

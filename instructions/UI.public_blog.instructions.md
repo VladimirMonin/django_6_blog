@@ -15,6 +15,9 @@ The public blog is SSR-first. HTMX is progressive enhancement, not the only navi
 - HTMX partials return only the intended fragment.
 - Full-page responses must work without JavaScript.
 - Content-type filters (`?type=article|video|audio|podcast`) must preserve SSR and shareable URLs.
+- Search, category, tag and content-type filters must survive SSR/HTMX pagination,
+  load-more and filter navigation through one `request.GET` / `QueryDict` contract.
+  A filter change must drop stale `page` and `load_more` parameters.
 - Series landing pages and post detail pages must remain directly bookmarkable.
 
 ## Public visibility
@@ -24,7 +27,10 @@ All public list/detail querysets must filter both:
 - `Post.status = published`
 - `Post.deleted_at IS NULL`
 
-Do not leak `draft`, `archived`, or soft-deleted posts into public list/detail views.
+Do not leak `draft`, `archived`, or soft-deleted posts into public list/detail
+views, tag visibility/counts, series navigation or reaction endpoints. A like
+request for a non-public post returns `404` without changing counters or session
+interaction history.
 
 ## Search
 
@@ -58,9 +64,20 @@ Avoid duplicate H1 in body. Do not render duplicate primary media players below 
 ## Series and discovery
 
 - `Series` is a first-class navigation surface, not a category alias in public UI.
-- Series landing pages list ordered posts by `series_order`.
-- Detail pages should expose `prev` / `next` / position for posts inside a series.
+- Series landing pages list ordered public posts by `series_order`.
+- Detail pages should expose `prev` / `next` / position for public posts inside
+  a series; soft-deleted members must not affect neighbors, position or total.
 - Related posts are part of the public discovery layer and should be checked when changing detail-page layout.
+
+## Navigation accessibility
+
+- A page that renders breadcrumbs exposes exactly one semantic breadcrumb
+  navigation for the current location.
+- The navbar toggler has an accessible name plus `aria-controls` and
+  `aria-expanded` state tied to the collapse target.
+- Exactly the current paginator link uses `aria-current="page"`.
+- Decorative navigation and paginator icons are hidden from assistive
+  technology with `aria-hidden="true"`.
 
 ## Reactions and telemetry
 

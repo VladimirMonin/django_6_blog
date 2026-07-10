@@ -10,7 +10,7 @@
 
 - URL: `/sitemap.xml`
 - Классы: `blog/sitemaps.py` — `PostSitemap` (priority 0.8, weekly), `StaticViewSitemap` (priority 0.5, daily)
-- Только `status=published` посты попадают в sitemap
+- Только `status=published` посты с `deleted_at IS NULL` попадают в sitemap
 - `lastmod` = `updated_at` поста
 
 ## robots.txt
@@ -25,7 +25,7 @@
 - RSS 2.0: `/feed/rss/`
 - Atom 1.0: `/feed/atom/`
 - Классы: `blog/feeds.py` — `LatestPostsFeed`, `AtomLatestPostsFeed`
-- 20 последних опубликованных постов
+- 20 последних опубликованных постов с `deleted_at IS NULL`
 - Каждый item: title, link, description, pubdate, updatedate, author
 
 ## Open Graph и Twitter Card
@@ -54,6 +54,12 @@
 
 Поля: `headline`, `description`, `url`, `datePublished`, `dateModified`, `author`, `contentUrl` (для медиа), `image` (при наличии обложки).
 
+Structured data собирается в Python как словарь и сериализуется
+`DjangoJSONEncoder`. Перед вставкой в `application/ld+json` символы `<`, `>` и
+`&` переводятся в JSON Unicode escapes: пользовательские title/description не
+могут закрыть `<script>` через `</script>`, при этом валидный JSON сохраняет
+Unicode, кавычки, обратные слеши и переводы строк без искажений.
+
 ## Canonical URLs
 
 Каждая detail-страница содержит:
@@ -66,11 +72,12 @@
 
 ## Тесты
 
-`blog/test_seo.py` — 22 теста:
+`blog/test_seo.py` — регрессионный пакет SEO:
 
-- Sitemap: содержит опубликованные посты, исключает черновики, валидный XML
+- Sitemap: содержит только опубликованные, не soft-deleted посты, валидный XML
 - robots.txt: content-type, directives, sitemap reference
-- RSS/Atom: содержит посты, исключает черновики, корректные поля
-- JSON-LD: Article/VideoObject/AudioObject/AudioObject по типам контента, валидный JSON
+- RSS/Atom: содержит опубликованные, не soft-deleted посты, корректные поля
+- JSON-LD: Article/VideoObject/AudioObject по типам контента, валидный и
+  script-safe JSON, round-trip hostile text, абсолютные media/cover URL
 - OG/Twitter: meta tags на detail
 - E2E: publisher CLI → API → DB → сайт → sitemap → RSS → social meta → JSON-LD

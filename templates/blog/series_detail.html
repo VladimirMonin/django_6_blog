@@ -18,22 +18,16 @@
 {% block content %}
 <nav aria-label="Хлебные крошки" class="breadcrumbs-dynamic article-breadcrumbs-sticky">
     <div class="container d-flex align-items-center gap-2 overflow-hidden">
-        <span class="breadcrumbs-root breadcrumb-item"><a href="{% url 'post_list' %}">Главная</a></span>
-        <span class="breadcrumb-separator">/</span>
-        <span class="breadcrumbs-current breadcrumb-item active text-truncate">Серия: {{ series.name }}</span>
+        <ol class="breadcrumb small mb-0 flex-nowrap overflow-hidden">
+            <li class="breadcrumbs-root breadcrumb-item"><a href="{% url 'post_list' %}">Главная</a></li>
+            <li class="breadcrumbs-current breadcrumb-item active text-truncate" aria-current="page">Серия: {{ series.name }}</li>
+        </ol>
     </div>
 </nav>
 
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <nav aria-label="Хлебные крошки" class="mb-4">
-                <ol class="breadcrumb small mb-0">
-                    <li class="breadcrumb-item"><a href="{% url 'post_list' %}">Главная</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Серия: {{ series.name }}</li>
-                </ol>
-            </nav>
-
             <header class="mb-5">
                 <h1 class="display-5 fw-bold mb-3">{{ series.name }}</h1>
                 {% if series.description %}

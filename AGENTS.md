@@ -82,6 +82,7 @@ If no instruction clearly matches, read `doc/README.md`, inspect the current cod
 - `doc/media-content.md` — media posts and timecodes.
 - `doc/public-ui.md` — public UI and interactions.
 - `doc/api.md` — API endpoints and auth.
+- `doc/seo.md` — sitemap, feeds, canonical, social metadata and JSON-LD.
 - `doc/cli.md` — management commands.
 - `doc/navigation.md` — related posts, breadcrumbs, TOC, series landing.
 - `doc/analytics.md` — view tracking, read-depth, audit log, stats.

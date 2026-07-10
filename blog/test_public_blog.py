@@ -9,7 +9,7 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from bs4 import BeautifulSoup
 
-from blog.models import Category, Post, PostMedia, Tag
+from blog.models import Category, Post, PostMedia, SessionPostInteraction, Tag
 from blog.services.markdown_converter import convert_markdown_to_html
 from blog.views import AboutView, PostDetailView, PostLikeToggleView, PostListView
 
@@ -286,6 +286,75 @@ def test_anonymous_like_toggle_is_stored_in_session_history(client):
     assert "is-liked" not in unliked_button.get("class", [])
     assert unliked_button["aria-pressed"] == "false"
     assert "0 лайков" in unliked.content.decode()
+
+
+@pytest.mark.django_db
+def test_like_toggle_returns_404_for_soft_deleted_published_post(client):
+    post = create_post("Удалённый пост для лайка", content="Текст")
+    post.deleted_at = post.created_at
+    post.save(update_fields=["deleted_at"])
+
+    response = client.post(
+        reverse("post_like_toggle", kwargs={"slug": post.slug}),
+        HTTP_HX_REQUEST="true",
+    )
+
+    post.refresh_from_db()
+    assert response.status_code == 404
+    assert post.like_count == 0
+    assert not SessionPostInteraction.objects.filter(post=post).exists()
+
+
+@pytest.mark.django_db
+def test_tag_map_excludes_tags_backed_only_by_soft_deleted_posts(client):
+    deleted_only_tag = Tag.objects.create(name="Призрак", slug="ghost")
+    deleted = create_post("Удалённый пост", tags=[deleted_only_tag])
+    deleted.deleted_at = deleted.created_at
+    deleted.save(update_fields=["deleted_at"])
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    tag_counts = {
+        tag.slug: tag.public_post_count
+        for tag in response.context["tag_map"]
+    }
+    assert deleted_only_tag.slug not in tag_counts
+
+
+@pytest.mark.django_db
+def test_tag_map_does_not_count_soft_deleted_posts_for_shared_tag(client):
+    shared_tag = Tag.objects.create(name="Общий", slug="shared")
+    create_post("Активный пост", tags=[shared_tag])
+    deleted = create_post("Удалённый пост", tags=[shared_tag])
+    deleted.deleted_at = deleted.created_at
+    deleted.save(update_fields=["deleted_at"])
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    tag_counts = {
+        tag.slug: tag.public_post_count
+        for tag in response.context["tag_map"]
+    }
+    assert tag_counts[shared_tag.slug] == 1
+
+
+@pytest.mark.django_db
+def test_tag_map_shows_active_published_tag_with_public_post_count(client):
+    active_tag = Tag.objects.create(name="Активный", slug="active")
+    create_post("Первый опубликованный пост", tags=[active_tag])
+    create_post("Второй опубликованный пост", tags=[active_tag])
+    create_post("Черновик", status=Post.Status.DRAFT, tags=[active_tag])
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    tag_counts = {
+        tag.slug: tag.public_post_count
+        for tag in response.context["tag_map"]
+    }
+    assert tag_counts[active_tag.slug] == 2
 
 
 @pytest.mark.django_db

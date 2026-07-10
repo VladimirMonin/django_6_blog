@@ -52,10 +52,18 @@
         <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
             <div class="container">
                 <a class="navbar-brand fw-bold" href="{% url 'post_list' %}">
-                    <i class="bi bi-journal-code"></i> Django 6 Blog
+                    <i class="bi bi-journal-code" aria-hidden="true"></i> Django 6 Blog
                 </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                    <span class="navbar-toggler-icon"></span>
+                <button
+                    class="navbar-toggler"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#navbarNav"
+                    aria-controls="navbarNav"
+                    aria-expanded="false"
+                    aria-label="Переключить навигацию"
+                >
+                    <span class="navbar-toggler-icon" aria-hidden="true"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto">

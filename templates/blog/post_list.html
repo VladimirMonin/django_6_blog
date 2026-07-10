@@ -19,13 +19,15 @@
         <div class="content-type-tabs mb-3">
             <div class="d-flex flex-wrap gap-2">
                 <a class="btn btn-sm {% if not content_type_filter %}btn-dark{% else %}btn-outline-dark{% endif %}"
-                   href="{% url 'post_list' %}{% if search_query or category_slug or tag_slug %}?{% if search_query %}search={{ search_query|urlencode }}{% endif %}{% if category_slug %}{% if search_query %}&{% endif %}category={{ category_slug|urlencode }}{% endif %}{% if tag_slug %}{% if search_query or category_slug %}&{% endif %}tag={{ tag_slug|urlencode }}{% endif %}{% endif %}"
-                   hx-get="{% url 'post_list' %}{% if search_query or category_slug or tag_slug %}?{% if search_query %}search={{ search_query|urlencode }}{% endif %}{% if category_slug %}{% if search_query %}&{% endif %}category={{ category_slug|urlencode }}{% endif %}{% if tag_slug %}{% if search_query or category_slug %}&{% endif %}tag={{ tag_slug|urlencode }}{% endif %}{% endif %}"
+                   {% querystring filter_params type=None page=None load_more=None as all_types_query %}
+                   href="{% url 'post_list' %}{{ all_types_query }}"
+                   hx-get="{% url 'post_list' %}{{ all_types_query }}"
                    hx-target="#post-container" hx-swap="innerHTML" hx-push-url="true">Все</a>
                 {% for ct_value, ct_label in content_type_choices %}
                 <a class="btn btn-sm {% if content_type_filter == ct_value %}btn-dark{% else %}btn-outline-dark{% endif %}"
-                   href="{% url 'post_list' %}?type={{ ct_value }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if category_slug %}&category={{ category_slug|urlencode }}{% endif %}{% if tag_slug %}&tag={{ tag_slug|urlencode }}{% endif %}"
-                   hx-get="{% url 'post_list' %}?type={{ ct_value }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if category_slug %}&category={{ category_slug|urlencode }}{% endif %}{% if tag_slug %}&tag={{ tag_slug|urlencode }}{% endif %}"
+                   {% querystring filter_params type=ct_value page=None load_more=None as content_type_query %}
+                   href="{% url 'post_list' %}{{ content_type_query }}"
+                   hx-get="{% url 'post_list' %}{{ content_type_query }}"
                    hx-target="#post-container" hx-swap="innerHTML" hx-push-url="true">
                    {% if ct_value == 'video' %}<i class="bi bi-camera-video"></i> {% elif ct_value == 'audio' %}<i class="bi bi-soundwave"></i> {% elif ct_value == 'podcast' %}<i class="bi bi-broadcast-pin"></i> {% else %}<i class="bi bi-file-text"></i> {% endif %}{{ ct_label }}
                 </a>
@@ -68,13 +70,15 @@
             <div class="small text-muted mb-2">Категории</div>
             <div class="d-flex flex-wrap gap-2">
                 <a class="btn btn-sm {% if not category_slug %}btn-dark{% else %}btn-outline-dark{% endif %}"
-                   href="{% url 'post_list' %}{% if search_query or tag_slug %}?{% if search_query %}search={{ search_query|urlencode }}{% endif %}{% if search_query and tag_slug %}&{% endif %}{% if tag_slug %}tag={{ tag_slug|urlencode }}{% endif %}{% endif %}"
-                   hx-get="{% url 'post_list' %}{% if search_query or tag_slug %}?{% if search_query %}search={{ search_query|urlencode }}{% endif %}{% if search_query and tag_slug %}&{% endif %}{% if tag_slug %}tag={{ tag_slug|urlencode }}{% endif %}{% endif %}"
+                   {% querystring filter_params category=None page=None load_more=None as all_categories_query %}
+                   href="{% url 'post_list' %}{{ all_categories_query }}"
+                   hx-get="{% url 'post_list' %}{{ all_categories_query }}"
                    hx-target="#post-container" hx-swap="innerHTML" hx-push-url="true">Все</a>
                 {% for category in categories %}
                 <a class="btn btn-sm {% if category.slug == category_slug %}btn-dark{% else %}btn-outline-dark{% endif %}"
-                   href="{% url 'post_list' %}?category={{ category.slug|urlencode }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if tag_slug %}&tag={{ tag_slug|urlencode }}{% endif %}"
-                   hx-get="{% url 'post_list' %}?category={{ category.slug|urlencode }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if tag_slug %}&tag={{ tag_slug|urlencode }}{% endif %}"
+                   {% querystring filter_params category=category.slug page=None load_more=None as category_query %}
+                   href="{% url 'post_list' %}{{ category_query }}"
+                   hx-get="{% url 'post_list' %}{{ category_query }}"
                    hx-target="#post-container" hx-swap="innerHTML" hx-push-url="true">{{ category.name }}</a>
                 {% endfor %}
             </div>
@@ -87,8 +91,9 @@
             <div class="d-flex flex-wrap gap-2">
                 {% for tag in tag_map %}
                 <a class="badge rounded-pill {% if tag.slug == tag_slug %}text-bg-dark{% else %}text-bg-light text-dark border{% endif %} text-decoration-none"
-                   href="{% url 'post_list' %}?tag={{ tag.slug|urlencode }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if category_slug %}&category={{ category_slug|urlencode }}{% endif %}"
-                   hx-get="{% url 'post_list' %}?tag={{ tag.slug|urlencode }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if category_slug %}&category={{ category_slug|urlencode }}{% endif %}"
+                   {% querystring filter_params tag=tag.slug page=None load_more=None as tag_query %}
+                   href="{% url 'post_list' %}{{ tag_query }}"
+                   hx-get="{% url 'post_list' %}{{ tag_query }}"
                    hx-target="#post-container" hx-swap="innerHTML" hx-push-url="true">#{{ tag.name }} <span class="tag-count">{{ tag.public_post_count }}</span></a>
                 {% endfor %}
             </div>
@@ -108,6 +113,6 @@
         {% endfor %}
     </div>
 
-    {% component "paginator" page_obj=page_obj search_query=search_query category_slug=category_slug tag_slug=tag_slug / %}
+    {% component "paginator" page_obj=page_obj filter_params=filter_params / %}
 </div>
 {% endblock %}

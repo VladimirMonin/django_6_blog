@@ -5,10 +5,11 @@ sitemap → social meta tags (OG, Twitter, JSON-LD).
 """
 
 import json
+import re
 import xml.etree.ElementTree as ET
 
 import pytest
-from django.test import Client
+from django.test import Client, override_settings
 
 from api.models import ApiKey
 from blog.models import Post
@@ -180,6 +181,19 @@ def test_rss_feed_has_post_link_and_description():
 # ── JSON-LD + canonical tests ───────────────────────────────────────────────
 
 
+JSON_LD_SCRIPT_RE = re.compile(
+    r'<script\b[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+    re.DOTALL | re.IGNORECASE,
+)
+
+
+def _parse_json_ld_scripts(response):
+    """Parse every JSON-LD script in a rendered response with stdlib JSON."""
+    scripts = JSON_LD_SCRIPT_RE.findall(response.content.decode())
+    assert scripts, "JSON-LD script block not found"
+    return [json.loads(script) for script in scripts]
+
+
 @pytest.mark.django_db
 def test_article_detail_has_json_ld_article():
     """Article detail page has Article JSON-LD with correct fields."""
@@ -314,18 +328,75 @@ def test_json_ld_is_valid_json():
     client = Client()
     response = client.get(f"/post/{post.slug}/")
     assert response.status_code == 200
-    body = response.content.decode()
-    # Extract JSON-LD block
-    import re
-    match = re.search(
-        r'<script type="application/ld\+json">\s*(\{.*?\})\s*</script>',
-        body,
-        re.DOTALL,
-    )
-    assert match, "JSON-LD script block not found"
-    data = json.loads(match.group(1))
+    scripts = _parse_json_ld_scripts(response)
+    assert len(scripts) == 1
+    data = scripts[0]
     assert data["@context"] == "https://schema.org"
     assert data["headline"] == "Valid JSON-LD"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("content_type", "schema_type", "media_url"),
+    [
+        pytest.param(Post.ContentType.ARTICLE, "Article", "", id="article"),
+        pytest.param(
+            Post.ContentType.VIDEO,
+            "VideoObject",
+            'https://media.example/видео/"часть"\\путь\nролик.mp4?x=1&y=2',
+            id="video",
+        ),
+        pytest.param(
+            Post.ContentType.AUDIO,
+            "AudioObject",
+            'https://media.example/аудио/"часть"\\путь\nтрек.opus?x=1&y=2',
+            id="audio",
+        ),
+    ],
+)
+@override_settings(SITE_AUTHOR='Автор "Тест" \\ Юникод')
+def test_json_ld_hostile_text_round_trips_for_every_schema(
+    content_type,
+    schema_type,
+    media_url,
+):
+    """All schema variants preserve hostile text without HTML artifacts."""
+    title = 'Русский "заголовок" \\ путь\nстрока' + "\x00\b\f"
+    description = (
+        "Описание с кавычками \"и текстом\", обратным слешем \\, "
+        "табом\tи переводом\r\nстроки </script> & < > — ёж 漢字"
+    )
+    post = Post.objects.create(
+        title=title,
+        description=description,
+        content="# Body",
+        slug=f"jsonld-hostile-{content_type}",
+        status=Post.Status.PUBLISHED,
+        content_type=content_type,
+        media_url=media_url,
+    )
+
+    response = Client().get(f"/post/{post.slug}/")
+
+    assert response.status_code == 200
+    scripts = _parse_json_ld_scripts(response)
+    assert len(scripts) == 1
+    data = scripts[0]
+    assert data["@context"] == "https://schema.org"
+    assert data["@type"] == schema_type
+    assert data["headline"] == title
+    assert data["description"] == description
+    assert data["url"] == f"http://testserver/post/{post.slug}/"
+    assert data["datePublished"]
+    assert data["dateModified"]
+    assert data["author"]["@type"] == "Person"
+    assert data["author"]["name"] == 'Автор "Тест" \\ Юникод'
+    if media_url:
+        assert data["contentUrl"] == media_url
+        assert data["contentUrl"].startswith("https://media.example/")
+        assert not data["contentUrl"].startswith("http://testserverhttps://")
+    else:
+        assert "contentUrl" not in data
 
 
 # ── OG / Twitter meta tests ─────────────────────────────────────────────────

@@ -311,6 +311,33 @@ def test_series_landing_404_for_unknown_slug(client):
     assert response.status_code == 404
 
 
+@pytest.mark.django_db
+def test_detail_series_navigation_excludes_soft_deleted_members(client):
+    series = Series.objects.create(name="Clean Navigation", slug="clean-navigation")
+    previous = create_post("Visible Previous", series=series, series_order=1)
+    deleted_before = create_post("Deleted Before", series=series, series_order=2)
+    current = create_post("Current Lesson", series=series, series_order=3)
+    deleted_after = create_post("Deleted After", series=series, series_order=4)
+    following = create_post("Visible Next", series=series, series_order=5)
+    for deleted in (deleted_before, deleted_after):
+        deleted.deleted_at = deleted.created_at
+        deleted.save(update_fields=["deleted_at"])
+
+    response = client.get(current.get_absolute_url())
+
+    assert response.status_code == 200
+    assert response.context["series_prev"] == {
+        "slug": previous.slug,
+        "title": previous.title,
+    }
+    assert response.context["series_next"] == {
+        "slug": following.slug,
+        "title": following.title,
+    }
+    assert response.context["series_position"] == 2
+    assert response.context["series_total"] == 3
+
+
 # --- Soft delete guard -----------------------------------------------------
 
 

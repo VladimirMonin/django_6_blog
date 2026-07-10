@@ -1,10 +1,12 @@
 import json
+from urllib.parse import parse_qs, urlparse
 
 import pytest
+from bs4 import BeautifulSoup
 from django.test import Client
 
 from api.models import ApiKey
-from blog.models import Post, Series
+from blog.models import Category, Post, Series, Tag
 from publisher.client import publish_post
 from publisher.parser import parse_markdown_file
 
@@ -54,6 +56,137 @@ def test_post_list_keeps_content_type_in_search_form():
     assert response.status_code == 200
     body = response.content.decode()
     assert 'name="type" value="podcast"' in body
+
+
+def _query_params(url):
+    return parse_qs(urlparse(url).query)
+
+
+def _assert_active_filters(url, *, search, category, tag, content_type):
+    params = _query_params(url)
+    assert params["search"] == [search]
+    assert params["category"] == [category]
+    assert params["tag"] == [tag]
+    assert params["type"] == [content_type]
+    return params
+
+
+@pytest.mark.django_db
+def test_post_list_preserves_all_filters_across_navigation_links():
+    active_category = Category.objects.create(name="Видео", slug="video-category")
+    other_category = Category.objects.create(name="Другое", slug="other-category")
+    active_tag = Tag.objects.create(name="HTMX", slug="htmx")
+    other_tag = Tag.objects.create(name="Django", slug="django")
+    for index in range(7):
+        post = Post.objects.create(
+            title=f"Навигация video {index}",
+            description="Фильтры",
+            content="body",
+            slug=f"navigation-video-{index}",
+            category=active_category,
+            content_type=Post.ContentType.VIDEO,
+            media_url="https://example.com/video.mp4",
+            status=Post.Status.PUBLISHED,
+        )
+        post.tags.add(active_tag)
+    other_post = Post.objects.create(
+        title="Навигация video other",
+        description="Фильтры",
+        content="body",
+        slug="navigation-video-other",
+        category=other_category,
+        content_type=Post.ContentType.VIDEO,
+        media_url="https://example.com/other.mp4",
+        status=Post.Status.PUBLISHED,
+    )
+    other_post.tags.add(other_tag)
+
+    response = Client().get(
+        "/",
+        {
+            "search": "Навигация",
+            "category": active_category.slug,
+            "tag": active_tag.slug,
+            "type": Post.ContentType.VIDEO,
+        },
+    )
+
+    assert response.status_code == 200
+    page = BeautifulSoup(response.content, "html.parser")
+    paginator = page.select_one("#paginator-nav")
+    assert paginator is not None
+    for link in paginator.select("a.page-link"):
+        params = _assert_active_filters(
+            link["href"],
+            search="Навигация",
+            category=active_category.slug,
+            tag=active_tag.slug,
+            content_type=Post.ContentType.VIDEO,
+        )
+        assert "load_more" not in params
+        assert _query_params(link["hx-get"]) == params
+
+    load_more = paginator.select_one("button[hx-get]")
+    load_more_params = _assert_active_filters(
+        load_more["hx-get"],
+        search="Навигация",
+        category=active_category.slug,
+        tag=active_tag.slug,
+        content_type=Post.ContentType.VIDEO,
+    )
+    assert load_more_params["page"] == ["2"]
+    assert load_more_params["load_more"] == ["true"]
+
+    htmx_page_two = Client().get(
+        "/",
+        {
+            "search": "Навигация",
+            "category": active_category.slug,
+            "tag": active_tag.slug,
+            "type": Post.ContentType.VIDEO,
+            "page": "2",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    assert htmx_page_two.status_code == 200
+    htmx_paginator = BeautifulSoup(htmx_page_two.content, "html.parser").select_one(
+        "#paginator-nav[hx-swap-oob='true']"
+    )
+    previous_link = htmx_paginator.select_one("a.page-link")
+    previous_params = _assert_active_filters(
+        previous_link["href"],
+        search="Навигация",
+        category=active_category.slug,
+        tag=active_tag.slug,
+        content_type=Post.ContentType.VIDEO,
+    )
+    assert previous_params["page"] == ["1"]
+    assert "load_more" not in previous_params
+    assert _query_params(previous_link["hx-get"]) == previous_params
+
+    category_link = page.select_one(f'a[href*="category={other_category.slug}"]')
+    category_params = _assert_active_filters(
+        category_link["href"],
+        search="Навигация",
+        category=other_category.slug,
+        tag=active_tag.slug,
+        content_type=Post.ContentType.VIDEO,
+    )
+    assert "page" not in category_params
+    assert "load_more" not in category_params
+    assert _query_params(category_link["hx-get"]) == category_params
+
+    tag_link = page.select_one(f'a[href*="tag={other_tag.slug}"]')
+    tag_params = _assert_active_filters(
+        tag_link["href"],
+        search="Навигация",
+        category=active_category.slug,
+        tag=other_tag.slug,
+        content_type=Post.ContentType.VIDEO,
+    )
+    assert "page" not in tag_params
+    assert "load_more" not in tag_params
+    assert _query_params(tag_link["hx-get"]) == tag_params
 
 
 @pytest.mark.django_db

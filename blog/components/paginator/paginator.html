@@ -14,32 +14,35 @@
       {# Кнопка "Предыдущая" #}
       <li class="page-item {% if not has_previous %}disabled{% endif %}">
         {% if has_previous %}
+        {% querystring filter_params page=previous_page load_more=None as previous_query %}
         <a
           class="page-link"
-          href="?page={{ previous_page }}{{ search_param }}"
-          hx-get="?page={{ previous_page }}{{ search_param }}"
+          href="{{ previous_query }}"
+          hx-get="{{ previous_query }}"
           hx-target="#post-container"
           hx-swap="innerHTML"
           hx-push-url="true"
         >
-          <i class="bi bi-chevron-left"></i> Назад
+          <i class="bi bi-chevron-left" aria-hidden="true"></i> Назад
         </a>
         {% else %}
         <span class="page-link">
-          <i class="bi bi-chevron-left"></i> Назад
+          <i class="bi bi-chevron-left" aria-hidden="true"></i> Назад
         </span>
         {% endif %}
       </li>
 
       {# Кнопки страниц #} {% for page_num in page_range %}
       <li class="page-item {% if page_num == current_page %}active{% endif %}">
+        {% querystring filter_params page=page_num load_more=None as page_query %}
         <a
           class="page-link"
-          href="?page={{ page_num }}{{ search_param }}"
-          hx-get="?page={{ page_num }}{{ search_param }}"
+          href="{{ page_query }}"
+          hx-get="{{ page_query }}"
           hx-target="#post-container"
           hx-swap="innerHTML"
           hx-push-url="true"
+          {% if page_num == current_page %}aria-current="page"{% endif %}
         >
           {{ page_num }}
         </a>
@@ -52,19 +55,20 @@
       {% endif %} {% endif %} {# Кнопка "Следующая" #}
       <li class="page-item {% if not has_next %}disabled{% endif %}">
         {% if has_next %}
+        {% querystring filter_params page=next_page load_more=None as next_query %}
         <a
           class="page-link"
-          href="?page={{ next_page }}{{ search_param }}"
-          hx-get="?page={{ next_page }}{{ search_param }}"
+          href="{{ next_query }}"
+          hx-get="{{ next_query }}"
           hx-target="#post-container"
           hx-swap="innerHTML"
           hx-push-url="true"
         >
-          Вперед <i class="bi bi-chevron-right"></i>
+          Вперед <i class="bi bi-chevron-right" aria-hidden="true"></i>
         </a>
         {% else %}
         <span class="page-link">
-          Вперед <i class="bi bi-chevron-right"></i>
+          Вперед <i class="bi bi-chevron-right" aria-hidden="true"></i>
         </span>
         {% endif %}
       </li>
@@ -72,9 +76,10 @@
 
     {# Кнопка "Загрузить еще" для текущей страницы #} {% if show_load_more and
     has_next %}
+    {% querystring filter_params page=next_page load_more='true' as load_more_query %}
     <button
       class="btn btn-dark"
-      hx-get="?{{ load_more_query }}"
+      hx-get="{{ load_more_query }}"
       hx-target="#post-container"
       hx-swap="beforeend"
       hx-indicator="#load-more-spinner"
@@ -82,9 +87,10 @@
       <span
         id="load-more-spinner"
         class="htmx-indicator spinner-border spinner-border-sm me-2"
+        aria-hidden="true"
       ></span>
       Загрузить еще
-      <i class="bi bi-arrow-down-circle"></i>
+      <i class="bi bi-arrow-down-circle" aria-hidden="true"></i>
     </button>
     {% endif %}
   </div>

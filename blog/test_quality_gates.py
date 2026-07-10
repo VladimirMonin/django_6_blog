@@ -26,12 +26,20 @@ CSS_FILES = [
 pytestmark = pytest.mark.django_db
 
 
-def create_post(title, content="Текст публикации", *, category=None, tags=()):
+def create_post(
+    title,
+    content="Текст публикации",
+    *,
+    category=None,
+    tags=(),
+    content_type=Post.ContentType.ARTICLE,
+):
     post = Post.objects.create(
         title=title,
         content=content,
         status=Post.Status.PUBLISHED,
         category=category,
+        content_type=content_type,
     )
     if tags:
         post.tags.set(tags)
@@ -106,13 +114,18 @@ def test_post_card_excerpt_strips_markdown_table_syntax():
 def test_full_and_htmx_index_use_expected_templates_and_partial_boundaries(client):
     category = Category.objects.create(name="Django", slug="django")
     for index in range(7):
-        create_post(f"Django HTMX {index}", category=category)
+        create_post(
+            f"Django HTMX {index}",
+            category=category,
+            content_type=Post.ContentType.VIDEO,
+        )
 
-    full_response = client.get("/", {"search": "Django"})
-    htmx_response = client.get("/", {"search": "Django"}, HTTP_HX_REQUEST="true")
+    filters = {"search": "Django", "type": Post.ContentType.VIDEO}
+    full_response = client.get("/", filters)
+    htmx_response = client.get("/", filters, HTTP_HX_REQUEST="true")
     load_more_response = client.get(
         "/",
-        {"search": "Django", "page": "2", "load_more": "true"},
+        {**filters, "page": "2", "load_more": "true"},
         HTTP_HX_REQUEST="true",
     )
 
@@ -124,13 +137,21 @@ def test_full_and_htmx_index_use_expected_templates_and_partial_boundaries(clien
     assert [template.name for template in htmx_response.templates if template.name][0] == "blog/_post_list_partial.html"
     htmx_page = soup(htmx_response)
     assert htmx_page.select_one("html") is None
-    assert htmx_page.select_one("#paginator-nav[hx-swap-oob='true']") is not None
+    htmx_paginator = htmx_page.select_one("#paginator-nav[hx-swap-oob='true']")
+    assert htmx_paginator is not None
+    for navigation in htmx_paginator.select("a[href], button[hx-get]"):
+        url = navigation.get("href") or navigation["hx-get"]
+        assert parse_qs(urlparse(url).query)["type"] == [Post.ContentType.VIDEO]
 
     assert load_more_response.status_code == 200
     assert [template.name for template in load_more_response.templates if template.name][0] == "blog/_post_cards_only.html"
     load_more_page = soup(load_more_response)
     assert load_more_page.select_one("html") is None
-    assert load_more_page.select_one("#paginator-nav[hx-swap-oob='true']") is not None
+    load_more_paginator = load_more_page.select_one("#paginator-nav[hx-swap-oob='true']")
+    assert load_more_paginator is not None
+    for navigation in load_more_paginator.select("a[href], button[hx-get]"):
+        url = navigation.get("href") or navigation["hx-get"]
+        assert parse_qs(urlparse(url).query)["type"] == [Post.ContentType.VIDEO]
     assert len(load_more_page.select(".post-card")) == 2
 
 

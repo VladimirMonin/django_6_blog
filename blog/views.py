@@ -1,12 +1,15 @@
 import hashlib
+import json
 import re
-from urllib.parse import urlencode
 
+from django.conf import settings
 from django.core.paginator import Paginator
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
+from django.utils.safestring import mark_safe
 from django.views.decorators.http import condition
 from django.views.generic import DetailView, ListView, TemplateView, View
 
@@ -14,7 +17,44 @@ from .models import Category, Post, Series, Tag
 from .session_interactions import SessionInteractionMixin
 
 
-POST_DETAIL_RENDER_VERSION = "compact-toc-breadcrumbs-v5"
+POST_DETAIL_RENDER_VERSION = "json-ld-v6"
+
+_JSON_SCRIPT_ESCAPES = {
+    ord("<"): "\\u003C",
+    ord(">"): "\\u003E",
+    ord("&"): "\\u0026",
+}
+
+
+def _build_post_json_ld(request, post):
+    """Serialize post structured data as HTML-safe, valid JSON."""
+    schema_type = {
+        Post.ContentType.VIDEO: "VideoObject",
+        Post.ContentType.AUDIO: "AudioObject",
+        Post.ContentType.PODCAST: "AudioObject",
+    }.get(post.content_type, "Article")
+    data = {
+        "@context": "https://schema.org",
+        "@type": schema_type,
+        "headline": post.title,
+        "description": post.description,
+        "url": request.build_absolute_uri(),
+        "datePublished": post.created_at,
+        "dateModified": post.updated_at,
+        "author": {
+            "@type": "Person",
+            "name": getattr(settings, "SITE_AUTHOR", "Владимир Монин"),
+        },
+    }
+    player_media_url = post.player_media_url
+    if player_media_url and post.content_type != Post.ContentType.ARTICLE:
+        data["contentUrl"] = player_media_url
+    cover = post.cover_media
+    if cover:
+        data["image"] = request.build_absolute_uri(cover.thumbnail_og_url)
+
+    serialized = json.dumps(data, cls=DjangoJSONEncoder, indent=2)
+    return mark_safe(serialized.translate(_JSON_SCRIPT_ESCAPES))
 
 
 def _post_detail_probe(request, slug):
@@ -78,20 +118,6 @@ def _post_matches_casefold(post, needle):
         chunks.append(post.category.name)
     chunks.extend(tag.name for tag in post.tags.all())
     return needle in " ".join(filter(None, chunks)).casefold()
-
-
-def _filter_query_string(*, search="", category="", tag="", content_type=""):
-    """Build a stable query string for links that should preserve filters."""
-    params = {}
-    if search:
-        params["search"] = search
-    if category:
-        params["category"] = category
-    if tag:
-        params["tag"] = tag
-    if content_type:
-        params["type"] = content_type
-    return urlencode(params)
 
 
 def _build_body_html_and_toc(html_content):
@@ -234,12 +260,10 @@ class PostListView(ListView):
                 "category_slug": self.category_slug,
                 "tag_slug": self.tag_slug,
                 "content_type_filter": self.content_type_filter,
-                "filter_query": _filter_query_string(
-                    search=self.search,
-                    category=self.category_slug,
-                    tag=self.tag_slug,
-                    content_type=self.content_type_filter,
-                ),
+                # One QueryDict contract drives every SSR/HTMX navigation URL.
+                # Templates override the parameter they own and drop stale
+                # pagination state via Django's built-in ``querystring`` tag.
+                "filter_params": self.request.GET,
                 "active_category": self.active_category,
                 "active_tag": self.active_tag,
                 "categories": Category.objects.all(),
@@ -247,7 +271,10 @@ class PostListView(ListView):
                 "tag_map": Tag.objects.annotate(
                     public_post_count=Count(
                         "posts",
-                        filter=Q(posts__status=Post.Status.PUBLISHED),
+                        filter=Q(
+                            posts__status=Post.Status.PUBLISHED,
+                            posts__deleted_at__isnull=True,
+                        ),
                         distinct=True,
                     )
                 ).filter(public_post_count__gt=0),
@@ -314,6 +341,7 @@ class PostDetailView(SessionInteractionMixin, DetailView):
         context.update(
             {
                 "post_is_liked": self.is_post_liked(self.object),
+                "post_json_ld": _build_post_json_ld(self.request, self.object),
                 "is_post_list": False,
                 "is_about": False,
             }
@@ -322,7 +350,10 @@ class PostDetailView(SessionInteractionMixin, DetailView):
         post = self.object
         if post.series:
             series_posts = list(
-                post.series.posts.filter(status=Post.Status.PUBLISHED)
+                post.series.posts.filter(
+                    status=Post.Status.PUBLISHED,
+                    deleted_at__isnull=True,
+                )
                 .order_by("series_order", "created_at")
                 .values_list("pk", "slug", "title")
             )
@@ -369,7 +400,10 @@ class PostLikeToggleView(SessionInteractionMixin, View):
 
     def post(self, request, slug):
         post = get_object_or_404(
-            Post.objects.filter(status=Post.Status.PUBLISHED),
+            Post.objects.filter(
+                status=Post.Status.PUBLISHED,
+                deleted_at__isnull=True,
+            ),
             slug=slug,
         )
         post_is_liked = self.toggle_post_like(post)

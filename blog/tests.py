@@ -1,6 +1,6 @@
 import importlib
 from pathlib import Path
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qs, urljoin, urlparse
 
 import pytest
 from bs4 import BeautifulSoup
@@ -153,7 +153,15 @@ def test_load_more_button_preserves_search_query_as_urlencoded_parameter(client)
     response = client.get(reverse("post_list"), {"search": "Django HTMX"})
 
     assert response.status_code == 200
-    assert b"?page=2&amp;search=Django+HTMX&amp;load_more=true" in response.content
+    load_more = BeautifulSoup(response.content, "html.parser").select_one(
+        "button[hx-get][hx-swap='beforeend']"
+    )
+    assert load_more is not None
+    assert parse_qs(urlparse(load_more["hx-get"]).query) == {
+        "search": ["Django HTMX"],
+        "page": ["2"],
+        "load_more": ["true"],
+    }
 
 
 @pytest.mark.django_db

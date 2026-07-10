@@ -27,21 +27,7 @@
 <link rel="alternate" type="application/rss+xml" title="Django 6 Blog — RSS" href="{% url 'feed_rss' %}">
 <link rel="alternate" type="application/atom+xml" title="Django 6 Blog — Atom" href="{% url 'feed_atom' %}">
 <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "{% if post.content_type == 'video' %}VideoObject{% elif post.content_type == 'audio' or post.content_type == 'podcast' %}AudioObject{% else %}Article{% endif %}",
-  "headline": "{{ post.title }}",
-  "description": "{{ post.description }}",
-  "url": "{{ request.build_absolute_uri }}",
-  "datePublished": "{{ post.created_at|date:'c' }}",
-  "dateModified": "{{ post.updated_at|date:'c' }}",
-  "author": {
-    "@type": "Person",
-    "name": "{{ site_author }}"
-  }{% if post.player_media_url and post.content_type != 'article' %},
-  "contentUrl": "{{ post.player_media_url }}"{% endif %}{% if post.cover_media %},
-  "image": "{{ request.scheme }}://{{ request.get_host }}{{ post.cover_media.thumbnail_og_url }}"{% endif %}
-}
+{{ post_json_ld }}
 </script>
 {% endblock %}
 
