@@ -1,10 +1,7 @@
 ---
-name: PUBLISHER.cli
-version: 1
-scope: publisher/
-status: active
-canonical: doc/cli.md#publisher-cli-publisher
-last_updated: 2026-07-10
+applyTo: "publisher/**/*.py,doc/cli.md"
+name: "PUBLISHER.CLI"
+description: "Use for the standalone Publisher CLI, Markdown/frontmatter parsing, local asset packages, API key handling, dry-run safety, retries, and publisher tests."
 ---
 
 # Publisher CLI — Agent Workflow

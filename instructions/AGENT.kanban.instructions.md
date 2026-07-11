@@ -96,4 +96,4 @@ uv run pytest -q
 git diff --check
 ```
 
-Do not stage `.env`, `.venv/`, `db.sqlite3`, `media/posts/*`, `tests/assets/*`, `__pycache__/`, `*.pyc`, generated caches, or secrets.
+If the user explicitly requests the final Git action, follow `instructions/DOCS.git.instructions.md` for staged-diff review, forbidden-artifact/secret scans, the commit message, and push authorization.

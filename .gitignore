@@ -34,6 +34,8 @@ env/
 # IDE
 .vscode/
 .idea/
+.hermes/
+.serena/
 *.swp
 *.swo
 *~

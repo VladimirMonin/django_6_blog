@@ -39,7 +39,7 @@ Use smaller tests first when the change is narrow.
 ## Hard rules
 
 1. Use `uv`; do not introduce Poetry, system Python setup, Docker or Postgres unless the user explicitly asks for that slice.
-2. Do not commit `.env`, `.venv/`, `db.sqlite3`, `media/posts/*`, `tests/assets/*`, `__pycache__/` or `*.pyc`.
+2. Do not commit `.env`, `.venv/`, `.hermes/`, `.serena/`, `db.sqlite3`, `media/posts/*`, `tests/assets/*`, `__pycache__/` or `*.pyc`.
 3. Public views must expose only posts where `status = published` **and** `deleted_at IS NULL`; drafts, archived posts and soft-deleted posts must stay hidden and return `404` on detail URLs.
 4. `Post.description` is the public card excerpt source. Do not fall back to raw Markdown excerpts in cards.
 5. Author is a site default from Django settings/context, not Obsidian/frontmatter metadata.
@@ -57,16 +57,19 @@ Use smaller tests first when the change is narrow.
 
 | Area | Instruction |
 |---|---|
-| Project setup, dependencies, commit safety | `instructions/CORE.project.instructions.md` |
+| Project setup, dependencies, project-wide safety | `instructions/CORE.project.instructions.md` |
 | Hermes Kanban board, card contract, dispatch boundary | `instructions/AGENT.kanban.instructions.md` |
 | Markdown/Obsidian import, frontmatter, local media | `instructions/CONTENT.import.instructions.md` |
 | Video/audio/podcast, player, cover, timecodes | `instructions/CONTENT.media.instructions.md` |
 | Public list/detail UI, HTMX, reactions, visual QA | `instructions/UI.public_blog.instructions.md` |
 | Tests, smoke gates, browser evidence | `instructions/TEST.quality_gates.instructions.md` |
 | README, `doc/`, instructions style | `instructions/DOCS.documentation.instructions.md` |
+| Git inspection, staging, commit messages, commit/push safety | `instructions/DOCS.git.instructions.md` |
+| Python docstrings | `instructions/docstring_python_code.instructions.md` |
 | API endpoints, auth, token management, permissions | `instructions/API.publish.instructions.md` |
 | Publisher CLI, Markdown parser, agent workflow | `instructions/PUBLISHER.cli.instructions.md` |
 | SEO, sitemap, feeds, meta tags, JSON-LD | `instructions/SEO.meta.instructions.md` |
+| Compatibility entry through `instructions/` | `instructions/main_guide.instructions.md` |
 | Navigation, related posts, TOC, series landing | `doc/navigation.md` |
 | Analytics, PostView, read-depth, AuditLog | `doc/analytics.md` |
 | Infrastructure, CI, backup, health, env | `doc/infrastructure.md` |
@@ -108,21 +111,4 @@ Before creating, dispatching, reviewing or closing kanban cards, read `instructi
 
 ## Git discipline
 
-Before staging:
-
-```bash
-git status --short --branch
-git diff --stat
-git diff --cached --stat
-git ls-files --others --exclude-standard
-```
-
-Before commit:
-
-```bash
-git diff --cached --check
-git diff --cached --name-only | grep -E '(^\.env$|^\.venv/|^db\.sqlite3$|^media/posts/|^tests/assets/|__pycache__|\.pyc$)' && exit 1 || true
-git diff --cached | grep -En '(AKIA|SECRET|TOKEN|PASSWORD|PASS|API[_-]?KEY|BEGIN RSA|BEGIN OPENSSH|ghp_|sk-|xoxb-|gsk_)' && exit 1 || true
-```
-
-Push only after the requested commit succeeds and the branch state is understood.
+Before inspecting, staging, committing, or pushing, read `instructions/DOCS.git.instructions.md`. The staged diff is the source of truth; commit and push only on explicit user request.

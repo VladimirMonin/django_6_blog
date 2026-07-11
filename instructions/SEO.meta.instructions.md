@@ -1,6 +1,7 @@
 ---
-name: SEO meta tags, sitemap, feeds
-canonical: doc/seo.md
+applyTo: "blog/sitemaps.py,blog/feeds.py,blog/views.py,config/urls.py,config/settings.py,templates/base.html,templates/blog/post_detail.html,blog/test_seo.py,doc/seo.md"
+name: "SEO.Meta"
+description: "Use for sitemap, robots.txt, RSS/Atom feeds, canonical URLs, Open Graph, Twitter Cards, JSON-LD, social image URLs, and SEO tests."
 ---
 
 # SEO.meta.instructions.md

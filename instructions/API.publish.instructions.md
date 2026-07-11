@@ -1,8 +1,7 @@
 ---
-name: API.publish.instructions
-description: "API endpoints, auth, token management, permissions, rate limits and agent publishing workflow"
-zone: API
-scope: api/
+applyTo: "api/**/*.py,doc/api.md,config/urls.py"
+name: "API.Publish"
+description: "Use for API endpoints, authentication, opaque token handling, permissions, rate limits, JSON/multipart publishing, package storage, audit logging, and API tests."
 ---
 
 # API Instructions

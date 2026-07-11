@@ -1,7 +1,7 @@
 ---
-applyTo: "README.md,pyproject.toml,uv.lock,.env.example,config/**/*.py,blog/**/*.py"
+applyTo: "**"
 name: "CORE.Project"
-description: "Use for django_6_blog setup, dependencies, settings, database boundary, uv workflow, commit safety, forbidden local artifacts, and project-wide hard rules."
+description: "Use for django_6_blog setup, dependencies, settings, database boundary, uv workflow, forbidden local artifacts, and project-wide hard rules."
 ---
 
 # CORE — Project rules
@@ -28,6 +28,8 @@ git diff --check
 
 - `.env`
 - `.venv/`
+- `.hermes/`
+- `.serena/`
 - `db.sqlite3`
 - `media/posts/*`
 - `tests/assets/*`
@@ -37,8 +39,8 @@ git diff --check
 
 ## Public data rules
 
-- Public routes expose only `Post.status = published`.
-- Draft details return `404`.
+- Public routes expose only posts where `Post.status = published` and `deleted_at IS NULL`.
+- Draft, archived and soft-deleted details return `404`.
 - Slug-only public URLs are the project convention.
 - `Post.description` is required for public cards.
 - Site author is a Django-side default, not Obsidian/frontmatter content.
@@ -53,4 +55,4 @@ git diff --check
 git diff --cached --check
 ```
 
-Then inspect staged paths and scan staged diff for secrets. Commit/push only after explicit user request.
+Then follow `instructions/DOCS.git.instructions.md` for staged-path/secret scans, commit-message truth, and explicit commit/push authorization.
