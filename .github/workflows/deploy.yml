@@ -29,9 +29,6 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - name: Configure SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
@@ -42,14 +39,8 @@ jobs:
           chmod 0600 ~/.ssh/id_ed25519
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 0644 ~/.ssh/known_hosts
-      - name: Build immutable source archive
-        run: |
-          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
-          created_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          release_id="${created_at:0:4}${created_at:5:2}${created_at:8:2}T${created_at:11:2}${created_at:14:2}${created_at:17:2}Z-${GITHUB_SHA:0:12}"
-          printf 'RELEASE_ID=%s\n' "$release_id" >> "$GITHUB_ENV"
-          git archive --format=tar --output="release-$release_id.tar" HEAD
-      - name: Upload release source
+
+      - name: Pull reviewed commit and restart application
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
@@ -58,19 +49,6 @@ jobs:
           [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9.-]+$ ]]
           [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
           port=${DEPLOY_PORT:-22}
-          [[ "$port" =~ ^[0-9]{1,5}$ ]] && ((port >= 1 && port <= 65535))
-          scp -P "$port" "release-$RELEASE_ID.tar" \
-            "$DEPLOY_USER@$DEPLOY_HOST:/srv/django-6-blog/incoming/release-$RELEASE_ID.tar"
-      - name: Activate release through host-owned adapter
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          RELEASE_COMMIT: ${{ github.sha }}
-        run: |
-          port=${DEPLOY_PORT:-22}
-          [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9.-]+$ ]]
-          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
           [[ "$port" =~ ^[0-9]{1,5}$ ]] && ((port >= 1 && port <= 65535))
           ssh -p "$port" "$DEPLOY_USER@$DEPLOY_HOST" \
-            sudo -- /usr/local/sbin/django-6-blog-deploy "$RELEASE_ID" "$RELEASE_COMMIT"
+            sudo -- /usr/local/sbin/django-6-blog-deploy "$GITHUB_SHA"
