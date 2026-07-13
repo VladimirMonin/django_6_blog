@@ -33,12 +33,15 @@ jobs:
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
           install -d -m 0700 ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 0600 ~/.ssh/id_ed25519
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 0644 ~/.ssh/known_hosts
+          ssh-keygen -y -P '' -f ~/.ssh/id_ed25519 > /dev/null
+          ssh-keygen -F "$DEPLOY_HOST" -f ~/.ssh/known_hosts > /dev/null
 
       - name: Pull reviewed commit and restart application
         env:
@@ -50,9 +53,14 @@ jobs:
           [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
           port=${DEPLOY_PORT:-22}
           [[ "$port" =~ ^[0-9]{1,5}$ ]] && ((port >= 1 && port <= 65535))
-          timeout 300 ssh -p "$port" \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            -o ConnectTimeout=15 \
-            "$DEPLOY_USER@$DEPLOY_HOST" \
+          ssh_options=(
+            -p "$port"
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts"
+            -o ConnectTimeout=15
+          )
+          timeout 30 ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" true
+          timeout 300 ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" \
             sudo -- /usr/local/sbin/django-6-blog-deploy "$GITHUB_SHA"
