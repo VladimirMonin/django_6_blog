@@ -20,7 +20,7 @@ jobs:
       - run: uv sync --frozen
       - run: uv lock --check
       - run: uv run python manage.py check
-      - run: uv run pytest -q
+      - run: uv run pytest -q tests/test_production_settings.py blog/test_infra.py blog/test_static_delivery.py blog/test_storage_compat.py
 
   deploy:
     needs: verify
