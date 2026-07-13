@@ -11,20 +11,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v3
         with:
           version: latest
+      - run: uv python install 3.12
+      - run: uv sync --frozen
+      - run: uv run python manage.py check
+      - run: uv run pytest -q
 
-      - name: Set up Python
-        run: uv python install 3.12
-
-      - name: Install dependencies
-        run: uv sync --frozen
-
-      - name: Django check
-        run: uv run python manage.py check
-
-      - name: Run tests
-        run: uv run pytest -q
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: blog_ci
+          POSTGRES_PASSWORD: blog_ci
+          POSTGRES_DB: blog_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U blog_ci -d blog_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings_production
+      DJANGO_DEBUG: "false"
+      DJANGO_SECRET_KEY: ci-only-production-key-with-sufficient-entropy-123456789-ABCDEFG
+      DJANGO_ALLOWED_HOSTS: testserver
+      DJANGO_CSRF_TRUSTED_ORIGINS: https://testserver
+      DATABASE_URL: postgresql://blog_ci:blog_ci@127.0.0.1:5432/blog_ci
+      DJANGO_MEDIA_STORAGE: s3
+      MEDIA_S3_ENDPOINT_URL: https://s3.example.invalid
+      MEDIA_S3_BUCKET_NAME: ci-bucket
+      MEDIA_S3_REGION_NAME: us-east-1
+      MEDIA_S3_AUTH_ID: ci-id
+      MEDIA_S3_AUTH_MATERIAL: ci-material
+      MEDIA_S3_CUSTOM_DOMAIN: media.example.invalid
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv python install 3.12
+      - run: uv sync --frozen
+      - run: uv run python manage.py migrate --noinput
+      - run: uv run python manage.py check --deploy
+      - run: uv run pytest -q tests/test_production_settings.py blog/test_infra.py

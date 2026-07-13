@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+unset BASH_ENV ENV CDPATH GLOBIGNORE PYTHONHOME PYTHONPATH
+
+# Install as /usr/local/sbin/django-6-blog-deploy, owned by root and not
+# writable by the deploy account. The root-owned bare repository is the
+# provenance authority; uploaded bytes must equal its archive for the commit.
+[[ $# -eq 2 ]] || { echo "usage: django-6-blog-deploy RELEASE_ID COMMIT" >&2; exit 2; }
+release_id=$1
+commit=$2
+[[ "$release_id" =~ ^([0-9]{8}T[0-9]{6}Z)-([a-f0-9]{12})$ ]] || { echo "invalid release id" >&2; exit 2; }
+timestamp=${BASH_REMATCH[1]}
+commit_prefix=${BASH_REMATCH[2]}
+[[ "$commit" =~ ^[a-f0-9]{40}$ && "${commit:0:12}" == "$commit_prefix" ]] || { echo "invalid commit" >&2; exit 2; }
+
+release_root=/srv/django-6-blog
+repository=/srv/django-6-blog/repository.git
+deploy_user=deploy
+archive="$release_root/incoming/release-$release_id.tar"
+work_root="$release_root/.adapter-work"
+private_archive="$work_root/release-$release_id.tar"
+trusted_archive="$work_root/trusted-$release_id.tar"
+source_dir="$work_root/source-$release_id"
+[[ -d "$work_root" && ! -L "$work_root" && "$(stat -c '%u:%a' "$work_root")" == "0:711" ]] || { echo "unsafe adapter work root" >&2; exit 2; }
+[[ -d "$repository" && ! -L "$repository" && "$(stat -c '%u:%a' "$repository")" == "0:700" ]] || { echo "unsafe provenance repository" >&2; exit 2; }
+[[ -f "$archive" && ! -L "$archive" && ! -e "$private_archive" && ! -e "$trusted_archive" && ! -e "$source_dir" ]] || { echo "release source is unavailable" >&2; exit 2; }
+
+cleanup() { rm -rf -- "$source_dir"; rm -f -- "$archive" "$private_archive" "$trusted_archive"; }
+trap cleanup EXIT
+install -m 0600 -- "$archive" "$private_archive"
+rm -f -- "$archive"
+git_command=(/usr/bin/env -i HOME=/root PATH=/usr/bin:/bin /usr/bin/git --git-dir="$repository")
+"${git_command[@]}" fetch --quiet --prune origin \
+    '+refs/heads/main:refs/remotes/origin/main' '+refs/tags/v*:refs/tags/v*'
+"${git_command[@]}" cat-file -e "$commit^{commit}" 2>/dev/null || { echo "unauthorized commit" >&2; exit 2; }
+authorized=0
+if "${git_command[@]}" merge-base --is-ancestor "$commit" refs/remotes/origin/main; then
+    authorized=1
+fi
+while IFS= read -r tag; do
+    [[ "$tag" == v* ]] && authorized=1
+done < <("${git_command[@]}" tag --points-at "$commit")
+[[ $authorized -eq 1 ]] || { echo "unauthorized commit" >&2; exit 2; }
+"${git_command[@]}" archive --format=tar --output="$trusted_archive" "$commit"
+exec {archive_fd}<"$private_archive"
+private_identity=$(stat -Lc '%d:%i:%s:%Y:%Z' -- "$private_archive")
+cmp --silent -- "/proc/self/fd/$archive_fd" "$trusted_archive" || { echo "artifact provenance mismatch" >&2; exit 2; }
+[[ "$(stat -Lc '%d:%i:%s:%Y:%Z' -- "$private_archive")" == "$private_identity" ]] || { echo "private archive identity changed" >&2; exit 2; }
+cmp --silent -- "/proc/self/fd/$archive_fd" "$trusted_archive" || { echo "artifact provenance changed" >&2; exit 2; }
+mkdir -- "$source_dir"
+/usr/bin/env -i PATH=/usr/bin:/bin /usr/bin/python3 - "/proc/self/fd/$archive_fd" "$source_dir" <<'PY'
+import sys
+import tarfile
+from pathlib import Path, PurePosixPath
+
+archive, destination = sys.argv[1:]
+with tarfile.open(archive, "r:") as package:
+    for member in package.getmembers():
+        path = PurePosixPath(member.name)
+        if path.is_absolute() or ".." in path.parts or member.isdev() or member.isfifo():
+            raise SystemExit("unsafe archive member")
+    package.extractall(Path(destination), filter="data")
+PY
+[[ -f "$source_dir/scripts/deploy/release.sh" && ! -L "$source_dir/scripts/deploy/release.sh" ]] || { echo "trusted release entry point is unavailable" >&2; exit 2; }
+
+/usr/sbin/runuser --user "$deploy_user" -- /usr/bin/env -i \
+    HOME="/home/$deploy_user" PATH=/usr/local/bin:/usr/bin:/bin \
+    RELEASE_ROOT="$release_root" SOURCE_DIR="$source_dir" \
+    RELEASE_ID="$release_id" RELEASE_COMMIT="$commit" \
+    RELEASE_CREATED_AT="${timestamp:0:4}-${timestamp:4:2}-${timestamp:6:2}T${timestamp:9:2}:${timestamp:11:2}:${timestamp:13:2}Z" \
+    MIGRATION_SAFETY=no-schema-change MEDIA_STORAGE_MODE=s3 \
+    /usr/bin/bash "$source_dir/scripts/deploy/release.sh"

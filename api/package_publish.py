@@ -276,6 +276,22 @@ def _delete_replaced_storage_names(storage, names: tuple[str, ...]) -> None:
             )
 
 
+def _cleanup_new_storage_names(storage, names: list[str]) -> list[str]:
+    """Delete newly owned objects and return names that still need recovery."""
+    remaining = []
+    for name in reversed(names):
+        try:
+            storage.delete(name)
+        except Exception:
+            remaining.append(name)
+            logger.warning(
+                "api.publish_package.new_asset_cleanup_failed",
+                extra={"storage_name": name},
+            )
+    remaining.reverse()
+    return remaining
+
+
 def _strip_primary_embed(content: str, primary: ValidatedAsset | None) -> str:
     if not primary:
         return content

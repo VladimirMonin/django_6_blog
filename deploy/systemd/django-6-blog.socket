@@ -1,0 +1,12 @@
+[Unit]
+Description=Django 6 Blog Gunicorn socket
+
+[Socket]
+ListenStream=/run/django-6-blog/gunicorn.sock
+SocketUser=django-blog
+SocketGroup=www-data
+SocketMode=0660
+RemoveOnStop=true
+
+[Install]
+WantedBy=sockets.target

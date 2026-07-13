@@ -222,7 +222,8 @@ def test_environment_example_documents_runtime_variables():
     assert "DJANGO_SECRET_KEY=" in content
     assert "DJANGO_DEBUG=" in content
     assert "DJANGO_ALLOWED_HOSTS=" in content
-    assert "DATABASE_URL" not in content
+    assert "DATABASE_URL=" in content
+    assert "DJANGO_MEDIA_STORAGE=s3" in content
 
 
 def test_public_blog_urls_are_class_based_views():
@@ -640,9 +641,8 @@ def test_detail_og_image_uses_thumbnail(client):
     page = soup(response)
     og_image_url = page.select_one('meta[property="og:image"]')["content"]
 
-    # The og:image URL should end with the thumbnail path (a .jpg file in
-    # posts/thumbnails/), not the original .png file path.
-    assert "/media/posts/thumbnails/" in og_image_url
+    # Derivatives are isolated under the owning post key.
+    assert f"/media/posts/{post.slug}/thumbnails/" in og_image_url
     assert og_image_url.endswith(".jpg")
     assert "og-cover" in og_image_url
     # It must NOT be the original file URL.

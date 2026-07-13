@@ -11,7 +11,7 @@ Core stack:
 
 - Python `>=3.12`, `uv` only.
 - Django `6.0.x`.
-- SQLite-only for the current project stage.
+- SQLite for local development/tests; fail-closed PostgreSQL settings for production.
 - Bootstrap 5, django-components, HTMX.
 - Markdown/Obsidian import with local media.
 - Public content types: `article`, `video`, `audio`, `podcast`.
@@ -50,6 +50,7 @@ Use smaller tests first when the change is narrow.
 10. API changes must keep docs/instructions synchronized in the same slice; do not let `instructions/API.publish.instructions.md` drift from real endpoints.
 11. Remote local-asset publishing uses the authenticated multipart package endpoint. Paths must stay inside `--assets-dir`, packages must be idempotent, and storage code must not require a local filesystem `.path`.
 12. Treat API tokens as opaque secrets. Publisher CLI compatibility includes every valid `secrets.token_urlsafe(32)` value, including a token beginning with `-`; never print tokens in dry-run, errors, logs or test evidence.
+13. Production preparation is offline by default: repository tests and examples do not authorize SSH, DNS/TLS, PostgreSQL/S3 access, systemd/Nginx installation, backup/restore, deployment, or use of real credentials.
 
 ## Instruction routing
 
@@ -72,7 +73,9 @@ Use smaller tests first when the change is narrow.
 | Compatibility entry through `instructions/` | `instructions/main_guide.instructions.md` |
 | Navigation, related posts, TOC, series landing | `doc/navigation.md` |
 | Analytics, PostView, read-depth, AuditLog | `doc/analytics.md` |
-| Infrastructure, CI, backup, health, env | `doc/infrastructure.md` |
+| Infrastructure, CI, health, env | `doc/infrastructure.md` |
+| Release/systemd/Nginx deployment and rollback | `doc/deployment.md` |
+| Encrypted backup, pruning and restore | `doc/backup-restore.md` |
 
 If no instruction clearly matches, read `doc/README.md`, inspect the current code, then update instructions only if the discovered rule is fundamental.
 

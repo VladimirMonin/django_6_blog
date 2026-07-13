@@ -1,4 +1,7 @@
 .env
+.env.production
+.env.deploy
+.env.*.local
 .qwen/settings.json
 qwen_switch.sh
 qwen_switch.ps1

@@ -1,0 +1,13 @@
+[Unit]
+Description=Encrypted Django blog backup
+[Service]
+Type=oneshot
+User=django-blog-backup
+EnvironmentFile=/etc/django-6-blog/backup.env
+ExecStart=/srv/django-6-blog/current/scripts/backup/run-backup.sh
+StateDirectory=django-6-blog-backup
+RuntimeDirectory=django-6-blog-backup
+ReadWritePaths=/var/lib/django-6-blog-backup /run/lock
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict

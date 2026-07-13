@@ -32,7 +32,9 @@ cover: cover.webp
 
 Если у video-поста нет cover, карточка показывает проектный video placeholder. Это нормальное состояние и его нужно проверять отдельно от карточек с обложкой.
 
-Publisher CLI загружает локальный `cover` из `--assets-dir` с ролью `cover`. Путь не может выйти за этот корень. Изображения и thumbnails читаются/пишутся через Django Storage API без `file.path`, поэтому тот же контракт работает с локальным filesystem и pathless S3-compatible storage.
+Publisher CLI загружает локальный `cover` из `--assets-dir` с ролью `cover`. Путь не может выйти за этот корень. Изображения и thumbnails читаются/пишутся через Django Storage API без `file.path`, поэтому тот же контракт работает с локальным filesystem и pathless S3-compatible storage. Генерация читает source один раз; при частичной ошибке удаляет только созданные этой попыткой derivatives, сохраняет pre-existing objects и допускает идемпотентный retry.
+
+После смены storage URL policy сначала запусти `uv run python manage.py rebuild_content_html --dry-run`, затем отдельно одобренный реальный запуск. Команда сообщает `candidates/changed/skipped/errors`; повторный реальный запуск должен дать `changed=0`.
 
 ## Remote publication flow
 
@@ -92,6 +94,7 @@ flowchart LR
 ```bash
 uv run pytest blog/test_content_types_timecodes.py -q
 uv run pytest blog/test_obsidian_import.py blog/test_importer_metadata_links.py -q
+uv run pytest blog/test_storage_compat.py -q
 uv run python manage.py check
 git diff --check
 ```

@@ -6,7 +6,7 @@
 
 - Python `>=3.12`, выбирается через `uv`
 - Django `6.0.x`; зависимость ограничена как `django>=6.0.5,<6.1`
-- SQLite — текущая рабочая база
+- SQLite — локальная база; production-модуль требует PostgreSQL
 - `django-components` закреплён на `0.143.x`
 - `pytest` + `pytest-django` — основной тестовый запуск
 
@@ -43,6 +43,8 @@ cp .env.example .env
 - `DJANGO_ALLOWED_HOSTS` — hosts через запятую
 - `SITE_AUTHOR` — публичный автор по умолчанию
 
+`.env.example` содержит локальные значения и production placeholders. Для production preparation используй `.env.production.example`; populated `.env.production` игнорируется Git и не передаётся через чат. Production settings не загружают dotenv сами: переменные поставляет process environment/systemd.
+
 ## Команды для разработки
 
 ```bash
@@ -58,6 +60,7 @@ make test
 # Операционные команды
 uv run python manage.py backup --output backup.json
 uv run python manage.py publish_scheduled
+uv run python manage.py rebuild_content_html --dry-run
 ```
 
 ## Quality gate
@@ -83,6 +86,8 @@ uv run pytest -q
 git diff --check
 git status --short
 ```
+
+Для изменений production/ops дополнительно запусти focused offline pack из [`../instructions/TEST.quality_gates.instructions.md`](../instructions/TEST.quality_gates.instructions.md). Он не выполняет SSH, systemd/Nginx actions, S3/remote PostgreSQL calls, backup upload или restore.
 
 Дополнительная проверка, что Poetry не вернулся:
 

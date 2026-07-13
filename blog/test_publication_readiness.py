@@ -84,13 +84,11 @@ def test_rendered_public_page_has_core_visual_landmarks(client):
     assert page.select_one(".post-card-stats") is not None
 
 
-def test_project_does_not_add_alternative_database_stack():
+def test_project_keeps_sqlite_default_and_isolates_production_database_stack():
     pyproject = (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8").lower()
     settings = (PROJECT_ROOT / "config" / "settings.py").read_text(encoding="utf-8")
 
-    # CI workflow is now intentionally present
-    # Postgres/psycopg is still not part of this project stage
-    assert "psycopg" not in pyproject
-    assert "postgres" not in pyproject
+    assert "psycopg[binary]>=3.2,<4" in pyproject
+    assert "dj-database-url>=3,<4" in pyproject
     assert "DATABASE_URL" not in settings
     assert '"ENGINE": "django.db.backends.sqlite3"' in settings

@@ -28,7 +28,10 @@ The same rule applies to remote multipart publication: a local primary asset bec
 - Cover path must stay inside `assets_dir`.
 - Publisher CLI resolves the same local cover contract inside `--assets-dir` and uploads it with the `cover` role.
 - Thumbnail generation must read with the Django storage file API, not `file.path`, so S3-compatible pathless storage works.
+- Thumbnail generation opens the source once and compensates partial derivative writes: delete only objects created by the failed attempt, keep pre-existing objects, log a sanitized warning, and allow an idempotent retry.
 - No-cover media cards should use the project placeholder style.
+
+When storage URL policy changes, rebuild persisted `Post.content_html` with `rebuild_content_html`. Use `--dry-run` first; the command reports candidates/changed/skipped/errors and a second real run must be idempotent.
 
 ## Timecodes
 

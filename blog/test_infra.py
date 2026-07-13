@@ -11,54 +11,30 @@ from blog.models import Post
 
 
 @pytest.mark.django_db
-def test_health_endpoint_returns_200_and_correct_shape():
-    """Health endpoint returns 200 with status, db, post_count, version keys."""
+def test_readiness_endpoints_return_sanitized_success():
     client = Client()
-    response = client.get("/api/v1/health/")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "ok"
-    assert data["db"] == "ok"
-    assert "post_count" in data
-    assert isinstance(data["post_count"], int)
-    assert data["version"] == "1.0"
+    for path in ("/api/v1/health/", "/api/v1/health/ready/"):
+        response = client.get(path)
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+        assert response["Cache-Control"] == "no-store"
 
 
 @pytest.mark.django_db
-def test_health_endpoint_works_without_api_key():
-    """Health endpoint is public — no Authorization header required."""
+def test_liveness_is_public_and_does_not_query_database(django_assert_num_queries):
     client = Client()
-    response = client.get("/api/v1/health/")
+    with django_assert_num_queries(0):
+        response = client.get("/api/v1/health/live/")
     assert response.status_code == 200
-    # Must not return 401 or 403
-    assert response.status_code not in (401, 403)
+    assert response.json() == {"status": "ok"}
+    assert response["Cache-Control"] == "no-store"
 
 
 @pytest.mark.django_db
-def test_health_endpoint_shows_correct_post_count():
-    """Health endpoint post_count matches the number of non-deleted posts."""
-    # Clean slate — delete all posts
-    for post in Post.objects.all():
-        post.hard_delete()
-
-    Post.objects.create(
-        title="Test Post 1",
-        slug="test-post-1",
-        content="Content 1",
-        status=Post.Status.PUBLISHED,
-    )
-    Post.objects.create(
-        title="Test Post 2",
-        slug="test-post-2",
-        content="Content 2",
-        status=Post.Status.DRAFT,
-    )
-
+def test_health_probes_are_get_only():
     client = Client()
-    response = client.get("/api/v1/health/")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["post_count"] == 2
+    for path in ("/api/v1/health/", "/api/v1/health/live/", "/api/v1/health/ready/"):
+        assert client.post(path).status_code == 405
 
 
 @pytest.mark.django_db

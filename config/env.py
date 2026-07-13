@@ -1,9 +1,4 @@
-"""Small environment helpers for local Django settings.
-
-The project stays SQLite-only for now. Values are read from process
-environment; local developers can copy .env.example into .env and export it
-with their shell or editor if needed.
-"""
+"""Small, strict environment parsing helpers for Django settings."""
 
 from __future__ import annotations
 
@@ -21,6 +16,22 @@ def env_bool(name: str, default: bool = False) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_required(name: str) -> str:
+    """Return a non-empty environment value or fail settings import."""
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise RuntimeError(f"Required environment variable is missing: {name}")
+    return value
+
+
+def env_int(name: str, default: int) -> int:
+    """Read an integer environment variable."""
+    try:
+        return int(os.environ.get(name, str(default)))
+    except ValueError as exc:
+        raise RuntimeError(f"Environment variable must be an integer: {name}") from exc
 
 
 def env_list(name: str, default: list[str] | None = None) -> list[str]:

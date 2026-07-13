@@ -26,7 +26,21 @@ git diff --check
 - Rendered links and quality: `blog/test_rendered_links.py`, `blog/test_quality_gates.py`.
 - Model/domain regressions: `blog/test_model_regressions.py`, `blog/test_content_strategy.py`, `blog/test_analytics.py`.
 - API: `api/test_api.py`, `api/test_api_extended.py`, `api/test_api_operational.py`, `api/test_publish_package.py`, `api/test_remote_media_e2e.py`, `api/test_cleanup_publish_packages.py`.
-- Infra/ops: `blog/test_infra.py`.
+- Infra/ops: `blog/test_infra.py`, `blog/test_static_delivery.py`, `blog/test_storage_compat.py`, `tests/test_production_settings.py`, `tests/test_deploy_artifacts.py`, `tests/test_backup_script_safety.py`.
+
+## Offline production gate
+
+Production-readiness changes are verified without real credentials or live resources:
+
+```bash
+uv lock --check
+uv run pytest -q tests/test_production_settings.py blog/test_infra.py blog/test_static_delivery.py blog/test_storage_compat.py tests/test_deploy_artifacts.py tests/test_backup_script_safety.py
+uv run python manage.py check
+uv run pytest -q
+git diff --check
+```
+
+The PostgreSQL job in `.github/workflows/ci.yml` is the integration proof for migrations, `check --deploy`, and readiness against PostgreSQL. Local fake-storage, fake-tool and temporary-release tests prove only repository behavior; they do not prove Timeweb, S3, host permissions, systemd/Nginx installation, TLS, backup durability, or restore RPO/RTO.
 
 ## API / operational evidence
 

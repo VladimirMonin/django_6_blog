@@ -1,3 +1,4 @@
+import logging
 import re
 from io import BytesIO
 from pathlib import PurePath
@@ -16,6 +17,8 @@ from PIL import Image, ImageOps
 from blog.content_import.timecodes import time_to_seconds
 from blog.services import convert_markdown_to_html
 from blog.slug_utils import build_slug, build_unique_slug
+
+logger = logging.getLogger("blog.models")
 
 
 def format_ru_count(value, forms):
@@ -525,15 +528,32 @@ class PostMedia(models.Model):
             return self.thumbnail_card.url
         return self.file.url
 
-    def _generate_thumbnail(self, size, quality=85):
-        """Generate a cover-cropped JPEG thumbnail ContentFile of the given size."""
+    @staticmethod
+    def _thumbnail_bytes(image, size, quality=85):
+        """Render one derivative from an already decoded image."""
+        derivative = ImageOps.fit(
+            image, size, method=Image.LANCZOS, centering=(0.5, 0.4)
+        )
+        buffer = BytesIO()
+        derivative.save(buffer, format="JPEG", quality=quality, optimize=True)
+        return buffer.getvalue()
+
+    def _generate_thumbnails(self):
+        """Open and decode the source exactly once for both derivatives."""
         with self.file.open("rb") as source_file:
-            with Image.open(source_file) as img:
-                img = img.convert("RGB")
-                img = ImageOps.fit(img, size, method=Image.LANCZOS, centering=(0.5, 0.4))
-                buffer = BytesIO()
-                img.save(buffer, format="JPEG", quality=quality, optimize=True)
-                return ContentFile(buffer.getvalue())
+            with Image.open(source_file) as image:
+                image = image.convert("RGB")
+                return {
+                    "thumbnail_og": self._thumbnail_bytes(image, (1200, 630)),
+                    "thumbnail_card": self._thumbnail_bytes(image, (400, 300)),
+                }
+
+    def _generate_thumbnail(self, size, quality=85):
+        """Compatibility helper that remains path-free for one derivative."""
+        with self.file.open("rb") as source_file:
+            with Image.open(source_file) as image:
+                image = image.convert("RGB")
+                return ContentFile(self._thumbnail_bytes(image, size, quality))
 
     def save(self, *args, **kwargs):
         if self.file and not self.original_filename:
@@ -557,26 +577,41 @@ class PostMedia(models.Model):
         extension = PurePath(self.file_slug or self.file.name).suffix.lower()
         if extension == ".svg":
             return
+        created = []
         try:
             self._generating_thumbnails = True
+            thumbnails = self._generate_thumbnails()
             update_fields = []
-            if not self.thumbnail_og:
-                og_thumb = self._generate_thumbnail((1200, 630))
-                og_name = f"{self.file_slug}_og.jpg"
-                self.thumbnail_og.save(og_name, og_thumb, save=False)
-                update_fields.append("thumbnail_og")
-            if not self.thumbnail_card:
-                card_thumb = self._generate_thumbnail((400, 300))
-                card_name = f"{self.file_slug}_card.jpg"
-                self.thumbnail_card.save(card_name, card_thumb, save=False)
-                update_fields.append("thumbnail_card")
+            for field_name, suffix in (
+                ("thumbnail_og", "og"),
+                ("thumbnail_card", "card"),
+            ):
+                field = getattr(self, field_name)
+                if field:
+                    continue
+                name = f"posts/{self.post.slug}/thumbnails/{self.file_slug}_{suffix}.jpg"
+                saved_name = field.storage.save(
+                    name, ContentFile(thumbnails[field_name])
+                )
+                field.name = saved_name
+                created.append((field.storage, saved_name, field_name))
+                update_fields.append(field_name)
             if update_fields:
                 super().save(update_fields=update_fields)
         except Exception:
-            # Pillow could not open the file (corrupt, fake bytes, etc.)
-            # Silently skip — thumbnail fields stay empty and URL properties
-            # fall back to the original file URL.
-            pass
+            for storage, name, field_name in reversed(created):
+                try:
+                    storage.delete(name)
+                except Exception:
+                    logger.error(
+                        "thumbnail.cleanup_failed",
+                        extra={"media_id": self.pk, "field": field_name},
+                    )
+                getattr(self, field_name).name = ""
+            logger.warning(
+                "thumbnail.generation_failed",
+                extra={"media_id": self.pk, "created_count": len(created)},
+            )
         finally:
             self._generating_thumbnails = False
 

@@ -3,6 +3,8 @@ from django.urls import path
 from .views import (
     bulk_publish,
     health,
+    health_live,
+    health_ready,
     list_posts,
     post_detail_api,
     publish_package,
@@ -16,6 +18,8 @@ app_name = "api"
 
 urlpatterns = [
     path("health/", health, name="health"),
+    path("health/live/", health_live, name="health_live"),
+    path("health/ready/", health_ready, name="health_ready"),
     path("posts/publish/", publish_post, name="publish_post"),
     path("posts/publish-package/", publish_package, name="publish_package"),
     path("posts/bulk/", bulk_publish, name="bulk_publish"),

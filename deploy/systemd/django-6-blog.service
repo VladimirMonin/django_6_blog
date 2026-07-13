@@ -1,0 +1,13 @@
+[Unit]
+After=network.target
+[Service]
+User=django-blog
+Group=django-blog
+EnvironmentFile=/etc/django-6-blog/django-6-blog.env
+WorkingDirectory=/srv/django-6-blog/current
+ExecStart=/srv/django-6-blog/current/.venv/bin/gunicorn -c deploy/gunicorn.conf.py config.wsgi:application
+RuntimeDirectory=django-6-blog
+NoNewPrivileges=true
+PrivateTmp=true
+[Install]
+WantedBy=multi-user.target

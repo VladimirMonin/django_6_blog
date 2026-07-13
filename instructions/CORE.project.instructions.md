@@ -10,8 +10,9 @@ description: "Use for django_6_blog setup, dependencies, settings, database boun
 
 - Use `uv` only for Python environment and dependencies.
 - Python is selected via `uv sync --python 3.12` or another explicit uv-managed version.
-- Do not add Poetry, `poetry.lock`, `poetry-core`, system Python setup, Docker or Postgres unless the user explicitly asks for that slice.
-- Current database boundary is SQLite. `DATABASE_URL`, Postgres and pgvector are separate future work.
+- Do not add Poetry, `poetry.lock`, `poetry-core`, system Python setup, or Docker unless the user explicitly asks for that slice.
+- Base `config.settings` uses SQLite for local development and ordinary tests. `config.settings_production` is a separate fail-closed boundary: PostgreSQL only, `DJANGO_DEBUG=false`, explicit HTTPS origins/hosts, and S3 media only.
+- Production examples contain placeholders only. Repository/offline work never authorizes real credentials, SSH, DNS/TLS, remote PostgreSQL/S3, service installation/reload, deployment, backup, restore, or production data mutation.
 
 ## Commands
 

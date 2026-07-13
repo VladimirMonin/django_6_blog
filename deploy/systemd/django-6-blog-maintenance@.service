@@ -1,0 +1,11 @@
+[Unit]
+Description=Django blog maintenance %i
+[Service]
+Type=oneshot
+User=django-blog
+Group=django-blog
+EnvironmentFile=/etc/django-6-blog/django-6-blog.env
+WorkingDirectory=/srv/django-6-blog/releases
+ExecStart=/srv/django-6-blog/current/scripts/deploy/maintenance.sh %i
+NoNewPrivileges=true
+PrivateTmp=true

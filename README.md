@@ -12,7 +12,7 @@ uv run python manage.py migrate
 uv run python manage.py runserver 127.0.0.1:8036
 ```
 
-Если нужна другая версия Python, выбирай её через `uv`, например `uv sync --python 3.13`. Системный Python, Poetry, Postgres и Docker не нужны, пока это не станет отдельной задачей.
+Если нужна другая версия Python, выбирай её через `uv`, например `uv sync --python 3.13`. Системный Python, Poetry и Docker не нужны. Локальная разработка использует SQLite; отдельный fail-closed production-контур использует PostgreSQL и S3.
 
 ## Переменные окружения
 
@@ -53,6 +53,9 @@ git diff --check
 - [`doc/api.md`](doc/api.md) — API публикации, авторизация, JSON и multipart-пакеты с локальными файлами;
 - [`doc/cli.md`](doc/cli.md) — management commands и примеры запуска;
 - [`doc/seo.md`](doc/seo.md) — sitemap, robots.txt, RSS/Atom, canonical, OG/Twitter и JSON-LD;
+- [`doc/infrastructure.md`](doc/infrastructure.md) — CI, health/readiness, production env и граница offline/live;
+- [`doc/deployment.md`](doc/deployment.md) — release/systemd/Nginx runbook и rollback;
+- [`doc/backup-restore.md`](doc/backup-restore.md) — encrypted backup, prune и break-glass restore;
 - [`doc/agent-workflow.md`](doc/agent-workflow.md) — как агентам работать с проектом и инструкциями.
 
 Исторические планы и исследовательские материалы остаются в [`doc/plans/`](doc/plans/), [`doc/architecture/`](doc/architecture/) и [`doc/researches/`](doc/researches/). Они не заменяют актуальные документы верхнего уровня.

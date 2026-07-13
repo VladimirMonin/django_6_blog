@@ -5,7 +5,7 @@ import logging
 import re
 
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import Count, Q, Sum
 from django.http import HttpRequest, JsonResponse
 from django.utils import timezone
@@ -45,25 +45,32 @@ VALID_SORT_FIELDS = {
 _TIMECODE_RE = re.compile(r"^\d{1,2}:[0-5]\d(?::[0-5]\d)?$")
 
 
-@csrf_exempt
-@require_GET
-def health(request):
-    """Public health check endpoint — no API key required."""
-    try:
-        post_count = Post.objects.filter(deleted_at__isnull=True).count()
-        db_status = "ok"
-    except Exception:
-        post_count = 0
-        db_status = "error"
+def _health_response(payload, *, status=200):
+    response = JsonResponse(payload, status=status)
+    response["Cache-Control"] = "no-store"
+    return response
 
-    return JsonResponse(
-        {
-            "status": "ok",
-            "db": db_status,
-            "post_count": post_count,
-            "version": APP_VERSION,
-        }
-    )
+
+@require_GET
+def health_live(request):
+    """Process liveness probe that deliberately avoids the database."""
+    return _health_response({"status": "ok"})
+
+
+@require_GET
+def health_ready(request):
+    """Database readiness probe with a low-information failure response."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+    except Exception:
+        logger.error("api.health.readiness_failed", extra={"probe": "readiness"})
+        return _health_response({"status": "unavailable"}, status=503)
+    return _health_response({"status": "ok"})
+
+
+health = health_ready
 
 
 def _parse_json_body(request: HttpRequest):

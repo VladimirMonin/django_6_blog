@@ -1,0 +1,8 @@
+[Unit]
+Description=Daily Django blog backup
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=30m
+[Install]
+WantedBy=timers.target

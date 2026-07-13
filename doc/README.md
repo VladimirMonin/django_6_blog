@@ -15,7 +15,10 @@
 - [`seo.md`](seo.md) — sitemap, robots.txt, RSS/Atom, OG/Twitter, JSON-LD, canonical.
 - [`navigation.md`](navigation.md) — related posts, breadcrumbs, TOC, series landing, content type filter.
 - [`analytics.md`](analytics.md) — PostView tracking, read-depth, AuditLog, stats endpoint.
-- [`infrastructure.md`](infrastructure.md) — CI, health, backup, env vars, Makefile, logging.
+- [`infrastructure.md`](infrastructure.md) — CI, health/readiness, env vars, Makefile, logging и offline/live boundary.
+- [`deployment.md`](deployment.md) — production settings, immutable releases, Gunicorn/systemd, Nginx, deploy/rollback gates.
+- [`backup-restore.md`](backup-restore.md) — encrypted PostgreSQL/media backup, prune, rehearsal and break-glass restore.
+- [`timeweb-deployment-preparation.md`](timeweb-deployment-preparation.md) — inputs and explicit gates for a future owner-approved Timeweb bootstrap.
 - [`agent-workflow.md`](agent-workflow.md) — правила для агентов и поддержка `instructions/`.
 
 ## Исторические материалы
