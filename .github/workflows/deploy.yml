@@ -50,5 +50,9 @@ jobs:
           [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
           port=${DEPLOY_PORT:-22}
           [[ "$port" =~ ^[0-9]{1,5}$ ]] && ((port >= 1 && port <= 65535))
-          ssh -p "$port" "$DEPLOY_USER@$DEPLOY_HOST" \
+          timeout 300 ssh -p "$port" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o ConnectTimeout=15 \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
             sudo -- /usr/local/sbin/django-6-blog-deploy "$GITHUB_SHA"
