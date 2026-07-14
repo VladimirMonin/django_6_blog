@@ -1,156 +1,142 @@
-# Timeweb deployment preparation
+# Timeweb production operations
 
-Repository behavior and offline checks are documented in `doc/deployment.md`; backup and restore gates are documented in `doc/backup-restore.md`. This file covers only the missing inputs and future live Timeweb boundary.
+The active production site is `https://exception-blog.ru/`. Repository behavior and deployment mechanics are documented in `doc/deployment.md`; backup and restore gates are documented in `doc/backup-restore.md`.
 
-## Resource decisions
+## Current resources
 
-- VPS: use SSH only for bootstrap; create a dedicated `deploy` account and stop using root for CI.
-- Object Storage: keep the existing bucket private for the first staging deployment.
-- Private media mode uses presigned URLs: `MEDIA_S3_SIGNED_URLS=true` and an empty `MEDIA_S3_CUSTOM_DOMAIN`.
-- Do not make the bucket public merely to satisfy application startup. Public/CDN mode is a separate later choice after social-preview and cache testing.
+- VPS: Ubuntu, Nginx, Gunicorn through `django-6-blog.service`, PostgreSQL on the host.
+- Application checkout: `/srv/django-6-blog/app`.
+- Production environment: `/etc/django-6-blog/django-6-blog.env`.
+- Media: private Timeweb S3 with signed URLs.
+- TLS: Let’s Encrypt certificate issued by DNS-01 through the Timeweb Cloud DNS API.
+- Deployment: GitHub Actions verify job plus GitHub Deployments API pull transport; no inbound CI SSH.
 
-## Local files to fill
+## Secret boundaries
 
-Both files are ignored by Git:
+Populated local files are ignored by Git:
 
 ```text
-.env.production  # Django/PostgreSQL/S3 values copied later to the server
-.env.deploy      # SSH/GitHub environment preparation
+.env.production
+.env.deploy
+/home/v/.config/django_6_blog/timeweb-bootstrap.toml
 ```
 
-Tracked field references:
+Tracked references contain placeholders only:
 
-- `.env.production.example`
-- `.env.deploy.example`
-- `deploy/systemd/django-6-blog.env.example`
+- `.env.production.example`;
+- `deploy/systemd/django-6-blog.env.example`.
 
-Never send populated files through Telegram or commit them.
+Never commit or paste populated application env, SSH private keys, S3 keys, PostgreSQL passwords, Timeweb API tokens or TLS private keys into GitHub logs, documentation or task evidence.
 
 ## GitHub production environment
 
-Create an environment named `production`. Prefer a required reviewer while deployment is being stabilized.
+The workflow uses the environment named `production`. The active pull transport requires no repository or environment secrets:
 
-Add only these environment secrets:
+- the workflow uses the short-lived job-scoped `GITHUB_TOKEN` only to create a deployment record;
+- the VPS reads public deployment metadata from `api.github.com`;
+- the host adapter independently verifies the requested SHA against the fixed repository origin and `origin/main`/`v*` reachability;
+- application credentials never leave the VPS.
 
-| Secret | Value |
-|---|---|
-| `DEPLOY_HOST` | Public VPS hostname or IPv4 |
-| `DEPLOY_PORT` | SSH port, normally `22` |
-| `DEPLOY_USER` | Dedicated `deploy` account |
-| `DEPLOY_SSH_PRIVATE_KEY` | Private half of a deploy-only Ed25519 key |
-| `DEPLOY_KNOWN_HOSTS` | Pinned host-key line verified during bootstrap |
+Old `DEPLOY_HOST`, `DEPLOY_PORT`, `DEPLOY_USER`, `DEPLOY_SSH_PRIVATE_KEY` and `DEPLOY_KNOWN_HOSTS` secrets are obsolete for the active workflow and should be removed after the pull deployment is verified.
 
-Application secrets do **not** belong in GitHub. Store them on the VPS at:
+## Deployment sequence
 
-```text
-/etc/django-6-blog/django-6-blog.env
-owner: root
-group: django-blog
-mode: 0640
+```mermaid
+sequenceDiagram
+    actor Owner as Vladimir
+    participant GA as GitHub Actions
+    participant API as GitHub Deployments API
+    participant Timer as Timeweb systemd timer
+    participant Host as VPS deploy adapter
+    participant Web as exception-blog.ru
+
+    Owner->>GA: workflow_dispatch or push v* tag
+    GA->>GA: verify repository and production tests
+    GA->>API: create exact-SHA deployment request
+    loop every 2 minutes
+        Timer->>API: read latest marked production deployment
+    end
+    Timer->>Host: deploy verified SHA once
+    Host->>Host: uv sync, check, migrate, collectstatic, restart
+    Host->>Web: local readiness check
+    Host-->>Web: publish deployment ID/SHA/status
+    GA->>Web: wait for matching success and verify public endpoints
 ```
 
-## Release trigger
+Expected latency between the GitHub request and host pickup is up to approximately two minutes.
 
-- Push/PR to `main`: `.github/workflows/ci.yml` only.
-- Tag `v*`: `.github/workflows/deploy.yml` verifies the repository and deploys.
-- `workflow_dispatch`: manual production deploy/retry.
-
-The deploy workflow uploads a Git archive and calls the host-owned adapter:
+## Installed deployment artifacts
 
 ```text
-/usr/local/sbin/django-6-blog-deploy
+/usr/local/sbin/django-6-blog-checkout-deploy
+/usr/local/sbin/django-6-blog-deployment-poller
+/etc/systemd/system/django-6-blog-deployment-poller.service
+/etc/systemd/system/django-6-blog-deployment-poller.timer
+/var/lib/django-6-blog/deployment-status.json
 ```
 
-The adapter must be installed and reviewed during server bootstrap. Until then, the workflow is expected to fail closed rather than execute arbitrary remote shell fragments.
-
-Tracked adapter example: `deploy/host/django-6-blog-deploy`. Install that file as
-`/usr/local/sbin/django-6-blog-deploy`, owned by `root:root`, mode `0755`, and
-grant the deploy account only that fixed command. It accepts exactly a release
-identifier and a 40-character commit, validates that they agree, reads the
-matching uniquely named uncompressed Git archive from `incoming/`, and refreshes
-a root-owned bare repository from its fixed `origin`. The commit must be reachable
-from `origin/main` or be the target of a `v*` tag. The adapter creates its own
-archive from that authorized commit and requires the uploaded bytes to match it
-exactly before extraction. Git and Python verification run with clean
-environments, so deploy-controlled `GIT_*`/`PYTHON*` variables cannot replace the
-host provenance authority. A release that changes migration leaves therefore
-fails closed until the adapter policy is deliberately reviewed; the workflow
-does not carry an arbitrary shell fragment or application secrets.
-
-The `deploy` account invokes only the following command through a narrow
-passwordless sudoers rule:
+Repository sources:
 
 ```text
-sudo -- /usr/local/sbin/django-6-blog-deploy <release-id> <commit>
+deploy/host/django-6-blog-checkout-deploy
+deploy/host/django-6-blog-deployment-poller
+deploy/systemd/django-6-blog-deployment-poller.service
+deploy/systemd/django-6-blog-deployment-poller.timer
+.github/workflows/deploy.yml
 ```
 
-It receives no general shell, package-manager or unrestricted systemctl
-privilege.
+The poller handles each GitHub deployment ID once. A failed deployment is not retried indefinitely; create a new manual workflow run after diagnosing the server journal.
 
-The workflow validates host, user and port shapes before `scp`/`ssh`. The host
-still validates release identity independently; GitHub-side checks are not the
-security boundary.
+## Operational checks
 
-Bootstrap also creates `/srv/django-6-blog/repository.git` as a root-owned bare
-repository at mode `0700`, with a fixed trusted `origin`, and
-`/srv/django-6-blog/.adapter-work` as `root:root 0711`. The adapter copies the
-deploy-owned upload to a root-owned mode-`0600` file, opens it once, and checks
-both its bytes and pathname identity against the host-generated archive. The
-verified source remains root-owned and read-only; its release entry point is
-executed through `runuser` as `deploy`, never as root.
+```bash
+systemctl is-active nginx django-6-blog.service
+test -f /var/lib/django-6-blog/deployment-status.json
+systemctl is-active django-6-blog-deployment-poller.timer
+systemctl list-timers django-6-blog-deployment-poller.timer
+journalctl -u django-6-blog-deployment-poller.service
+```
 
-## Offline executable gates
+Public probes:
 
-The repository-only gate now exercises these boundaries without contacting
-Timeweb, S3 or GitHub:
+```bash
+curl --fail https://exception-blog.ru/
+curl --fail https://exception-blog.ru/api/v1/health/live/
+curl --fail https://exception-blog.ru/api/v1/health/ready/
+curl --fail https://exception-blog.ru/_deploy/status
+```
 
-- final-path release success, pre-cutover failure and readiness failure against
-  an isolated release root, including a console-script shebang and execution
-  bound to the final release virtualenv rather than the reviewer or an incoming
-  path;
-- source, previous-release and out-of-root sentinels plus unsafe release/static
-  path refusal;
-- backup tool versions for PostgreSQL 16/17/18 and bounded age/rclone/flock
-  versions, malformed output, phase failures, lock refusal, `SUCCESS` and
-  `last-success` publication order;
-- prune dry-run, direct `/dev/tty` confirmation, exact count, selected backup
-  and recomputed manifest digest;
-- restore descriptor schema/mode/symlink/entry-point/TTY/marker/emptiness
-  checks, restore-client/source-major matching and zero-target-write dry run;
-- descriptor and production marker file descriptors remain open in the parent
-  verifier and are the held authority revalidated after database/media emptiness
-  checks and at the write boundary. Deterministic descriptor and production
-  marker replacement is refused with zero database/media writes;
-- fake-root host-adapter tests reject a forged commit archive and replacement of
-  the private archive before any archive-provided release entry point can run.
+The public deployment status intentionally exposes only deployment ID, commit SHA and state. It must never expose command output or environment values.
 
-These are offline safety proofs only. They do not prove host permissions,
-systemd/Nginx installation, real PostgreSQL restore, S3 durability, network
-identity, TLS, GitHub environment configuration or a successful live deploy.
+## TLS
 
-## SSH bootstrap boundary
+The active Nginx vhost serves:
 
-Use the Timeweb root password only for the initial interactive bootstrap. Do not save it in GitHub.
+- HTTP `80` with an ACME webroot exception and redirect to HTTPS;
+- HTTPS `443` with the production Let’s Encrypt certificate;
+- `/static/` from `/srv/django-6-blog/app/staticfiles/`;
+- `/_deploy/status` from the root-owned deployment status file;
+- application traffic through Gunicorn at `127.0.0.1:8000`.
 
-Bootstrap must:
+HTTP-01 and TLS-ALPN-01 were not selected for renewal because external validation paths were inconsistent. DNS-01 requires a Timeweb Cloud API token with the minimum DNS-management rights. A temporary token is sufficient for one issuance but not for unattended renewal. Keep the renewal token outside GitHub and repository files.
 
-1. Verify the server OS/version and SSH host fingerprint out of band.
-2. Install the deploy public key.
-3. Create `django-blog` system account and `deploy` operator account.
-4. Restrict sudo for `deploy` to the reviewed adapter and required systemd operations only.
-5. Install Python/uv, PostgreSQL client/server as chosen, Nginx, systemd units and the host adapter.
-6. Create `/srv/django-6-blog/{incoming,releases}`, the root-owned `0711`
-   `.adapter-work`, and the root-owned `0700` bare `repository.git` with its fixed
-   trusted origin.
-7. Create `/etc/django-6-blog/django-6-blog.env` from the populated local template.
-8. Run an S3 upload/read/delete smoke before publishing content.
-9. Validate Nginx/TLS, migrations, readiness and rollback before enabling tag deployment.
+## Failure handling
 
-## Missing inputs before live bootstrap
+- GitHub verify failure: the deployment request is not created.
+- GitHub deployment request created but not picked up: inspect the timer and VPS access to `api.github.com`.
+- Poller reports `failure`: inspect `journalctl -u django-6-blog-deployment-poller.service`, fix the blocker and start a new manual workflow run.
+- Readiness failure without migration changes: the adapter restores the preceding code revision.
+- Readiness failure with migration changes: automatic code rollback is refused; use a reviewed forward fix or restore plan.
+- Public status polling timeout: confirm that Nginx serves `/_deploy/status` and that the deployment ID matches the GitHub run.
 
-- domain name for HTTPS and `DJANGO_ALLOWED_HOSTS`;
-- server OS/version confirmation;
-- decision whether PostgreSQL runs on this VPS or as a managed service;
-- deploy public key;
-- populated S3 access ID/material;
-- final public author/site identity.
+## Offline verification
+
+```bash
+uv lock --check
+uv run pytest -q tests/test_production_settings.py blog/test_infra.py blog/test_static_delivery.py blog/test_storage_compat.py tests/test_deploy_artifacts.py tests/test_backup_script_safety.py
+uv run python manage.py check
+uv run pytest -q
+git diff --check
+```
+
+Offline tests prove parsing, authorization and fail-closed repository behavior. The manual workflow run plus VPS journal, exact deployed revision and public HTTPS probes are the live deployment proof.

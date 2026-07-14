@@ -16,9 +16,9 @@
 - [`navigation.md`](navigation.md) — related posts, breadcrumbs, TOC, series landing, content type filter.
 - [`analytics.md`](analytics.md) — PostView tracking, read-depth, AuditLog, stats endpoint.
 - [`infrastructure.md`](infrastructure.md) — CI, health/readiness, env vars, Makefile, logging и offline/live boundary.
-- [`deployment.md`](deployment.md) — production settings, immutable releases, Gunicorn/systemd, Nginx, deploy/rollback gates.
+- [`deployment.md`](deployment.md) — active GitHub Deployments API pull transport, exact-SHA adapter, production settings, systemd/Nginx and rollback boundaries.
 - [`backup-restore.md`](backup-restore.md) — encrypted PostgreSQL/media backup, prune, rehearsal and break-glass restore.
-- [`timeweb-deployment-preparation.md`](timeweb-deployment-preparation.md) — inputs and explicit gates for a future owner-approved Timeweb bootstrap.
+- [`timeweb-deployment-preparation.md`](timeweb-deployment-preparation.md) — current Timeweb resources, secrets boundary, deployment sequence, TLS and operational diagnostics.
 - [`agent-workflow.md`](agent-workflow.md) — правила для агентов и поддержка `instructions/`.
 
 ## Исторические материалы

@@ -1,0 +1,11 @@
+[Unit]
+Description=Schedule GitHub deployment polling for Django 6 Blog
+
+[Timer]
+OnBootSec=45s
+OnUnitActiveSec=2min
+AccuracySec=10s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

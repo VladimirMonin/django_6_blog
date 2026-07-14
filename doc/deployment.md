@@ -1,35 +1,111 @@
 # Production deployment
 
-This runbook describes the repository contract. It does not authorize a live deploy. Host, DNS/TLS, PostgreSQL, S3, credentials, systemd/Nginx installation, service actions and migrations require a separate owner-approved gate.
+This runbook describes the active Timeweb production deployment for `exception-blog.ru` and the repository safety contract behind it.
 
-## Architecture
+## Active architecture
 
 ```mermaid
 flowchart LR
-    G[Git tag v* or manual workflow] --> W[GitHub production environment]
-    W --> A[Host-owned deploy adapter]
-    A --> R[Final-path immutable release]
-    R --> C[current symlink]
-    N[Nginx TLS boundary] --> S[systemd socket]
-    S --> U[Gunicorn service]
-    U --> D[PostgreSQL]
-    U --> O[Private S3 media]
+    T["Tag v* or workflow_dispatch"] --> V["GitHub-hosted verify job"]
+    V --> D["GitHub Deployments API<br/>payload: timeweb-pull-v1"]
+    D --> P["Timeweb systemd timer<br/>every 2 minutes"]
+    P --> Q["Root-owned deployment poller"]
+    Q --> A["Root-owned exact-SHA adapter"]
+    A --> G["/srv/django-6-blog/app"]
+    G --> U["uv sync + Django checks<br/>migrate + collectstatic"]
+    U --> S["systemd Gunicorn service"]
+    S --> N["Nginx HTTPS"]
+    N --> H["Public health and deploy status"]
 ```
 
-Canonical repository artifacts:
+The VPS pulls deployment intent from `api.github.com`; GitHub-hosted runners do not open SSH connections to Timeweb. This avoids the provider route that timed out between GitHub runners and the VPS. A self-hosted runner is not installed because the VPS cannot reach its assigned `pipelines*.actions.githubusercontent.com` tenant endpoint reliably.
 
-- `.github/workflows/deploy.yml` — verify, archive, upload and fixed adapter invocation;
-- `deploy/host/django-6-blog-deploy` — trusted host adapter example;
-- `scripts/deploy/release.sh` — final-path build, static collection, metadata and cutover;
-- `scripts/deploy/rollback.sh` — compatibility-aware code/static rollback only;
-- `scripts/deploy/maintenance.sh` and `deploy/systemd/django-6-blog-maintenance@.service` — allowlisted `check`, `migrate`, `collectstatic` boundary;
-- `deploy/systemd/django-6-blog.service`, `.socket` and env example — Gunicorn runtime;
-- `deploy/nginx/django-6-blog.conf.example` — HTTP redirect, TLS placeholders, static aliases and proxy boundary;
-- `deploy/release-metadata.schema.json` — closed release compatibility metadata.
+## Trigger and workflow
+
+`.github/workflows/deploy.yml` accepts only:
+
+- a pushed tag matching `v*`;
+- an explicit `workflow_dispatch` run.
+
+The workflow:
+
+1. runs repository checks on a GitHub-hosted runner;
+2. uses the job-scoped `GITHUB_TOKEN` with `deployments: write` to create a production deployment for the exact `github.sha`;
+3. marks the request with `payload.transport = timeweb-pull-v1`;
+4. waits for the matching deployment ID and SHA at `https://exception-blog.ru/_deploy/status`;
+5. verifies the public home, liveness and readiness endpoints after success.
+
+No deploy SSH key, host, port or application secret is required in GitHub. Application secrets remain only in `/etc/django-6-blog/django-6-blog.env` on the VPS.
+
+## VPS pull boundary
+
+Canonical active artifacts:
+
+- `deploy/host/django-6-blog-deployment-poller` — reads public deployment metadata from the GitHub API, accepts only the `timeweb-pull-v1` marker, processes each deployment ID once and publishes an atomic status file;
+- `deploy/systemd/django-6-blog-deployment-poller.service` — root-owned oneshot poller;
+- `deploy/systemd/django-6-blog-deployment-poller.timer` — persistent two-minute schedule;
+- `deploy/host/django-6-blog-checkout-deploy` — fixed-origin, exact-SHA deployment adapter for the active checkout layout;
+- `deploy/nginx/django-6-blog.conf.example` — includes the read-only `/_deploy/status` endpoint.
+
+Installed paths:
+
+```text
+/usr/local/sbin/django-6-blog-deployment-poller
+/usr/local/sbin/django-6-blog-checkout-deploy
+/etc/systemd/system/django-6-blog-deployment-poller.service
+/etc/systemd/system/django-6-blog-deployment-poller.timer
+/var/lib/django-6-blog/deployment-status.json
+/var/lib/django-6-blog/last-deployment-id
+```
+
+The status document contains only:
+
+```json
+{
+  "deployment_id": 123,
+  "sha": "40-character commit",
+  "status": "in_progress | success | failure"
+}
+```
+
+It contains no logs, credentials or environment values.
+
+## Exact-SHA adapter contract
+
+`django-6-blog-checkout-deploy`:
+
+- accepts exactly one lowercase 40-character commit SHA;
+- requires root and a non-blocking deployment lock;
+- refuses a changed tracked worktree;
+- verifies the fixed origin is `https://github.com/VladimirMonin/django_6_blog.git`;
+- fetches only `origin/main` and `v*` tags;
+- permits only a commit reachable from `origin/main` or pointed to by a `v*` tag;
+- runs `uv sync --frozen` as the application user;
+- runs `check --deploy`, migrations and static collection through transient systemd units using the protected production `EnvironmentFile`;
+- restarts `django-6-blog.service` and requires readiness on `127.0.0.1:8000`;
+- restores the preceding code revision after readiness failure only when no migration file changed;
+- refuses automatic code rollback after a migration-bearing deployment.
+
+The timer executes the root-owned poller directly. No repository-provided shell fragment, deployment secret or arbitrary command is accepted from GitHub.
+
+## Current runtime layout
+
+The live Timeweb service currently uses:
+
+```text
+checkout:      /srv/django-6-blog/app
+virtualenv:    /srv/django-6-blog/app/.venv
+static root:   /srv/django-6-blog/app/staticfiles
+service:       django-6-blog.service
+Gunicorn:      127.0.0.1:8000
+production env:/etc/django-6-blog/django-6-blog.env
+```
+
+The immutable release artifacts under `scripts/deploy/`, `deploy/host/django-6-blog-deploy`, release metadata and rollback tests remain the reviewed future release-layout contract. They are not claimed as the active Timeweb layout until the service is deliberately migrated from `/app` to `/current`.
 
 ## Production settings
 
-Use `DJANGO_SETTINGS_MODULE=config.settings_production`. The module fails before startup unless:
+Use `DJANGO_SETTINGS_MODULE=config.settings_production`. Startup fails closed unless:
 
 - `DJANGO_DEBUG=false`;
 - `DJANGO_SECRET_KEY` is non-placeholder and at least 50 characters;
@@ -38,52 +114,40 @@ Use `DJANGO_SETTINGS_MODULE=config.settings_production`. The module fails before
 - `DATABASE_URL` is PostgreSQL;
 - `DJANGO_MEDIA_STORAGE=s3` and all required `MEDIA_S3_*` values exist.
 
-PostgreSQL connections use `connect_timeout=2` and `statement_timeout=2000` ms. Production media uses the canonical variables in `.env.production.example` and `deploy/systemd/django-6-blog.env.example`. Private Timeweb S3 uses `MEDIA_S3_SIGNED_URLS=true` with empty `MEDIA_S3_CUSTOM_DOMAIN`. HSTS remains disabled until a separately approved live TLS check.
+Application secrets stay in `/etc/django-6-blog/django-6-blog.env`, expected as a non-public root-owned file readable by the application service account. They do not belong in GitHub deployments, workflow logs or the public status document.
 
-Application secrets live only in `/etc/django-6-blog/django-6-blog.env`, expected as `root:django-blog 0640`. They do not belong in GitHub. GitHub production stores only the five deploy transport secrets listed in `doc/timeweb-deployment-preparation.md`.
+## Verification
 
-## Offline verification
-
-Run without real endpoints or credentials:
+Repository gate:
 
 ```bash
 uv lock --check
-uv run pytest -q tests/test_production_settings.py blog/test_infra.py blog/test_static_delivery.py blog/test_storage_compat.py tests/test_deploy_artifacts.py
+uv run pytest -q tests/test_production_settings.py blog/test_infra.py blog/test_static_delivery.py blog/test_storage_compat.py tests/test_deploy_artifacts.py tests/test_backup_script_safety.py
 uv run python manage.py check
-for file in scripts/deploy/*.sh deploy/host/django-6-blog-deploy; do bash -n "$file"; done
 uv run pytest -q
 git diff --check
 ```
 
-CI separately starts PostgreSQL 16, applies migrations, runs `check --deploy`, and verifies health tests. Temporary release tests prove final-path virtualenv execution, safe static collection, pre/post-cutover rollback, metadata verdicts and fixed adapter provenance. These are repository proofs, not host proofs.
+VPS checks:
 
-## Future live bootstrap gate
+```bash
+systemctl status django-6-blog-deployment-poller.timer
+systemctl status django-6-blog-deployment-poller.service
+journalctl -u django-6-blog-deployment-poller.service
+cat /var/lib/django-6-blog/deployment-status.json
+```
 
-Only after Vladimir explicitly approves the live stage, the host operator may follow `doc/timeweb-deployment-preparation.md` and `doc/plans/timeweb-server-bootstrap.md` to:
+Public checks:
 
-1. verify OS and SSH fingerprint out of band;
-2. create dedicated `deploy`, `django-blog` and backup accounts and narrow permissions;
-3. install reviewed units, adapter and Nginx configuration;
-4. insert application secrets out of band;
-5. configure PostgreSQL, private S3 and TLS;
-6. run migrations, static collection, `/api/v1/health/live/` and `/api/v1/health/ready/` checks;
-7. run S3 upload/read/delete and backup/rehearsal gates;
-8. enable tag deployment only after rollback and reboot-persistence checks.
+```bash
+curl --fail https://exception-blog.ru/
+curl --fail https://exception-blog.ru/api/v1/health/live/
+curl --fail https://exception-blog.ru/api/v1/health/ready/
+curl --fail https://exception-blog.ru/_deploy/status
+```
 
-Before reload, the host operator must replace placeholders and run `nginx -t`. HSTS may be enabled only after HTTPS/proxy behavior is verified. No command in this document grants that approval.
+A successful GitHub job is accepted only after the status endpoint reports the same deployment ID and SHA and all public endpoint checks pass.
 
-## Release and rollback contract
+## TLS and renewal note
 
-`release.sh` creates `/srv/django-6-blog/releases/<release-id>` at its final pathname before `uv sync`; it never moves a populated virtualenv. It collects release-local manifest static files, creates validated `release-metadata.json`, checks final-path Gunicorn, then atomically repoints `current`. Readiness failure restores the prior symlink and removes only the failed validated release.
-
-`rollback.sh` permits only `ALLOW_CODE_STATIC_ONLY`. It refuses unknown DB migration state, incompatible schema sequences, irreversible migration boundaries, storage-mode changes and invalid metadata. It never reverses migrations or restores PostgreSQL/media. A refused rollback requires a separately reviewed forward fix or break-glass restore plan.
-
-## Ownership and non-claims
-
-- Vladimir: change approval and live-stage authorization.
-- Host operator: SSH/bootstrap, file ownership, systemd/Nginx/TLS and rollback execution.
-- Database operator: PostgreSQL provisioning, migration evidence and DB recovery.
-- Storage operator: S3 credentials, copy/delta sync, ACL/CORS/Range/cache checks.
-- Backup operator and key custodian: see `doc/backup-restore.md`.
-
-Offline PASS does not prove Timeweb compatibility, public DNS/TLS, host permissions, service installation, real PostgreSQL latency/failure behavior, S3 semantics, reboot persistence, backup durability, restore RPO/RTO or a successful production deploy.
+The active certificate was issued with Let’s Encrypt DNS-01 through the Timeweb Cloud DNS API because HTTP-01 and TLS-ALPN-01 were unreliable from some external validation networks. Certificate renewal is a separate operational credential boundary: use a long-lived Timeweb token restricted to DNS management and never place it in GitHub or repository files.

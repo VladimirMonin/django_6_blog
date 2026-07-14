@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+set -euo pipefail
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+unset BASH_ENV ENV CDPATH GLOBIGNORE PYTHONHOME PYTHONPATH
+
+[[ $# -eq 1 ]] || { echo "usage: django-6-blog-checkout-deploy COMMIT" >&2; exit 2; }
+commit=$1
+[[ "$commit" =~ ^[a-f0-9]{40}$ ]] || { echo "invalid commit" >&2; exit 2; }
+[[ ${EUID:-$(id -u)} -eq 0 ]] || { echo "root is required" >&2; exit 2; }
+
+app=/srv/django-6-blog/app
+app_user=v
+app_group=v
+env_file=/etc/django-6-blog/django-6-blog.env
+expected_origin=https://github.com/VladimirMonin/django_6_blog.git
+lock_file=/run/lock/django-6-blog-deploy.lock
+revision_file=/var/lib/django-6-blog/deployed-revision
+
+exec 9>"$lock_file"
+flock -n 9 || { echo "deploy already running" >&2; exit 75; }
+[[ -d "$app/.git" && ! -L "$app" ]] || { echo "application checkout is unavailable" >&2; exit 2; }
+[[ -f "$env_file" && ! -L "$env_file" ]] || { echo "production environment is unavailable" >&2; exit 2; }
+
+run_as_app() {
+    runuser --user "$app_user" -- /usr/bin/env -i \
+        HOME="/home/$app_user" PATH=/home/v/.local/bin:/usr/local/bin:/usr/bin:/bin \
+        "$@"
+}
+
+run_with_production_env() {
+    systemd-run --quiet --wait --pipe --collect \
+        --uid="$app_user" --gid="$app_group" \
+        --working-directory="$app" \
+        --property="EnvironmentFile=$env_file" \
+        --setenv=HOME="/home/$app_user" \
+        --setenv=PATH=/home/v/.local/bin:/usr/local/bin:/usr/bin:/bin \
+        "$@"
+}
+
+git_command=(run_as_app git -C "$app")
+[[ "$("${git_command[@]}" remote get-url origin)" == "$expected_origin" ]] || {
+    echo "unexpected repository origin" >&2
+    exit 2
+}
+[[ -z "$("${git_command[@]}" status --porcelain --untracked-files=no)" ]] || {
+    echo "tracked checkout changes refuse deployment" >&2
+    exit 2
+}
+
+"${git_command[@]}" fetch --quiet --prune origin \
+    '+refs/heads/main:refs/remotes/origin/main' '+refs/tags/v*:refs/tags/v*'
+"${git_command[@]}" cat-file -e "$commit^{commit}" 2>/dev/null || {
+    echo "commit is unavailable" >&2
+    exit 2
+}
+authorized=0
+if "${git_command[@]}" merge-base --is-ancestor "$commit" refs/remotes/origin/main; then
+    authorized=1
+fi
+while IFS= read -r tag; do
+    [[ "$tag" == v* ]] && authorized=1
+done < <("${git_command[@]}" tag --points-at "$commit")
+[[ $authorized -eq 1 ]] || { echo "unauthorized commit" >&2; exit 2; }
+
+previous=$("${git_command[@]}" rev-parse HEAD)
+migration_changed=0
+if [[ "$previous" != "$commit" ]] && "${git_command[@]}" diff --quiet "$previous" "$commit" -- '*/migrations/*.py'; then
+    migration_changed=0
+elif [[ "$previous" != "$commit" ]]; then
+    migration_changed=1
+fi
+
+"${git_command[@]}" reset --hard --quiet "$commit"
+run_as_app /home/v/.local/bin/uv sync --project "$app" --frozen
+run_with_production_env "$app/.venv/bin/python" manage.py check --deploy
+run_with_production_env "$app/.venv/bin/python" manage.py migrate --noinput
+run_with_production_env "$app/.venv/bin/python" manage.py collectstatic --noinput
+systemctl restart django-6-blog.service
+
+ready=0
+for _ in $(seq 1 20); do
+    if curl --fail --silent --show-error --max-time 3 \
+        -H 'Host: exception-blog.ru' -H 'X-Forwarded-Proto: https' \
+        http://127.0.0.1:8000/api/v1/health/ready/ >/dev/null; then
+        ready=1
+        break
+    fi
+    sleep 1
+done
+
+if [[ $ready -ne 1 ]]; then
+    if [[ $migration_changed -eq 0 ]]; then
+        echo "readiness failed; restoring previous code revision" >&2
+        "${git_command[@]}" reset --hard --quiet "$previous"
+        run_as_app /home/v/.local/bin/uv sync --project "$app" --frozen
+        run_with_production_env "$app/.venv/bin/python" manage.py collectstatic --noinput
+        systemctl restart django-6-blog.service
+    else
+        echo "readiness failed after migration-bearing deployment; automatic code rollback refused" >&2
+    fi
+    exit 1
+fi
+
+install -d -o root -g root -m 0755 "$(dirname "$revision_file")"
+printf '%s\n' "$commit" >"$revision_file"
+chown root:root "$revision_file"
+chmod 0644 "$revision_file"
+printf 'deployed_commit=%s\n' "$commit"

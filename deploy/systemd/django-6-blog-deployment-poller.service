@@ -1,0 +1,12 @@
+[Unit]
+Description=Poll GitHub deployment requests for Django 6 Blog
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/local/sbin/django-6-blog-deployment-poller
+NoNewPrivileges=true
+PrivateTmp=true

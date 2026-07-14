@@ -16,6 +16,7 @@ Core stack:
 - Markdown/Obsidian import with local media.
 - Public content types: `article`, `video`, `audio`, `podcast`.
 - Agent API under `/api/v1/` with token auth, permissions, rate limits, and audit logging.
+- Timeweb production uses a GitHub Deployments API pull transport: GitHub-hosted verification, a root-owned VPS poller, an exact-SHA checkout adapter, systemd/Gunicorn, Nginx/HTTPS, PostgreSQL and private S3.
 
 ## Commands
 
@@ -74,7 +75,7 @@ Use smaller tests first when the change is narrow.
 | Navigation, related posts, TOC, series landing | `doc/navigation.md` |
 | Analytics, PostView, read-depth, AuditLog | `doc/analytics.md` |
 | Infrastructure, CI, health, env | `doc/infrastructure.md` |
-| Release/systemd/Nginx deployment and rollback | `doc/deployment.md` |
+| Active Timeweb pull deployment, exact-SHA checkout adapter, systemd/Nginx and rollback boundaries | `doc/deployment.md` |
 | Encrypted backup, pruning and restore | `doc/backup-restore.md` |
 
 If no instruction clearly matches, read `doc/README.md`, inspect the current code, then update instructions only if the discovered rule is fundamental.

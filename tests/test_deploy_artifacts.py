@@ -9,6 +9,7 @@ import sys
 import textwrap
 
 import pytest
+import py_compile
 import yaml
 
 from jsonschema import Draft202012Validator
@@ -32,6 +33,8 @@ def test_host_artifacts_keep_trusted_boundaries():
     assert "proxy_set_header Host $host" in nginx
     assert "proxy_intercept_errors off" in nginx
     assert "unix:/run/django-6-blog/gunicorn.sock" in nginx
+    assert "location = /_deploy/status" in nginx
+    assert "/var/lib/django-6-blog/deployment-status.json" in nginx
     unit = (ROOT / "deploy/systemd/django-6-blog-maintenance@.service").read_text()
     assert "EnvironmentFile=/etc/django-6-blog/" in unit
     assert "User=django-blog" in unit and "sh -c" not in unit
@@ -300,9 +303,55 @@ def test_deploy_workflow_is_closed_tag_or_manual_contract():
     assert triggers["push"] == {"tags": ["v*"]}
     deploy = workflow["jobs"]["deploy"]
     assert deploy["environment"] == "production"
+    assert deploy["runs-on"] == "ubuntu-latest"
+    assert deploy["needs"] == "verify"
+    assert deploy["permissions"] == {"contents": "read", "deployments": "write"}
     text = workflow_path.read_text(encoding="utf-8")
-    assert "/usr/local/sbin/django-6-blog-deploy" in text
+    assert "timeweb-pull-v1" in text
+    assert "repos/$REPOSITORY/deployments" in text
+    assert "deployments/$DEPLOYMENT_ID/statuses" in text
+    assert "https://exception-blog.ru/_deploy/status" in text
+    assert "self-hosted" not in text
+    assert "DEPLOY_SSH" not in text
     assert "bash -c" not in text and "sh -c" not in text
+
+
+def test_checkout_adapter_is_fixed_sha_production_boundary():
+    adapter = ROOT / "deploy/host/django-6-blog-checkout-deploy"
+    text = adapter.read_text(encoding="utf-8")
+    assert "https://github.com/VladimirMonin/django_6_blog.git" in text
+    assert '[[ "$commit" =~ ^[a-f0-9]{40}$ ]]' in text
+    assert "status --porcelain --untracked-files=no" in text
+    assert "merge-base --is-ancestor" in text
+    assert "flock -n" in text
+    assert "EnvironmentFile=$env_file" in text
+    assert "manage.py check --deploy" in text
+    assert "manage.py migrate --noinput" in text
+    assert "manage.py collectstatic --noinput" in text
+    assert "/api/v1/health/ready/" in text
+    assert "eval " not in text and f"source {chr(34)}$env_file" not in text
+    subprocess.run(["bash", "-n", str(adapter)], check=True)
+    result = subprocess.run([str(adapter), "not-a-commit"], text=True, capture_output=True)
+    assert result.returncode == 2
+    assert "invalid commit" in result.stderr
+
+
+def test_deployment_poller_is_idempotent_fixed_transport_boundary(tmp_path):
+    poller = ROOT / "deploy/host/django-6-blog-deployment-poller"
+    text = poller.read_text(encoding="utf-8")
+    assert "api.github.com/repos/VladimirMonin/django_6_blog/" in text
+    assert 'TRANSPORT = "timeweb-pull-v1"' in text
+    assert "fcntl.LOCK_EX | fcntl.LOCK_NB" in text
+    assert "last-deployment-id" in text
+    assert "deployment-status.json" in text
+    assert 'ADAPTER = Path("/usr/local/sbin/django-6-blog-checkout-deploy")' in text
+    assert "os.replace(temporary, path)" in text
+    py_compile.compile(str(poller), cfile=str(tmp_path / "poller.pyc"), doraise=True)
+    timer = (ROOT / "deploy/systemd/django-6-blog-deployment-poller.timer").read_text(encoding="utf-8")
+    service = (ROOT / "deploy/systemd/django-6-blog-deployment-poller.service").read_text(encoding="utf-8")
+    assert "OnUnitActiveSec=2min" in timer and "Persistent=true" in timer
+    assert "User=root" in service
+    assert "ExecStart=/usr/local/sbin/django-6-blog-deployment-poller" in service
 
 
 def test_host_adapter_example_accepts_only_archive_release_id_and_commit():
@@ -470,14 +519,7 @@ def test_release_path_validator_refuses_symlink(tmp_path):
 
 def test_deploy_examples_and_workflow_keep_secret_boundary():
     workflow = (ROOT / ".github/workflows/deploy.yml").read_text(encoding="utf-8")
-    expected = {
-        "DEPLOY_HOST",
-        "DEPLOY_PORT",
-        "DEPLOY_USER",
-        "DEPLOY_SSH_PRIVATE_KEY",
-        "DEPLOY_KNOWN_HOSTS",
-    }
-    assert set(re.findall(r"secrets\.([A-Z0-9_]+)", workflow)) == expected
+    assert not re.findall(r"secrets\.([A-Z0-9_]+)", workflow)
     assert "DJANGO_SECRET_KEY" not in workflow
     assert "MEDIA_S3_AUTH_MATERIAL" not in workflow
     production = (ROOT / ".env.production.example").read_text(encoding="utf-8")
