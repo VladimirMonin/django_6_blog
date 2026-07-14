@@ -38,7 +38,7 @@ run_with_production_env() {
         "$@"
 }
 
-git_command=(run_as_app git -C "$app")
+git_command=(run_as_app git -c http.version=HTTP/1.1 -C "$app")
 [[ "$("${git_command[@]}" remote get-url origin)" == "$expected_origin" ]] || {
     echo "unexpected repository origin" >&2
     exit 2
@@ -48,8 +48,16 @@ git_command=(run_as_app git -C "$app")
     exit 2
 }
 
-"${git_command[@]}" fetch --quiet --prune origin \
-    '+refs/heads/main:refs/remotes/origin/main' '+refs/tags/v*:refs/tags/v*'
+fetched=0
+for attempt in $(seq 1 5); do
+    if "${git_command[@]}" fetch --quiet --prune origin \
+        '+refs/heads/main:refs/remotes/origin/main' '+refs/tags/v*:refs/tags/v*'; then
+        fetched=1
+        break
+    fi
+    sleep $((attempt * 2))
+done
+[[ $fetched -eq 1 ]] || { echo "repository fetch failed" >&2; exit 1; }
 "${git_command[@]}" cat-file -e "$commit^{commit}" 2>/dev/null || {
     echo "commit is unavailable" >&2
     exit 2
@@ -88,6 +96,17 @@ for _ in $(seq 1 20); do
     fi
     sleep 1
 done
+
+if [[ $ready -eq 1 ]]; then
+    for path in / /api/v1/health/live/ /api/v1/health/ready/; do
+        if ! curl --fail --silent --show-error --max-time 5 \
+            --resolve exception-blog.ru:443:127.0.0.1 \
+            "https://exception-blog.ru$path" >/dev/null; then
+            ready=0
+            break
+        fi
+    done
+fi
 
 if [[ $ready -ne 1 ]]; then
     if [[ $migration_changed -eq 0 ]]; then

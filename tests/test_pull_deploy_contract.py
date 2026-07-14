@@ -35,12 +35,15 @@ def test_checkout_adapter_is_fixed_origin_exact_sha_boundary():
     assert '[[ "$commit" =~ ^[a-f0-9]{40}$ ]]' in text
     assert "status --porcelain --untracked-files=no" in text
     assert "merge-base --is-ancestor" in text
+    assert "http.version=HTTP/1.1" in text
+    assert "for attempt in $(seq 1 5)" in text
     assert "flock -n" in text
     assert "EnvironmentFile=$env_file" in text
     assert "manage.py check --deploy" in text
     assert "manage.py migrate --noinput" in text
     assert "manage.py collectstatic --noinput" in text
     assert "/api/v1/health/ready/" in text
+    assert "--resolve exception-blog.ru:443:127.0.0.1" in text
     assert "eval " not in text
     subprocess.run(["bash", "-n", str(adapter)], check=True)
     invalid = subprocess.run([str(adapter), "not-a-commit"], text=True, capture_output=True)

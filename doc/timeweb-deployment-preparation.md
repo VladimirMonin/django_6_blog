@@ -58,9 +58,9 @@ sequenceDiagram
     end
     Timer->>Host: deploy verified SHA once
     Host->>Host: uv sync, check, migrate, collectstatic, restart
-    Host->>Web: local readiness check
+    Host->>Web: local HTTPS home/live/ready checks
     Host-->>Web: publish deployment ID/SHA/status
-    GA->>Web: wait for matching success and verify public endpoints
+    GA->>Web: wait for matching deployment status
 ```
 
 Expected latency between the GitHub request and host pickup is up to approximately two minutes.

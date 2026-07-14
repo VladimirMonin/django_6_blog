@@ -76,12 +76,6 @@ jobs:
           echo "Timed out waiting for VPS deployment" >&2
           exit 1
 
-      - name: Verify public production endpoints
-        run: |
-          curl --fail --silent --show-error --max-time 30 https://exception-blog.ru/ >/dev/null
-          curl --fail --silent --show-error --max-time 30 https://exception-blog.ru/api/v1/health/live/ >/dev/null
-          curl --fail --silent --show-error --max-time 30 https://exception-blog.ru/api/v1/health/ready/ >/dev/null
-
       - name: Mark GitHub deployment successful
         if: success()
         env:

@@ -33,7 +33,7 @@ The workflow:
 2. uses the job-scoped `GITHUB_TOKEN` with `deployments: write` to create a production deployment for the exact `github.sha`;
 3. marks the request with `payload.transport = timeweb-pull-v1`;
 4. waits for the matching deployment ID and SHA at `https://exception-blog.ru/_deploy/status`;
-5. verifies the public home, liveness and readiness endpoints after success.
+5. records the explicit GitHub deployment as success or failure after the matching VPS result.
 
 No deploy SSH key, host, port or application secret is required in GitHub. Application secrets remain only in `/etc/django-6-blog/django-6-blog.env` on the VPS.
 
@@ -78,11 +78,11 @@ It contains no logs, credentials or environment values.
 - requires root and a non-blocking deployment lock;
 - refuses a changed tracked worktree;
 - verifies the fixed origin is `https://github.com/VladimirMonin/django_6_blog.git`;
-- fetches only `origin/main` and `v*` tags;
+- fetches only `origin/main` and `v*` tags over Git HTTP/1.1 with five bounded retries for transient Timeweb resets;
 - permits only a commit reachable from `origin/main` or pointed to by a `v*` tag;
 - runs `uv sync --frozen` as the application user;
 - runs `check --deploy`, migrations and static collection through transient systemd units using the protected production `EnvironmentFile`;
-- restarts `django-6-blog.service` and requires readiness on `127.0.0.1:8000`;
+- restarts `django-6-blog.service`, requires readiness on `127.0.0.1:8000`, then checks home, liveness and readiness through local Nginx HTTPS with the production hostname and certificate;
 - restores the preceding code revision after readiness failure only when no migration file changed;
 - refuses automatic code rollback after a migration-bearing deployment.
 
@@ -146,7 +146,7 @@ curl --fail https://exception-blog.ru/api/v1/health/ready/
 curl --fail https://exception-blog.ru/_deploy/status
 ```
 
-A successful GitHub job is accepted only after the status endpoint reports the same deployment ID and SHA and all public endpoint checks pass.
+A successful GitHub job is accepted only after the external status endpoint reports the same deployment ID and SHA. The adapter must also pass direct Gunicorn readiness and local Nginx HTTPS checks for home, liveness and readiness; independent operational probes verify wider public reachability.
 
 ## TLS and renewal note
 
