@@ -40,8 +40,8 @@ def test_real_obsidian_lm_studio_lesson_import_renders_media_and_mermaid(client)
     assert post.media_files.count() == len(expected_media.found)
     assert image_media_count >= 1
     assert audio_media_count == 1
-    assert len(soup.select("img[src]")) == image_media_count
-    assert len(soup.select("audio[src]")) == audio_media_count
+    assert len(soup.select(".markdown-content img[src]")) == image_media_count
+    assert len(soup.select(".markdown-content audio[src]")) == audio_media_count
     assert len(soup.select(".mermaid")) >= 1
     assert len(soup.select("blockquote.alert")) >= 1
     assert not soup.select('img[src$=".opus"]')

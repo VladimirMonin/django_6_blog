@@ -19,6 +19,14 @@ from .session_interactions import SessionInteractionMixin
 
 POST_DETAIL_RENDER_VERSION = "social-image-v7"
 
+YANDEX_WEBMASTER_VERIFICATION = """<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body>Verification: 5834a95c038b9599</body>
+</html>
+"""
+
 _JSON_SCRIPT_ESCAPES = {
     ord("<"): "\\u003C",
     ord(">"): "\\u003E",
@@ -468,3 +476,9 @@ def robots_txt(request):
         f"Sitemap: {request.build_absolute_uri('/sitemap.xml')}",
     ]
     return HttpResponse("\n".join(lines), content_type="text/plain")
+
+
+def yandex_webmaster_verification(request):
+    """Serve the root verification document required by Yandex Webmaster."""
+
+    return HttpResponse(YANDEX_WEBMASTER_VERIFICATION, content_type="text/html; charset=UTF-8")

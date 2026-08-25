@@ -23,7 +23,7 @@ from django.urls import include, path, re_path
 from blog.dev_media import serve_media_with_range
 from blog.feeds import AtomLatestPostsFeed, LatestPostsFeed
 from blog.sitemaps import PostSitemap, StaticViewSitemap
-from blog.views import robots_txt
+from blog.views import robots_txt, yandex_webmaster_verification
 
 sitemaps = {
     "posts": PostSitemap,
@@ -31,6 +31,11 @@ sitemaps = {
 }
 
 urlpatterns = [
+    path(
+        "yandex_5834a95c038b9599.html",
+        yandex_webmaster_verification,
+        name="yandex_webmaster_verification",
+    ),
     path("admin/", admin.site.urls),
     # Приложение блога (главная страница и все маршруты)
     path("", include("blog.urls")),

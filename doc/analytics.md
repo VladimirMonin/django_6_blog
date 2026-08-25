@@ -1,5 +1,19 @@
 # Analytics
 
+## Yandex Metrika
+
+Every full SSR page rendered through `templates/base.html` loads Yandex Metrika
+counter `111929557` near the start of `<head>`. JavaScript-disabled visits use
+the matching `<noscript>` pixel at the start of `<body>`.
+
+The counter enables Webvisor, click map, accurate bounce tracking and outbound
+link tracking. HTMX fragment responses do not repeat the counter script; the
+initial full-page load owns analytics initialization.
+
+Yandex Webmaster ownership is served from the versioned root route
+`/yandex_5834a95c038b9599.html`. Keep the filename and verification body stable
+while the site is registered in Webmaster.
+
 ## Post View Tracking
 
 Each post detail page view is tracked via `PostView` model:
