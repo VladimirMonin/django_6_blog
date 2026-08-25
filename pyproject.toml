@@ -36,6 +36,7 @@ filterwarnings = [
 
 [dependency-groups]
 dev = [
+    "jsonschema>=4.23,<5",
     "pytest>=9.0.3",
     "pytest-django>=4.12.0",
 ]

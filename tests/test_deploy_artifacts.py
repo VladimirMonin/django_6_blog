@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import textwrap
+from functools import lru_cache
 
 import pytest
 import py_compile
@@ -80,7 +81,14 @@ def test_rollback_atomically_selects_compatible_older_release(tmp_path):
     leaves.write_text(json.dumps(json.loads((current / "release-metadata.json").read_text())["migration_leaves"]))
     result = subprocess.run(
         ["bash", str(ROOT / "scripts/deploy/rollback.sh")],
-        env={**os.environ, "RELEASE_ROOT": str(tmp_path), "TARGET_RELEASE": "old", "SKIP_READINESS": "1", "LIVE_MIGRATION_LEAVES_FILE": str(leaves)},
+        env={
+            **os.environ,
+            "PYTHONPATH": os.pathsep.join(sys.path),
+            "RELEASE_ROOT": str(tmp_path),
+            "TARGET_RELEASE": "old",
+            "SKIP_READINESS": "1",
+            "LIVE_MIGRATION_LEAVES_FILE": str(leaves),
+        },
         text=True,
         capture_output=True,
     )
@@ -97,7 +105,14 @@ def test_rollback_refuses_schema_too_old_before_irreversible_boundary(tmp_path):
     leaves.write_text(json.dumps(json.loads((current / "release-metadata.json").read_text())["migration_leaves"]))
     result = subprocess.run(
         ["bash", str(ROOT / "scripts/deploy/rollback.sh")],
-        env={**os.environ, "RELEASE_ROOT": str(tmp_path), "TARGET_RELEASE": "old", "SKIP_READINESS": "1", "LIVE_MIGRATION_LEAVES_FILE": str(leaves)},
+        env={
+            **os.environ,
+            "PYTHONPATH": os.pathsep.join(sys.path),
+            "RELEASE_ROOT": str(tmp_path),
+            "TARGET_RELEASE": "old",
+            "SKIP_READINESS": "1",
+            "LIVE_MIGRATION_LEAVES_FILE": str(leaves),
+        },
         text=True,
         capture_output=True,
     )
@@ -129,7 +144,12 @@ def test_maintenance_wrapper_builds_allowlisted_final_release_argv(tmp_path):
     (release / "manage.py").write_text("# fake\n")
     result = subprocess.run(
         ["bash", str(ROOT / "scripts/deploy/maintenance.sh"), f"collectstatic:{release_id}"],
-        env={**os.environ, "RELEASE_ROOT": str(tmp_path), "ARGV_LOG": str(log), "CANARY": "never-print-me"},
+        env={
+            **os.environ,
+            "RELEASE_ROOT": str(tmp_path),
+            "ARGV_LOG": str(log),
+            "CANARY": "never-print-me",
+        },
         text=True,
         capture_output=True,
     )
@@ -407,7 +427,19 @@ def _host_adapter_fixture(tmp_path: Path):
     return source, release_root, adapter, release_id, commit
 
 
+@lru_cache(maxsize=1)
+def _user_namespaces_available() -> bool:
+    probe = subprocess.run(["unshare", "-Ur", "true"], text=True, capture_output=True)
+    return probe.returncode == 0
+
+
+def _require_user_namespaces() -> None:
+    if not _user_namespaces_available():
+        pytest.skip("unprivileged user namespaces are prohibited on this runner")
+
+
 def _run_fake_root_adapter(adapter: Path, release_id: str, commit: str, execution_log: Path):
+    _require_user_namespaces()
     return subprocess.run(
         ["unshare", "-Ur", str(adapter), release_id, commit],
         env={**os.environ, "EXECUTION_LOG": str(execution_log)},
@@ -452,6 +484,7 @@ def test_host_adapter_refuses_unreachable_commit_before_execution(tmp_path):
 
 
 def test_host_adapter_refuses_private_archive_replacement_before_execution(tmp_path):
+    _require_user_namespaces()
     source, release_root, adapter, release_id, commit = _host_adapter_fixture(tmp_path)
     archive = release_root / "incoming" / f"release-{release_id}.tar"
     subprocess.run(["git", "archive", "--format=tar", f"--output={archive}", commit], cwd=source, check=True)

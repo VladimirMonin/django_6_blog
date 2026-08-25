@@ -14,7 +14,7 @@ from blog.models import Post
 def test_readiness_endpoints_return_sanitized_success():
     client = Client()
     for path in ("/api/v1/health/", "/api/v1/health/ready/"):
-        response = client.get(path)
+        response = client.get(path, secure=True)
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
         assert response["Cache-Control"] == "no-store"
@@ -24,7 +24,7 @@ def test_readiness_endpoints_return_sanitized_success():
 def test_liveness_is_public_and_does_not_query_database(django_assert_num_queries):
     client = Client()
     with django_assert_num_queries(0):
-        response = client.get("/api/v1/health/live/")
+        response = client.get("/api/v1/health/live/", secure=True)
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
     assert response["Cache-Control"] == "no-store"
@@ -34,7 +34,7 @@ def test_liveness_is_public_and_does_not_query_database(django_assert_num_querie
 def test_health_probes_are_get_only():
     client = Client()
     for path in ("/api/v1/health/", "/api/v1/health/live/", "/api/v1/health/ready/"):
-        assert client.post(path).status_code == 405
+        assert client.post(path, secure=True).status_code == 405
 
 
 @pytest.mark.django_db

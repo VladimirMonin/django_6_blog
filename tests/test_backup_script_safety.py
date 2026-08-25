@@ -8,11 +8,23 @@ from pathlib import Path
 import shlex
 import subprocess
 import tarfile
+from functools import lru_cache
 
 import pytest
 
 ROOT = Path(__file__).parents[1]
 RUN_BACKUP = ROOT / "scripts/backup/run-backup.sh"
+
+
+@lru_cache(maxsize=1)
+def _user_namespaces_available() -> bool:
+    probe = subprocess.run(["unshare", "-Urmp", "true"], text=True, capture_output=True)
+    return probe.returncode == 0
+
+
+def _require_user_namespaces() -> None:
+    if not _user_namespaces_available():
+        pytest.skip("unprivileged user namespaces are prohibited on this runner")
 
 
 def executable(path: Path, content: str) -> None:
@@ -476,6 +488,7 @@ def test_restore_descriptor_mutation_during_pg_restore_preflight_causes_zero_wri
 
 
 def test_production_restore_marker_mutation_during_final_empty_check_causes_zero_writes(tmp_path):
+    _require_user_namespaces()
     _, target, descriptor, _, _ = _restore_fixture(tmp_path)
     fake_run = tmp_path / "fake-run"
     marker = fake_run / "django-6-blog/restore-maintenance/production-test"
