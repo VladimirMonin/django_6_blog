@@ -138,6 +138,7 @@ class TestParseMarkdownFile:
             "media_url: https://example.com/v.mp4\n"
             "tags: Python, Django\n"
             "series: testing\n"
+            "source_id: lesson-test-post\n"
             "status: published\n"
             "---\n"
             "# Test Post\n\n"
@@ -151,6 +152,7 @@ class TestParseMarkdownFile:
         assert payload["content_type"] == "video"
         assert payload["media_url"] == "https://example.com/v.mp4"
         assert payload["status"] == "published"
+        assert payload["source_id"] == "lesson-test-post"
         assert "Python" in payload["tags"]
         assert "Django" in payload["tags"]
         assert payload["category"] == "Testing"
@@ -169,6 +171,15 @@ class TestParseMarkdownFile:
         )
         payload = parse_markdown_file(note)
         assert payload["status"] == "draft"
+        assert "source_id" not in payload
+
+    def test_empty_source_id_is_omitted(self, tmp_path):
+        note = tmp_path / "empty-source.md"
+        note.write_text(
+            "---\ndescription: Empty source\nsource_id: \n---\nBody.\n",
+            encoding="utf-8",
+        )
+        assert "source_id" not in parse_markdown_file(note)
 
     def test_title_from_h1(self, tmp_path):
         note = tmp_path / "note.md"

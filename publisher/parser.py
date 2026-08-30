@@ -201,7 +201,7 @@ def parse_markdown_file(
     """Parse a Markdown/Obsidian note into an API-ready JSON payload.
 
     Frontmatter fields take precedence unless overridden by CLI arguments:
-        title, description, content_type/type, media_url, tags, series, status
+        title, description, content_type/type, media_url, tags, series, status, source_id
 
     Timecode fences (```timecodes ... ```) are extracted and converted to
     structured entries with ``seconds`` for player seek.
@@ -266,6 +266,9 @@ def parse_markdown_file(
     if series_name:
         payload["series"] = series_name
         payload["series_order"] = series_order
+    source_id = metadata.get("source_id", "").strip()
+    if source_id:
+        payload["source_id"] = source_id
     if slug:
         payload["slug"] = slug
 

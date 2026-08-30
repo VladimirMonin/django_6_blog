@@ -13,6 +13,21 @@ function initReadDepthTracking() {
   var maxDepth = 0;
   var sentDepth = 0;
   var ticking = false;
+  var trackedThresholds = { read_50: false, read_90: false };
+
+  function trackThresholds(depth) {
+    var trackGoal = window.trackMetrikaGoal;
+    if (typeof trackGoal !== 'function') return;
+    [['read_50', 0.5], ['read_90', 0.9]].forEach(function (threshold) {
+      if (!trackedThresholds[threshold[0]] && depth >= threshold[1]) {
+        trackedThresholds[threshold[0]] = true;
+        trackGoal(threshold[0], {
+          page_path: window.location.pathname,
+          content_kind: 'post',
+        });
+      }
+    });
+  }
 
   function calculateDepth() {
     var rect = content.getBoundingClientRect();
@@ -33,6 +48,7 @@ function initReadDepthTracking() {
     requestAnimationFrame(function() {
       var depth = calculateDepth();
       if (depth > maxDepth) maxDepth = depth;
+      trackThresholds(maxDepth);
       ticking = false;
     });
   }

@@ -8,7 +8,22 @@ the matching `<noscript>` pixel at the start of `<body>`.
 
 The counter enables Webvisor, click map, accurate bounce tracking and outbound
 link tracking. HTMX fragment responses do not repeat the counter script; the
-initial full-page load owns analytics initialization.
+initial full-page load owns analytics initialization. `static/js/metrika-events.js`
+also sends one manual `hit` after a successful HTMX history push, replacement or
+restoration when the effective URL changes. URL fragments are ignored, repeated
+URLs are deduplicated, and the previous URL is passed as `referer`; unavailable
+or blocked `ym` never interrupts navigation.
+
+Meaningful interaction goals are sent through the same central owner and use
+only bounded, content-free parameters (`page_path` and `content_kind`):
+
+- `post_like` / `post_unlike` — after a successful HTMX reaction swap;
+- `share_copy` — only after copying the post link succeeds;
+- `media_start` — once per audio/video element when playback starts;
+- `read_50` / `read_90` — once each after the corresponding reading threshold.
+
+Create goals with these exact names in Metrika before relying on conversion
+reports. Missing or blocked `ym` never breaks the corresponding UI behavior.
 
 Yandex Webmaster ownership is served from the versioned root route
 `/yandex_5834a95c038b9599.html`. Keep the filename and verification body stable

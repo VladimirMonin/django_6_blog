@@ -80,6 +80,18 @@ def test_external_media_url_stays_json_compatible(tmp_path):
     assert manifest["post"]["media_url"] == "https://cdn.example/video.mp4"
 
 
+def test_source_id_is_preserved_in_package_manifest(tmp_path):
+    note = _note(
+        tmp_path,
+        "---\ndescription: stable source\nsource_id: obsidian-note-42\n---\nBody\n",
+    )
+
+    manifest, files, _ = build_publish_package(note, parse_markdown_file(note))
+
+    assert files == {}
+    assert manifest["post"]["source_id"] == "obsidian-note-42"
+
+
 def test_non_http_media_url_is_not_treated_as_external(tmp_path):
     note = _note(
         tmp_path,

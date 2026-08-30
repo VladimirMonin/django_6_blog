@@ -11,9 +11,9 @@
     textarea.style.left = '-9999px';
     document.body.appendChild(textarea);
     textarea.select();
-    document.execCommand('copy');
+    var copied = document.execCommand('copy');
     document.body.removeChild(textarea);
-    return Promise.resolve();
+    return copied ? Promise.resolve() : Promise.reject(new Error('copy failed'));
   }
 
   function copyText(text) {
@@ -62,7 +62,15 @@
           return;
         }
         copyText(url).then(
-          function () { setButtonState(button, true); },
+          function () {
+            setButtonState(button, true);
+            if (typeof window.trackMetrikaGoal === 'function') {
+              window.trackMetrikaGoal('share_copy', {
+                page_path: window.location.pathname,
+                content_kind: 'post',
+              });
+            }
+          },
           function () { setButtonState(button, false); }
         );
       });
