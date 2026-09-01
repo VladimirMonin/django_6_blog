@@ -331,6 +331,9 @@ def test_deploy_workflow_is_closed_tag_or_manual_contract():
     assert "repos/$REPOSITORY/deployments" in text
     assert "deployments/$DEPLOYMENT_ID/statuses" in text
     assert "https://exception-blog.ru/_deploy/status" in text
+    assert "--ipv4" in text
+    assert '--resolve "exception-blog.ru:443:$PRODUCTION_IPV4"' in text
+    assert "deadline=$((SECONDS + 1020))" in text
     assert "self-hosted" not in text
     assert "DEPLOY_SSH" not in text
     assert "bash -c" not in text and "sh -c" not in text

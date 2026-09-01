@@ -23,6 +23,10 @@ def test_pull_workflow_is_closed_exact_sha_contract():
     assert "repos/$REPOSITORY/deployments" in text
     assert "deployments/$DEPLOYMENT_ID/statuses" in text
     assert "https://exception-blog.ru/_deploy/status" in text
+    assert "--ipv4" in text
+    assert '--resolve "exception-blog.ru:443:$PRODUCTION_IPV4"' in text
+    assert "deadline=$((SECONDS + 1020))" in text
+    assert "${route:-unreachable}" in text
     assert "self-hosted" not in text
     assert "DEPLOY_SSH" not in text
     assert not re.findall(r"secrets\.([A-Z0-9_]+)", text)

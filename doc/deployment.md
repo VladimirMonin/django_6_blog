@@ -35,6 +35,13 @@ The workflow:
 4. waits for the matching deployment ID and SHA at `https://exception-blog.ru/_deploy/status`;
 5. records the explicit GitHub deployment as success or failure after the matching VPS result.
 
+The wait step uses IPv4 explicitly. It tries normal DNS first and then the
+known production IPv4 through curl `--resolve`, which keeps the HTTPS hostname
+and certificate verification intact while recovering from GitHub-runner DNS
+failures. Bounded diagnostics report only the route and visible deployment
+ID/SHA/status. An internal 17-minute deadline leaves time for the workflow to
+record a normal failure before the 20-minute job timeout.
+
 No deploy SSH key, host, port or application secret is required in GitHub. Application secrets remain only in `/etc/django-6-blog/django-6-blog.env` on the VPS.
 
 ## VPS pull boundary
