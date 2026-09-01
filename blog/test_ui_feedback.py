@@ -146,6 +146,50 @@ def test_read_more_and_back_buttons_hide_text_on_mobile_but_keep_accessible_labe
     assert "d-sm-inline" in back.select_one(".button-text").get("class", [])
 
 
+def test_mobile_share_and_navigation_actions_are_right_aligned_and_accessible(client):
+    post = create_post()
+
+    index_page = soup(client.get("/"))
+    card_actions = index_page.select_one(".post-card-actions")
+    card_children = card_actions.find_all(recursive=False)
+
+    assert card_children[0].name == "a"
+    assert card_children[0]["aria-label"] == "Читать далее"
+    assert card_children[1].name == "button"
+    assert "share-link-button-card" in str(card_children[1].get("class"))
+    assert card_children[1]["aria-label"] == f"Скопировать ссылку на пост {post.title}"
+    assert card_children[1].select_one("[data-share-feedback][aria-live='polite']") is not None
+
+    detail_page = soup(client.get(post.get_absolute_url()))
+    detail_actions = detail_page.select_one(".post-detail-bottom-actions")
+    detail_children = detail_actions.find_all(recursive=False)
+
+    assert len(detail_page.select("button.share-link-button-detail[data-share-copy]")) == 2
+    assert detail_children[0].name == "button"
+    assert "share-link-button-detail" in detail_children[0].get("class", [])
+    assert detail_children[0].select_one("[data-share-feedback][aria-live='polite']") is not None
+    assert detail_children[1].name == "a"
+    assert detail_children[1]["aria-label"] == "Назад к списку"
+
+    css = (PROJECT_ROOT / "static/css/style.css").read_text(encoding="utf-8")
+    assert ".post-card-actions .share-link-button-card {\n    order: 1;" in css
+    assert ".post-card-actions .btn {\n    order: 2;" in css
+    assert ".post-detail-actions .share-link-button-detail {\n    display: none;" in css
+    assert ".post-detail-bottom-actions .share-link-button-detail {\n    display: inline-flex;" in css
+    assert ".post-detail-bottom-actions .button-text {\n    display: none !important;" in css
+    assert ".post-card-actions .share-link-button-card [data-share-label]" in css
+    assert ".post-detail-bottom-actions .share-link-button-detail [data-share-label]" in css
+    mobile_contract = css.split("@media (max-width: 576px)", 1)[1]
+    assert "width: 44px;" in mobile_contract
+    assert "height: 44px;" in mobile_contract
+    assert "min-width: 44px;" in mobile_contract
+    assert "min-height: 44px;" in mobile_contract
+    assert "padding: 0;" in mobile_contract
+    assert "border-radius: 50%;" in mobile_contract
+    assert "min-width: 2.75rem;" not in mobile_contract
+    assert "min-height: 2.75rem;" not in mobile_contract
+
+
 @pytest.mark.parametrize(
     ("callout_type", "icon_class"),
     [

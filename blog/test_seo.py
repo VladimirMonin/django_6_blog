@@ -194,6 +194,14 @@ def _parse_json_ld_scripts(response):
     return [json.loads(script) for script in scripts]
 
 
+def _graph_node(data, schema_type):
+    """Return exactly one graph node of the requested schema.org type."""
+
+    matches = [node for node in data["@graph"] if node.get("@type") == schema_type]
+    assert len(matches) == 1
+    return matches[0]
+
+
 @pytest.mark.django_db
 def test_article_detail_has_json_ld_article():
     """Article detail page has Article JSON-LD with correct fields."""
@@ -296,6 +304,116 @@ def test_detail_page_has_canonical_link():
 
 
 @pytest.mark.django_db
+def test_public_page_canonicals_ignore_queries_on_the_secure_host():
+    """Home, author, post, and series canonicals contain the path only."""
+
+    post = Post.objects.create(
+        title="Canonical surface",
+        description="Canonical surface description",
+        content="# Body",
+        slug="canonical-surface",
+        status=Post.Status.PUBLISHED,
+    )
+    from blog.models import Series
+
+    series = Series.objects.create(name="Canonical series", slug="canonical-series")
+    surfaces = [
+        ("/?search=django&page=2", "/"),
+        ("/about/?utm_source=test", "/about/"),
+        (f"{post.get_absolute_url()}?source=share", post.get_absolute_url()),
+        (f"/series/{series.slug}/?page=2", f"/series/{series.slug}/"),
+    ]
+
+    with override_settings(ALLOWED_HOSTS=["blog.example"]):
+        client = Client()
+        for requested_path, canonical_path in surfaces:
+            response = client.get(
+                requested_path,
+                secure=True,
+                HTTP_HOST="blog.example",
+            )
+            body = response.content.decode()
+            canonical_links = re.findall(
+                r'<link rel="canonical" href="([^"]+)">', body
+            )
+
+            assert response.status_code == 200
+            assert canonical_links == [f"https://blog.example{canonical_path}"]
+            assert f'property="og:url" content="https://blog.example{canonical_path}"' in body
+
+
+@pytest.mark.django_db
+def test_json_ld_graph_connects_article_author_and_visible_breadcrumbs():
+    """Detail schema links its real page, author, publisher, and breadcrumb trail."""
+
+    from blog.models import Category
+
+    category = Category.objects.create(name="SEO", slug="seo")
+    post = Post.objects.create(
+        title="Connected graph",
+        description="Graph description",
+        content="# Body",
+        slug="connected-graph",
+        status=Post.Status.PUBLISHED,
+        category=category,
+    )
+    response = Client().get(post.get_absolute_url())
+
+    data = _parse_json_ld_scripts(response)[0]
+    article = _graph_node(data, "Article")
+    person = _graph_node(data, "Person")
+    website = _graph_node(data, "WebSite")
+    breadcrumb = _graph_node(data, "BreadcrumbList")
+
+    assert article["@id"] == f"http://testserver{post.get_absolute_url()}#content"
+    assert article["mainEntityOfPage"] == {
+        "@type": "WebPage",
+        "@id": f"http://testserver{post.get_absolute_url()}",
+    }
+    assert article["author"] == article["publisher"] == {"@id": person["@id"]}
+    assert person["url"] == "http://testserver/about/"
+    assert website["publisher"] == {"@id": person["@id"]}
+    assert [item["name"] for item in breadcrumb["itemListElement"]] == [
+        "Главная",
+        category.name,
+        post.title,
+    ]
+    assert breadcrumb["itemListElement"][-1]["item"] == article["mainEntityOfPage"]["@id"]
+    assert "sameAs" not in person
+    assert "jobTitle" not in person
+
+
+@pytest.mark.django_db
+def test_home_about_and_series_json_ld_graphs_use_truthful_page_types(client):
+    """Non-detail discovery pages expose their own WebSite/ProfilePage/CollectionPage."""
+
+    from blog.models import Series
+
+    series = Series.objects.create(name="Graph series", slug="graph-series")
+
+    home = _parse_json_ld_scripts(client.get("/"))[0]
+    about = _parse_json_ld_scripts(client.get("/about/"))[0]
+    series_page = _parse_json_ld_scripts(client.get(f"/series/{series.slug}/"))[0]
+
+    home_website = _graph_node(home, "WebSite")
+    home_person = _graph_node(home, "Person")
+    about_profile = _graph_node(about, "ProfilePage")
+    about_person = _graph_node(about, "Person")
+    collection = _graph_node(series_page, "CollectionPage")
+    breadcrumb = _graph_node(series_page, "BreadcrumbList")
+
+    assert home_website["url"] == "http://testserver/"
+    assert home_website["publisher"] == {"@id": home_person["@id"]}
+    assert about_profile["mainEntity"] == {"@id": about_person["@id"]}
+    assert about_person["url"] == "http://testserver/about/"
+    assert collection["url"] == f"http://testserver/series/{series.slug}/"
+    assert [item["name"] for item in breadcrumb["itemListElement"]] == [
+        "Главная",
+        f"Серия: {series.name}",
+    ]
+
+
+@pytest.mark.django_db
 def test_detail_page_has_feed_alternate_links():
     """Detail page has RSS and Atom alternate feed links."""
     post = Post.objects.create(
@@ -332,7 +450,7 @@ def test_json_ld_is_valid_json():
     assert len(scripts) == 1
     data = scripts[0]
     assert data["@context"] == "https://schema.org"
-    assert data["headline"] == "Valid JSON-LD"
+    assert _graph_node(data, "Article")["headline"] == "Valid JSON-LD"
 
 
 @pytest.mark.django_db
@@ -383,20 +501,21 @@ def test_json_ld_hostile_text_round_trips_for_every_schema(
     assert len(scripts) == 1
     data = scripts[0]
     assert data["@context"] == "https://schema.org"
-    assert data["@type"] == schema_type
-    assert data["headline"] == title
-    assert data["description"] == description
-    assert data["url"] == f"http://testserver/post/{post.slug}/"
-    assert data["datePublished"]
-    assert data["dateModified"]
-    assert data["author"]["@type"] == "Person"
-    assert data["author"]["name"] == 'Автор "Тест" \\ Юникод'
+    article = _graph_node(data, schema_type)
+    person = _graph_node(data, "Person")
+    assert article["headline"] == title
+    assert article["description"] == description
+    assert article["url"] == f"http://testserver/post/{post.slug}/"
+    assert article["datePublished"]
+    assert article["dateModified"]
+    assert person["name"] == 'Автор "Тест" \\ Юникод'
     if media_url:
-        assert data["contentUrl"] == media_url
-        assert data["contentUrl"].startswith("https://media.example/")
-        assert not data["contentUrl"].startswith("http://testserverhttps://")
+        assert article["contentUrl"] == media_url
+        assert article["contentUrl"].startswith("https://media.example/")
+        assert not article["contentUrl"].startswith("http://testserverhttps://")
     else:
-        assert "contentUrl" not in data
+        assert "contentUrl" not in article
+    assert "</script>" not in scripts[0]
 
 
 # ── OG / Twitter meta tests ─────────────────────────────────────────────────
@@ -544,10 +663,10 @@ def test_e2e_seo_full_cycle_article(tmp_path, live_server):
     )
     assert match, "JSON-LD script not found on detail page"
     ld_data = json.loads(match.group(1))
-    assert ld_data["@type"] == "Article"
-    assert ld_data["headline"] == "SEO E2E Article"
-    assert ld_data["description"] == "Full cycle SEO verification"
-    assert ld_data["url"].endswith(f"/post/{slug}/")
+    article = _graph_node(ld_data, "Article")
+    assert article["headline"] == "SEO E2E Article"
+    assert article["description"] == "Full cycle SEO verification"
+    assert article["url"].endswith(f"/post/{slug}/")
 
     # 12. Verify feed alternate links
     assert 'application/rss+xml' in detail_body
@@ -610,9 +729,9 @@ def test_e2e_seo_full_cycle_video(tmp_path, live_server):
     )
     assert match
     ld = json.loads(match.group(1))
-    assert ld["@type"] == "VideoObject"
-    assert ld["contentUrl"] == "https://example.com/seo-video.mp4"
-    assert ld["headline"] == "SEO E2E Video"
+    video = _graph_node(ld, "VideoObject")
+    assert video["contentUrl"] == "https://example.com/seo-video.mp4"
+    assert video["headline"] == "SEO E2E Video"
 
     # OG type should be article for video too
     assert 'og:type' in body

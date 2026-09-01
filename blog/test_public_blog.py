@@ -418,6 +418,29 @@ def test_detail_page_exposes_open_graph_metadata_for_link_previews(client):
 
 
 @pytest.mark.django_db
+def test_visible_author_links_and_real_detail_dates_point_to_the_author_page(client):
+    """Cards, detail, and footer share one author URL; detail exposes DB dates."""
+
+    post = create_post("Автор и даты", content="Текст")
+
+    detail_response = client.get(post.get_absolute_url())
+    list_response = client.get("/")
+    detail_page = soup(detail_response)
+    list_page = soup(list_response)
+
+    assert detail_response.status_code == list_response.status_code == 200
+    assert detail_page.select_one(".post-detail-author a")["href"].endswith("/about/")
+    assert list_page.select_one(".post-card-author a")["href"].endswith("/about/")
+    assert detail_page.select_one("footer .footer-copyright a")["href"].endswith("/about/")
+    created = detail_page.select_one(".post-detail-created time")
+    updated = detail_page.select_one(".post-detail-updated time")
+    assert created is not None and created.get("datetime")
+    assert updated is not None and updated.get("datetime")
+    assert "Создано:" in detail_response.content.decode()
+    assert "Обновлено:" in detail_response.content.decode()
+
+
+@pytest.mark.django_db
 def test_share_copy_controls_render_absolute_post_links_on_detail_and_cards(client):
     post = create_post("Копируемая ссылка", content="Текст")
 

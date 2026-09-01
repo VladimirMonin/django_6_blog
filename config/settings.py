@@ -60,6 +60,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "blog.middleware.CrawlerObservationMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -81,7 +82,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "blog.context_processors.site_identity",
+                "blog.context_processors.seo_context",
             ],
             "builtins": [
                 "django_components.templatetags.component_tags",
@@ -290,6 +291,11 @@ LOGGING = {
     },
     "loggers": {
         "api": {
+            "handlers": ["console_json"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "crawler_observation": {
             "handlers": ["console_json"],
             "level": "INFO",
             "propagate": False,

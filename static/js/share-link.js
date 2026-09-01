@@ -25,12 +25,23 @@
 
   function setButtonState(button, ok) {
     const label = button.querySelector('[data-share-label]');
+    const feedback = button.querySelector('[data-share-feedback]');
     const icon = button.querySelector('i');
     const original = button.dataset.originalLabel || (label ? label.textContent : button.textContent).trim();
+    const originalAriaLabel = button.dataset.originalAriaLabel || (
+      button.getAttribute ? button.getAttribute('aria-label') : ''
+    );
     button.dataset.originalLabel = original;
+    button.dataset.originalAriaLabel = originalAriaLabel;
 
     if (label) {
       label.textContent = ok ? 'Ссылка скопирована' : 'Не удалось скопировать';
+    }
+    if (feedback) {
+      feedback.textContent = ok ? 'Ссылка скопирована' : 'Не удалось скопировать ссылку';
+    }
+    if (button.setAttribute) {
+      button.setAttribute('aria-label', ok ? 'Ссылка скопирована' : 'Не удалось скопировать ссылку');
     }
     button.classList.toggle('is-copied', ok);
     button.classList.toggle('is-copy-error', !ok);
@@ -41,6 +52,12 @@
     window.setTimeout(function () {
       if (label) {
         label.textContent = original;
+      }
+      if (feedback) {
+        feedback.textContent = '';
+      }
+      if (originalAriaLabel && button.setAttribute) {
+        button.setAttribute('aria-label', originalAriaLabel);
       }
       button.classList.remove('is-copied', 'is-copy-error');
       if (icon) {

@@ -1,19 +1,21 @@
 import hashlib
-import json
 import re
 
-from django.conf import settings
 from django.core.paginator import Paginator
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
-from django.utils.safestring import mark_safe
 from django.views.decorators.http import condition
 from django.views.generic import DetailView, ListView, TemplateView, View
 
 from .models import Category, Post, Series, Tag
+from .seo import (
+    build_about_json_ld,
+    build_home_json_ld,
+    build_post_json_ld,
+    build_series_json_ld,
+)
 from .session_interactions import SessionInteractionMixin
 
 
@@ -26,44 +28,6 @@ YANDEX_WEBMASTER_VERIFICATION = """<html>
     <body>Verification: 5834a95c038b9599</body>
 </html>
 """
-
-_JSON_SCRIPT_ESCAPES = {
-    ord("<"): "\\u003C",
-    ord(">"): "\\u003E",
-    ord("&"): "\\u0026",
-}
-
-
-def _build_post_json_ld(request, post):
-    """Serialize post structured data as HTML-safe, valid JSON."""
-    schema_type = {
-        Post.ContentType.VIDEO: "VideoObject",
-        Post.ContentType.AUDIO: "AudioObject",
-        Post.ContentType.PODCAST: "AudioObject",
-    }.get(post.content_type, "Article")
-    data = {
-        "@context": "https://schema.org",
-        "@type": schema_type,
-        "headline": post.title,
-        "description": post.description,
-        "url": request.build_absolute_uri(),
-        "datePublished": post.created_at,
-        "dateModified": post.updated_at,
-        "author": {
-            "@type": "Person",
-            "name": getattr(settings, "SITE_AUTHOR", "Владимир Монин"),
-        },
-    }
-    player_media_url = post.player_media_url
-    if player_media_url and post.content_type != Post.ContentType.ARTICLE:
-        data["contentUrl"] = player_media_url
-    cover = post.cover_media
-    if cover:
-        data["image"] = request.build_absolute_uri(cover.thumbnail_og_url)
-
-    serialized = json.dumps(data, cls=DjangoJSONEncoder, indent=2)
-    return mark_safe(serialized.translate(_JSON_SCRIPT_ESCAPES))
-
 
 def _post_detail_probe(request, slug):
     """Single lightweight DB probe shared by etag/last-modified funcs.
@@ -289,6 +253,7 @@ class PostListView(ListView):
                 "content_type_choices": Post.ContentType.choices,
                 "is_post_list": True,
                 "is_about": False,
+                "page_json_ld": build_home_json_ld(self.request),
             }
         )
         return context
@@ -350,7 +315,6 @@ class PostDetailView(SessionInteractionMixin, DetailView):
         context.update(
             {
                 "post_is_liked": self.is_post_liked(self.object),
-                "post_json_ld": _build_post_json_ld(self.request, self.object),
                 "social_image_url": (
                     self.request.build_absolute_uri(cover.thumbnail_og_url)
                     if cover
@@ -399,6 +363,11 @@ class PostDetailView(SessionInteractionMixin, DetailView):
             )
         breadcrumbs.append({"title": post.title})
         context["breadcrumbs"] = breadcrumbs
+        context["page_json_ld"] = build_post_json_ld(
+            self.request,
+            post,
+            breadcrumbs,
+        )
 
         # Body HTML and table of contents are built together so TOC anchors
         # always point to actual heading ids in the rendered article.
@@ -435,7 +404,13 @@ class AboutView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update({"is_post_list": False, "is_about": True})
+        context.update(
+            {
+                "is_post_list": False,
+                "is_about": True,
+                "page_json_ld": build_about_json_ld(self.request),
+            }
+        )
         return context
 
 
@@ -461,6 +436,7 @@ class SeriesDetailView(DetailView):
         context["series_posts"] = posts
         context["is_post_list"] = False
         context["is_about"] = False
+        context["page_json_ld"] = build_series_json_ld(self.request, self.object)
         return context
 
 

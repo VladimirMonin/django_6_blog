@@ -40,7 +40,7 @@
       </h2>
 
       <div class="post-card-byline d-flex flex-wrap gap-3 mb-2">
-        <span class="post-card-author"><i class="bi bi-person"></i> Владимир Монин</span>
+        <span class="post-card-author"><i class="bi bi-person"></i> <a class="text-reset" href="{{ author_url }}">{{ site_author }}</a></span>
         <span class="post-card-date"><i class="bi bi-calendar3"></i> {{ post.created_at|date:"d.m.Y H:i" }}</span>
       </div>
       <div class="post-card-stats d-flex flex-wrap gap-3 mb-3" aria-label="Статистика поста">
@@ -56,15 +56,7 @@
 
       <div class="mt-auto pt-2 post-card-actions">
         {% component "button" text="Читать далее" url=post.get_absolute_url icon="arrow-right" mobile_icon_only=True / %}
-        <button
-          class="share-link-button share-link-button-card"
-          type="button"
-          data-share-copy
-          data-share-url="{{ request.scheme }}://{{ request.get_host }}{{ post.get_absolute_url }}"
-          aria-label="Скопировать ссылку на пост {{ post.title }}">
-          <i class="bi bi-link-45deg" aria-hidden="true"></i>
-          <span data-share-label>Ссылка</span>
-        </button>
+        {% component "share_link" url=request.scheme|add:"://"|add:request.get_host|add:post.get_absolute_url label="Ссылка" aria_label="Скопировать ссылку на пост "|add:post.title variant="card" / %}
       </div>
     </div>
   </article>

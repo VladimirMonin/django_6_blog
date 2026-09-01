@@ -9,7 +9,7 @@
 <meta property="og:type" content="article">
 <meta property="og:title" content="{{ post.title }}">
 <meta property="og:description" content="{{ post.description }}">
-<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:url" content="{{ canonical_url }}">
 {% if social_image_url %}
 <meta property="og:image" content="{{ social_image_url }}">
 <meta property="og:image:alt" content="Обложка статьи {{ post.title }}">
@@ -23,12 +23,10 @@
 {% endblock %}
 
 {% block extra_head %}
-<link rel="canonical" href="{{ request.build_absolute_uri }}">
 <link rel="alternate" type="application/rss+xml" title="Django 6 Blog — RSS" href="{% url 'feed_rss' %}">
 <link rel="alternate" type="application/atom+xml" title="Django 6 Blog — Atom" href="{% url 'feed_atom' %}">
-<script type="application/ld+json">
-{{ post_json_ld }}
-</script>
+<link rel="alternate" type="text/markdown" href="{% url 'post_markdown' slug=post.slug %}">
+<link rel="describedby" href="{% url 'llms_txt' %}">
 {% endblock %}
 
 {% block content %}
@@ -71,18 +69,18 @@
                     <h1 class="post-detail-title display-5 fw-bold mb-2">{{ post.title }}</h1>
                     <div class="post-detail-meta post-detail-actions d-flex flex-wrap align-items-center gap-2 text-muted">
                         <span class="post-detail-meta-item post-detail-author">
-                            <i class="bi bi-person"></i> Автор: {{ site_author }}
+                            <i class="bi bi-person"></i> Автор: <a class="text-reset" href="{{ author_url }}" aria-label="Автор: {{ site_author }}">{{ site_author }}</a>
                         </span>
                         {% include "blog/_post_reactions.html" %}
-                        <button
-                            class="share-link-button share-link-button-detail"
-                            type="button"
-                            data-share-copy
-                            data-share-url="{{ request.build_absolute_uri }}"
-                            aria-label="Скопировать ссылку на пост {{ post.title }}">
-                            <i class="bi bi-link-45deg" aria-hidden="true"></i>
-                            <span data-share-label>Скопировать ссылку</span>
-                        </button>
+                        {% component "share_link" url=canonical_url label="Скопировать ссылку" aria_label="Скопировать ссылку на пост "|add:post.title variant="detail" / %}
+                    </div>
+                    <div class="post-detail-dates d-flex flex-wrap align-items-center gap-2 text-muted mt-2">
+                        <span class="post-detail-meta-item post-detail-created">
+                            <i class="bi bi-calendar3"></i> Создано: <time datetime="{{ post.created_at|date:'c' }}">{{ post.created_at|date:"d.m.Y H:i" }}</time>
+                        </span>
+                        <span class="post-detail-meta-item post-detail-updated">
+                            <i class="bi bi-pencil-square"></i> Обновлено: <time datetime="{{ post.updated_at|date:'c' }}">{{ post.updated_at|date:"d.m.Y H:i" }}</time>
+                        </span>
                     </div>
                 </header>
 
@@ -198,7 +196,8 @@
             </section>
             {% endif %}
 
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="post-detail-bottom-actions d-flex align-items-center">
+                {% component "share_link" url=canonical_url label="Скопировать ссылку" aria_label="Скопировать ссылку на пост "|add:post.title variant="detail" / %}
                 {% component "button" text="Назад к списку" url="post_list" icon="arrow-left" mobile_icon_only=True / %}
             </div>
         </div>

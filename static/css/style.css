@@ -209,6 +209,14 @@ article h1 {
   font-size: 0.8rem;
 }
 
+.post-detail-bottom-actions .share-link-button-detail {
+  display: none;
+}
+
+.post-detail-bottom-actions {
+  justify-content: space-between;
+}
+
 .post-toc-card {
   border-color: rgba(33, 37, 41, 0.10);
   box-shadow: none;
@@ -283,7 +291,53 @@ article h1 {
     width: 100%;
   }
 
-  .post-detail-actions .share-link-button-detail [data-share-label] {
+  .post-card-actions,
+  .post-detail-bottom-actions {
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+  }
+
+  .post-card-actions .button-text,
+  .post-detail-bottom-actions .button-text {
+    display: none !important;
+  }
+
+  .post-card-actions .share-link-button-card {
+    order: 1;
+  }
+
+  .post-card-actions .btn {
+    order: 2;
+  }
+
+  .post-detail-actions .share-link-button-detail {
+    display: none;
+  }
+
+  .post-detail-bottom-actions .share-link-button-detail {
+    display: inline-flex;
+  }
+
+  .post-card-actions .btn,
+  .post-card-actions .share-link-button-card,
+  .post-detail-bottom-actions .btn,
+  .post-detail-bottom-actions .share-link-button-detail {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .post-card-actions .btn i,
+  .post-detail-bottom-actions .btn i {
+    margin: 0;
+  }
+
+  .post-card-actions .share-link-button-card [data-share-label],
+  .post-detail-bottom-actions .share-link-button-detail [data-share-label] {
     display: none;
   }
 }
@@ -1272,56 +1326,6 @@ button[hx-get]:active::after {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.75rem;
-}
-
-.share-link-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  border: 1px solid rgba(33, 37, 41, 0.14);
-  border-radius: 999px;
-  background:
-    radial-gradient(circle at 18% 18%, rgba(255, 193, 7, 0.25), transparent 34%),
-    #ffffff;
-  color: var(--text-dark);
-  font-weight: 800;
-  line-height: 1.2;
-  box-shadow: 0 0.45rem 1.1rem rgba(33, 37, 41, 0.06);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.share-link-button:hover {
-  border-color: rgba(255, 193, 7, 0.75);
-  box-shadow: 0 0.7rem 1.35rem rgba(33, 37, 41, 0.10);
-  transform: translateY(-1px);
-}
-
-.share-link-button:active {
-  transform: translateY(0) scale(0.98);
-}
-
-.share-link-button.is-copied {
-  border-color: rgba(25, 135, 84, 0.45);
-  background: #eaf7ef;
-  color: #146c43;
-}
-
-.share-link-button.is-copy-error {
-  border-color: rgba(220, 53, 69, 0.45);
-  background: #fff0f1;
-  color: #b02a37;
-}
-
-.share-link-button-card {
-  min-height: 2.45rem;
-  padding: 0.55rem 0.85rem;
-  font-size: 0.9rem;
-}
-
-.share-link-button-detail {
-  min-height: 2.85rem;
-  padding: 0.7rem 1.05rem;
 }
 
 @media (max-width: 576px) {

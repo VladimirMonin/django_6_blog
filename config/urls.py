@@ -21,6 +21,7 @@ from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path, re_path
 
 from blog.dev_media import serve_media_with_range
+from blog.discovery import llms_txt, post_markdown
 from blog.feeds import AtomLatestPostsFeed, LatestPostsFeed
 from blog.sitemaps import PostSitemap, StaticViewSitemap
 from blog.views import robots_txt, yandex_webmaster_verification
@@ -37,6 +38,8 @@ urlpatterns = [
         name="yandex_webmaster_verification",
     ),
     path("admin/", admin.site.urls),
+    path("llms.txt", llms_txt, name="llms_txt"),
+    path("post/<slug:slug>.md", post_markdown, name="post_markdown"),
     # Приложение блога (главная страница и все маршруты)
     path("", include("blog.urls")),
     path("api/v1/", include("api.urls", namespace="api")),
