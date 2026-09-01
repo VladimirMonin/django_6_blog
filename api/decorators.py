@@ -44,8 +44,8 @@ def _reset_rate_limit() -> None:
     _rate_buckets.clear()
 
 
-def require_api_key(permission: str = "read"):
-    """Require a valid API key with the given permission in Authorization: Bearer *** header.
+def require_api_key(permission: str | None = "read"):
+    """Require a valid API key and, when provided, the given permission.
 
     Enforces a per-key rate limit of 60 requests per minute.
 
@@ -78,7 +78,7 @@ def require_api_key(permission: str = "read"):
                     {"error": "Invalid, revoked or expired API key"},
                     status=401,
                 )
-            if not api_key.has_permission(permission):
+            if permission is not None and not api_key.has_permission(permission):
                 return JsonResponse(
                     {"error": f"API key lacks required permission: {permission}"},
                     status=403,

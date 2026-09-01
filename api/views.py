@@ -518,9 +518,16 @@ def list_posts(request):
 
 
 @csrf_exempt
-@require_api_key("delete")
+@require_api_key(None)
 def post_detail_api(request, slug: str):
     """Retrieve or delete a single post by slug."""
+    required_permission = {"GET": "read", "DELETE": "delete"}.get(request.method)
+    if required_permission and not request.api_key.has_permission(required_permission):
+        return JsonResponse(
+            {"error": f"API key lacks required permission: {required_permission}"},
+            status=403,
+        )
+
     post = (
         Post.objects.filter(slug=slug, deleted_at__isnull=True)
         .select_related("category", "series")

@@ -67,6 +67,39 @@ def test_api_get_post_detail(api_client):
 
 
 @pytest.mark.django_db
+def test_post_detail_uses_method_specific_permissions():
+    post = Post.objects.create(
+        title="Scoped Detail API",
+        description="desc",
+        content="body",
+        slug="scoped-detail-api",
+        status=Post.Status.PUBLISHED,
+    )
+    read_key = ApiKey.objects.create(name="Read Only Agent", permissions=["read"])
+    delete_key = ApiKey.objects.create(name="Delete Only Agent", permissions=["delete"])
+    client = Client()
+
+    read_response = client.get(
+        f"/api/v1/posts/{post.slug}/",
+        HTTP_AUTHORIZATION="Bearer " + read_key.token,
+    )
+    denied_delete = client.delete(
+        f"/api/v1/posts/{post.slug}/",
+        HTTP_AUTHORIZATION="Bearer " + read_key.token,
+    )
+
+    assert read_response.status_code == 200
+    assert denied_delete.status_code == 403
+    assert Post.objects.filter(pk=post.pk, deleted_at__isnull=True).exists()
+
+    allowed_delete = client.delete(
+        f"/api/v1/posts/{post.slug}/",
+        HTTP_AUTHORIZATION="Bearer " + delete_key.token,
+    )
+    assert allowed_delete.status_code == 204
+
+
+@pytest.mark.django_db
 def test_api_patch_status_hides_and_restores_public_post(api_client):
     client, key = api_client
     post = Post.objects.create(
