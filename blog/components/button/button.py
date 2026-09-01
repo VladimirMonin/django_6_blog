@@ -30,6 +30,7 @@ class Button(Component):
             url (str): URL для ссылки или имя маршрута (по умолчанию "#")
             style (str): Стиль кнопки - dark/warning/outline-dark (по умолчанию "dark")
             icon (str): Имя иконки Bootstrap Icons (опционально)
+            icon_position (str): Позиция иконки — start или end (по умолчанию start)
             active (bool): Активное состояние (желтая обводка)
             size (str): Размер - sm/md/lg (по умолчанию None)
         """
@@ -38,9 +39,13 @@ class Button(Component):
         url_or_name = kwargs.get("url", "#")
         style = kwargs.get("style", "dark")
         icon = kwargs.get("icon")
+        icon_position = kwargs.get("icon_position", "start")
         active = kwargs.get("active", False)
         size = kwargs.get("size")
         mobile_icon_only = kwargs.get("mobile_icon_only", False)
+
+        if icon_position not in {"start", "end"}:
+            raise ValueError("Button icon_position must be 'start' or 'end'")
 
         # Разрешаем URL - если это имя маршрута, используем reverse()
         url = url_or_name
@@ -77,6 +82,7 @@ class Button(Component):
             "url": url,
             "css_class": " ".join(css_classes),
             "icon_class": icon_class,
+            "icon_position": icon_position,
             "text_class": text_class,
             "aria_label": text,
         }

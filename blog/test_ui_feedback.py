@@ -132,16 +132,21 @@ def test_read_more_and_back_buttons_hide_text_on_mobile_but_keep_accessible_labe
     index_page = soup(client.get("/"))
     read_more = index_page.select_one("a[aria-label='Читать далее']")
     assert read_more is not None
-    assert read_more.select_one("i.bi-arrow-right") is not None
+    read_more_children = read_more.find_all(recursive=False)
+    assert read_more_children[0].name == "span"
+    assert read_more_children[1].name == "i"
+    assert "bi-arrow-right" in str(read_more_children[1].get("class"))
+    assert "button-icon-end" in str(read_more_children[1].get("class"))
     assert "d-none" in read_more.select_one(".button-text").get("class", [])
     assert "d-sm-inline" in read_more.select_one(".button-text").get("class", [])
 
     detail_page = soup(client.get(post.get_absolute_url()))
     back = detail_page.select_one("a[aria-label='Назад к списку']")
     assert back is not None
-    children = [child for child in back.children if getattr(child, "name", None)]
+    children = back.find_all(recursive=False)
     assert children[0].name == "i"
-    assert "bi-arrow-left" in children[0].get("class", [])
+    assert "bi-arrow-left" in str(children[0].get("class"))
+    assert "button-icon-start" in str(children[0].get("class"))
     assert "d-none" in back.select_one(".button-text").get("class", [])
     assert "d-sm-inline" in back.select_one(".button-text").get("class", [])
 
@@ -176,18 +181,28 @@ def test_mobile_share_and_navigation_actions_are_right_aligned_and_accessible(cl
     assert ".post-card-actions .btn {\n    order: 2;" in css
     assert ".post-detail-actions .share-link-button-detail {\n    display: none;" in css
     assert ".post-detail-bottom-actions .share-link-button-detail {\n    display: inline-flex;" in css
-    assert ".post-detail-bottom-actions .button-text {\n    display: none !important;" in css
     assert ".post-card-actions .share-link-button-card [data-share-label]" in css
     assert ".post-detail-bottom-actions .share-link-button-detail [data-share-label]" in css
     mobile_contract = css.split("@media (max-width: 576px)", 1)[1]
-    assert "width: 44px;" in mobile_contract
-    assert "height: 44px;" in mobile_contract
-    assert "min-width: 44px;" in mobile_contract
-    assert "min-height: 44px;" in mobile_contract
-    assert "padding: 0;" in mobile_contract
-    assert "border-radius: 50%;" in mobile_contract
-    assert "min-width: 2.75rem;" not in mobile_contract
-    assert "min-height: 2.75rem;" not in mobile_contract
+    assert "display: flex;" in mobile_contract
+    action_controls = mobile_contract.split(
+        "  .post-card-actions .btn,\n"
+        "  .post-card-actions .share-link-button-card,\n"
+        "  .post-detail-bottom-actions .btn,\n"
+        "  .post-detail-bottom-actions .share-link-button-detail {",
+        1,
+    )[1].split("\n  }\n\n  .post-card-actions .btn .button-icon", 1)[0]
+    assert "width: 44px;" in action_controls
+    assert "height: 44px;" in action_controls
+    assert "min-width: 44px;" in action_controls
+    assert "min-height: 44px;" in action_controls
+    assert "padding: 0;" in action_controls
+    assert "border: 1px solid var(--text-dark);" in action_controls
+    assert "border-radius: 0.375rem;" in action_controls
+    assert "background: var(--text-dark);" in action_controls
+    assert "color: #fff;" in action_controls
+    assert "box-shadow: none;" in action_controls
+    assert "border-radius: 50%;" not in action_controls
 
 
 @pytest.mark.parametrize(

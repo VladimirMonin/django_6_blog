@@ -55,7 +55,7 @@
       {% endif %}
 
       <div class="mt-auto pt-2 post-card-actions">
-        {% component "button" text="Читать далее" url=post.get_absolute_url icon="arrow-right" mobile_icon_only=True / %}
+        {% component "button" text="Читать далее" url=post.get_absolute_url icon="arrow-right" icon_position="end" mobile_icon_only=True / %}
         {% component "share_link" url=request.scheme|add:"://"|add:request.get_host|add:post.get_absolute_url label="Ссылка" aria_label="Скопировать ссылку на пост "|add:post.title variant="card" / %}
       </div>
     </div>

@@ -40,6 +40,7 @@ When search behavior changes, test Cyrillic queries separately. SQLite `icontain
 
 - Cards use `Post.description`, cover/placeholder, type badge, category and tag links. Do not leak raw Markdown, frontmatter or service blocks into cards.
 - Cards and detail pages expose a copy-link control with an absolute detail URL; link sharing is universal, not tied to network-specific buttons.
+- At viewports `<=576px`, card/detail bottom actions are a right-aligned pair of equal dark 44×44 icon-only controls: copy-link on the left and the directional navigation action on the right. They share the same non-pill shape, border, padding, shadow and vertical alignment; labels remain available through `aria-label` and return on desktop.
 - Card filtering must preserve the list as SSR output even when HTMX enhances the interaction.
 
 ## Detail page

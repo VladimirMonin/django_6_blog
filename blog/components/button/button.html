@@ -1,4 +1,5 @@
 <a href="{{ url }}" class="{{ css_class }}" aria-label="{{ aria_label }}">
-  {% if icon_class %}<i class="{{ icon_class }}" aria-hidden="true"></i>{% endif %}
+  {% if icon_class and icon_position == "start" %}<i class="{{ icon_class }} button-icon button-icon-start" aria-hidden="true"></i>{% endif %}
   <span class="{{ text_class }}">{{ text }}</span>
+  {% if icon_class and icon_position == "end" %}<i class="{{ icon_class }} button-icon button-icon-end" aria-hidden="true"></i>{% endif %}
 </a>

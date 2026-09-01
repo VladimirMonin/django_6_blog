@@ -25,12 +25,15 @@
   background-color: #000;
 }
 
-/* Отступ для иконки */
-.btn i {
+/* Отступ для иконки задан явно, чтобы позиция не зависела от порядка DOM. */
+.btn .button-icon {
+  margin: 0;
+}
+
+.btn .button-icon-start {
   margin-right: 0.25rem;
 }
 
-.btn i:last-child {
-  margin-right: 0;
+.btn .button-icon-end {
   margin-left: 0.25rem;
 }
