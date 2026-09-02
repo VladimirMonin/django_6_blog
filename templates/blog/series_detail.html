@@ -10,9 +10,17 @@
 <meta property="og:title" content="{{ series.name }}">
 <meta property="og:description" content="{{ series.description|default:series.name }}">
 <meta property="og:url" content="{{ canonical_url }}">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="{{ social_image_url }}">
+<meta property="og:image:secure_url" content="{{ social_image_url }}">
+<meta property="og:image:type" content="{{ social_image_type }}">
+<meta property="og:image:width" content="{{ social_image_width }}">
+<meta property="og:image:height" content="{{ social_image_height }}">
+<meta property="og:image:alt" content="{{ social_image_alt }}">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{{ series.name }}">
 <meta name="twitter:description" content="{{ series.description|default:series.name }}">
+<meta name="twitter:image" content="{{ social_image_url }}">
+<meta name="twitter:image:alt" content="{{ social_image_alt }}">
 {% endblock %}
 
 {% block content %}

@@ -1,4 +1,4 @@
-from .seo import canonical_url, site_entities
+from .seo import canonical_url, site_entities, social_image_context
 
 
 def seo_context(request):
@@ -12,4 +12,5 @@ def seo_context(request):
         "site_url": entities["website"]["url"],
         "site_web_site": entities["website"],
         "site_person": entities["person"],
+        **social_image_context(request),
     }

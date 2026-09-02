@@ -1,12 +1,13 @@
 import hashlib
 import re
 
+from django.contrib.staticfiles import finders
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
-from django.http import HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
-from django.views.decorators.http import condition
+from django.views.decorators.http import condition, require_safe
 from django.views.generic import DetailView, ListView, TemplateView, View
 
 from .models import Category, Post, Series, Tag
@@ -15,11 +16,14 @@ from .seo import (
     build_home_json_ld,
     build_post_json_ld,
     build_series_json_ld,
+    social_image_context,
 )
 from .session_interactions import SessionInteractionMixin
 
 
-POST_DETAIL_RENDER_VERSION = "social-image-v7"
+POST_DETAIL_RENDER_VERSION = "social-image-v8"
+FAVICON_STATIC_PATH = "images/favicon.ico"
+FAVICON_CACHE_CONTROL = "public, max-age=86400"
 
 YANDEX_WEBMASTER_VERIFICATION = """<html>
     <head>
@@ -311,17 +315,12 @@ class PostDetailView(SessionInteractionMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        cover = self.object.cover_media
         context.update(
             {
                 "post_is_liked": self.is_post_liked(self.object),
-                "social_image_url": (
-                    self.request.build_absolute_uri(cover.thumbnail_og_url)
-                    if cover
-                    else ""
-                ),
                 "is_post_list": False,
                 "is_about": False,
+                **social_image_context(self.request, self.object),
             }
         )
         # Series navigation: prev/next posts in the same series
@@ -458,3 +457,15 @@ def yandex_webmaster_verification(request):
     """Serve the root verification document required by Yandex Webmaster."""
 
     return HttpResponse(YANDEX_WEBMASTER_VERIFICATION, content_type="text/html; charset=UTF-8")
+
+
+@require_safe
+def favicon(request):
+    """Serve the stable root favicon without relying on DEBUG or authentication."""
+
+    favicon_path = finders.find(FAVICON_STATIC_PATH)
+    if not isinstance(favicon_path, str):
+        raise Http404("Favicon asset is unavailable.")
+    response = FileResponse(open(favicon_path, "rb"), content_type="image/x-icon")
+    response["Cache-Control"] = FAVICON_CACHE_CONTROL
+    return response

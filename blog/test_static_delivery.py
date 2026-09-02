@@ -28,6 +28,12 @@ def test_collectstatic_uses_unique_absolute_root_and_manifest(tmp_path):
     representatives = {
         "project": "css/style.css",
         "component": "post_card/post_card.css",
+        "favicon_ico": "images/favicon.ico",
+        "favicon_16": "images/favicon-16x16.png",
+        "favicon_32": "images/favicon-32x32.png",
+        "apple_touch_icon": "images/apple-touch-icon.png",
+        "web_app_icon_192": "images/icon-192.png",
+        "web_app_icon_512": "images/icon-512.png",
     }
     for kind, source in representatives.items():
         assert source in data["paths"], f"missing {kind} asset"

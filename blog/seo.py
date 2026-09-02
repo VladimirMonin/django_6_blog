@@ -1,16 +1,22 @@
 """Canonical URL and structured-data helpers for public blog pages."""
 
 import json
-from urllib.parse import urlencode
+from mimetypes import guess_type
+from urllib.parse import urlencode, urlparse
 
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 
 SCHEMA_CONTEXT = "https://schema.org"
 SITE_NAME = "Django 6 Blog"
+SOCIAL_IMAGE_PATH = "images/django-6-blog-social.png"
+SOCIAL_IMAGE_ALT = "Exception Blog — Владимир Монин"
+SOCIAL_IMAGE_WIDTH = 1200
+SOCIAL_IMAGE_HEIGHT = 630
 _JSON_SCRIPT_ESCAPES = {
     ord("<"): "\\u003C",
     ord(">"): "\\u003E",
@@ -22,6 +28,40 @@ def canonical_url(request):
     """Return this request's absolute, query-free canonical URL."""
 
     return request.build_absolute_uri(request.path)
+
+
+def _social_image_type(image_path, *, generated_thumbnail):
+    """Return an Open Graph image MIME type without reading remote storage."""
+
+    if generated_thumbnail:
+        return "image/jpeg"
+    return guess_type(urlparse(image_path).path)[0] or "image/png"
+
+
+def social_image_context(request, post=None):
+    """Return one complete social-image contract for a public page or post."""
+
+    cover = post.cover_media if post is not None else None
+    if cover:
+        assert post is not None
+        image_path = cover.thumbnail_og_url
+        image_alt = f"Обложка статьи {post.title}"
+        image_type = _social_image_type(
+            image_path,
+            generated_thumbnail=bool(cover.thumbnail_og),
+        )
+    else:
+        image_path = static(SOCIAL_IMAGE_PATH)
+        image_alt = SOCIAL_IMAGE_ALT
+        image_type = "image/png"
+
+    return {
+        "social_image_url": request.build_absolute_uri(image_path),
+        "social_image_type": image_type,
+        "social_image_alt": image_alt,
+        "social_image_width": SOCIAL_IMAGE_WIDTH,
+        "social_image_height": SOCIAL_IMAGE_HEIGHT,
+    }
 
 
 def site_entities(request):
@@ -126,9 +166,8 @@ def build_post_json_ld(request, post, breadcrumbs):
     player_media_url = post.player_media_url
     if player_media_url and post.content_type != post.ContentType.ARTICLE:
         post_node["contentUrl"] = player_media_url
-    cover = post.cover_media
-    if cover:
-        post_node["image"] = request.build_absolute_uri(cover.thumbnail_og_url)
+    social_image = social_image_context(request, post)
+    post_node["image"] = social_image["social_image_url"]
 
     graph = [
         entities["website"],

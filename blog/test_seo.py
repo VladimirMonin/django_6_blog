@@ -9,10 +9,14 @@ import re
 import xml.etree.ElementTree as ET
 
 import pytest
+from bs4 import BeautifulSoup
+from django.contrib.staticfiles import finders
+from django.core.files.base import ContentFile
+from django.templatetags.static import static
 from django.test import Client, override_settings
 
 from api.models import ApiKey
-from blog.models import Post
+from blog.models import Post, PostMedia, Series
 from publisher.client import publish_post
 from publisher.parser import parse_markdown_file
 
@@ -200,6 +204,47 @@ def _graph_node(data, schema_type):
     matches = [node for node in data["@graph"] if node.get("@type") == schema_type]
     assert len(matches) == 1
     return matches[0]
+
+
+def _meta_values(page, attribute, name):
+    """Return all content values for one Open Graph or Twitter meta field."""
+
+    return [
+        tag["content"]
+        for tag in page.find_all("meta")
+        if tag.get(attribute) == name and tag.get("content") is not None
+    ]
+
+
+def _assert_social_image_contract(response, *, image_url, image_type, image_alt):
+    """Assert the complete, de-duplicated social image metadata contract."""
+
+    page = BeautifulSoup(response.content, "html.parser")
+    expected = {
+        ("property", "og:image"): image_url,
+        ("property", "og:image:secure_url"): image_url,
+        ("property", "og:image:type"): image_type,
+        ("property", "og:image:width"): "1200",
+        ("property", "og:image:height"): "630",
+        ("property", "og:image:alt"): image_alt,
+        ("name", "twitter:card"): "summary_large_image",
+        ("name", "twitter:image"): image_url,
+        ("name", "twitter:image:alt"): image_alt,
+    }
+    for (attribute, name), expected_value in expected.items():
+        assert _meta_values(page, attribute, name) == [expected_value]
+
+
+def _real_png_bytes():
+    """Return a valid in-memory PNG suitable for the PostMedia thumbnail path."""
+
+    from io import BytesIO
+
+    from PIL import Image
+
+    buffer = BytesIO()
+    Image.new("RGB", (800, 600), (33, 37, 41)).save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
 @pytest.mark.django_db
@@ -561,6 +606,176 @@ def test_detail_page_has_twitter_card():
     assert 'twitter:card' in body
     assert 'twitter:title' in body
     assert 'twitter:description' in body
+
+
+@pytest.mark.django_db
+@override_settings(ALLOWED_HOSTS=["exception-blog.ru"])
+def test_social_image_fallback_is_a_complete_png_contract_on_public_surfaces(client):
+    """Fallback PNG serves every main surface and matches detail JSON-LD."""
+
+    post = Post.objects.create(
+        title="Пост без обложки",
+        description="Fallback social image",
+        content="# Body",
+        slug="post-without-cover",
+        status=Post.Status.PUBLISHED,
+    )
+    series = Series.objects.create(name="Fallback series", slug="fallback-series")
+    fallback_url = "https://exception-blog.ru/static/images/django-6-blog-social.png"
+    fallback_alt = "Exception Blog — Владимир Монин"
+
+    for path in ("/", "/about/", f"/series/{series.slug}/", post.get_absolute_url()):
+        response = client.get(path, secure=True, HTTP_HOST="exception-blog.ru")
+
+        assert response.status_code == 200
+        _assert_social_image_contract(
+            response,
+            image_url=fallback_url,
+            image_type="image/png",
+            image_alt=fallback_alt,
+        )
+
+    detail_data = _parse_json_ld_scripts(
+        client.get(post.get_absolute_url(), secure=True, HTTP_HOST="exception-blog.ru")
+    )[0]
+    article = _graph_node(detail_data, "Article")
+    assert article["image"] == detail_data["image"] == fallback_url
+    assert "exception-blog.ruhttps://" not in fallback_url
+
+    image_path = finders.find("images/django-6-blog-social.png")
+    assert isinstance(image_path, str)
+    from PIL import Image
+
+    with Image.open(image_path) as fallback_image:
+        assert fallback_image.format == "PNG"
+        assert fallback_image.size == (1200, 630)
+
+
+@pytest.mark.django_db
+@override_settings(ALLOWED_HOSTS=["exception-blog.ru"])
+def test_detail_social_image_prefers_its_cover_and_matches_json_ld(client):
+    """A post cover replaces only its social-image values without duplicating tags."""
+
+    post = Post.objects.create(
+        title="Пост с обложкой",
+        description="Cover social image",
+        content="# Body",
+        slug="post-with-cover",
+        status=Post.Status.PUBLISHED,
+    )
+    media = PostMedia(post=post, original_filename="cover.png")
+    media.file.save("cover.png", ContentFile(_real_png_bytes()), save=True)
+    media.refresh_from_db()
+    assert media.thumbnail_og
+
+    response = client.get(post.get_absolute_url(), secure=True, HTTP_HOST="exception-blog.ru")
+    cover_url = f"https://exception-blog.ru{media.thumbnail_og_url}"
+    cover_alt = f"Обложка статьи {post.title}"
+
+    assert response.status_code == 200
+    _assert_social_image_contract(
+        response,
+        image_url=cover_url,
+        image_type="image/jpeg",
+        image_alt=cover_alt,
+    )
+    detail_data = _parse_json_ld_scripts(response)[0]
+    article = _graph_node(detail_data, "Article")
+    assert article["image"] == detail_data["image"] == cover_url
+    assert "exception-blog.ruhttps://" not in cover_url
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "user_agent",
+    ["TelegramBot", "VKShare", "Twitterbot", "facebookexternalhit", "LinkedInBot"],
+)
+@override_settings(ALLOWED_HOSTS=["exception-blog.ru"])
+def test_link_preview_user_agents_receive_the_social_image_html(client, user_agent):
+    """Recognised link-preview user agents receive ordinary public SSR HTML."""
+
+    post = Post.objects.create(
+        title="Crawler social image",
+        description="Crawler social image fallback",
+        content="# Body",
+        slug="crawler-social-image",
+        status=Post.Status.PUBLISHED,
+    )
+    response = client.get(
+        post.get_absolute_url(),
+        secure=True,
+        HTTP_HOST="exception-blog.ru",
+        HTTP_USER_AGENT=user_agent,
+    )
+
+    assert response.status_code == 200
+    _assert_social_image_contract(
+        response,
+        image_url="https://exception-blog.ru/static/images/django-6-blog-social.png",
+        image_type="image/png",
+        image_alt="Exception Blog — Владимир Монин",
+    )
+
+
+@pytest.mark.django_db
+def test_brand_favicon_assets_and_public_root_endpoint(client):
+    """All declared icon derivatives are rendered and the root icon is public."""
+
+    response = client.get("/")
+    assert response.status_code == 200
+    page = BeautifulSoup(response.content, "html.parser")
+    expected_links = {
+        ("icon", "16x16", "image/png"): "images/favicon-16x16.png",
+        ("icon", "32x32", "image/png"): "images/favicon-32x32.png",
+        ("icon", "any", "image/x-icon"): "images/favicon.ico",
+        ("apple-touch-icon", "180x180", "image/png"): "images/apple-touch-icon.png",
+    }
+    links = {
+        (tag["rel"][0], tag.get("sizes"), tag.get("type")): tag.get("href")
+        for tag in page.find_all("link")
+        if tag.get("rel")
+    }
+    for attributes, source_name in expected_links.items():
+        assert links[attributes] == static(source_name)
+
+    icon_sizes = {
+        "images/favicon-16x16.png": (16, 16),
+        "images/favicon-32x32.png": (32, 32),
+        "images/apple-touch-icon.png": (180, 180),
+        "images/icon-192.png": (192, 192),
+        "images/icon-512.png": (512, 512),
+    }
+    from PIL import Image
+
+    for source_name, expected_size in icon_sizes.items():
+        image_path = finders.find(source_name)
+        assert isinstance(image_path, str)
+        with Image.open(image_path) as image:
+            assert image.format == "PNG"
+            assert image.size == expected_size
+
+    ico_path = finders.find("images/favicon.ico")
+    assert isinstance(ico_path, str)
+    with Image.open(ico_path) as image:
+        assert image.format == "ICO"
+        assert set(getattr(image, "ico").sizes()) == {(16, 16), (32, 32), (48, 48)}
+
+    root_response = client.get("/favicon.ico", HTTP_USER_AGENT="YandexBot")
+    assert root_response.status_code == 200
+    assert root_response["Content-Type"] == "image/x-icon"
+    assert root_response["Cache-Control"] == "public, max-age=86400"
+    assert b"".join(root_response.streaming_content).startswith(b"\x00\x00\x01\x00")
+
+
+@override_settings(DEBUG=False)
+def test_favicon_root_does_not_depend_on_debug(client):
+    """The Yandex-compatible root favicon remains public in production mode."""
+
+    response = client.get("/favicon.ico", HTTP_USER_AGENT="YandexBot")
+
+    assert response.status_code == 200
+    assert response["Content-Type"] == "image/x-icon"
+    assert response["Cache-Control"] == "public, max-age=86400"
 
 
 # ── Full E2E: CLI → API → DB → Site → Sitemap → Social Meta ──────────────

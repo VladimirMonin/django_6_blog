@@ -24,7 +24,7 @@ from blog.dev_media import serve_media_with_range
 from blog.discovery import llms_txt, post_markdown
 from blog.feeds import AtomLatestPostsFeed, LatestPostsFeed
 from blog.sitemaps import PostSitemap, StaticViewSitemap
-from blog.views import robots_txt, yandex_webmaster_verification
+from blog.views import favicon, robots_txt, yandex_webmaster_verification
 
 sitemaps = {
     "posts": PostSitemap,
@@ -32,6 +32,7 @@ sitemaps = {
 }
 
 urlpatterns = [
+    path("favicon.ico", favicon, name="favicon"),
     path(
         "yandex_5834a95c038b9599.html",
         yandex_webmaster_verification,

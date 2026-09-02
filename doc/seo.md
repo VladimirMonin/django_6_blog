@@ -30,18 +30,51 @@
 
 ## Open Graph и Twitter Card
 
-На страницах постов:
+На главной, `/about/`, страницах серий и post detail используется один полный
+набор без дубликатов:
 
 ```html
 <meta property="og:title" content="...">
 <meta property="og:description" content="...">
 <meta property="og:url" content="...">
 <meta property="og:type" content="article">
-<meta property="og:image" content="...">  <!-- при наличии обложки -->
+<meta property="og:image" content="...">
+<meta property="og:image:secure_url" content="...">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="...">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="...">
+<meta name="twitter:image:alt" content="...">
 ```
 
-`og:image`, `twitter:image` и JSON-LD `image` используют URL configured storage. Относительный `/media/...` превращается в абсолютный через текущий request host; уже абсолютный S3/CDN URL сохраняется как есть и не получает host второй раз.
+`blog.seo.social_image_context()` — единый источник этого набора. Запасная
+карточка — raster PNG `static/images/django-6-blog-social.png` размером
+1200×630 с alt `Exception Blog — Владимир Монин`; она используется на главной,
+`/about/`, сериях и detail без cover.
+Detail с cover использует `cover_media.thumbnail_og_url`; его JPEG derivative
+получает `og:image:type=image/jpeg`. Выбранный URL и для cover, и для fallback
+также попадает в JSON-LD detail как `image`.
+
+`og:image`, `twitter:image` и JSON-LD `image` используют абсолютный URL через
+текущий request. Относительный `/media/...` или `/static/...` получает текущий
+host; уже абсолютный S3/CDN URL сохраняется как есть и не получает host второй
+раз. Карточка не требует авторизации; production-раздачу static обеспечивает
+обычный static-hosting слой, а локально её можно проверить через `runserver`.
+
+## Favicon
+
+Базовый шаблон объявляет PNG-иконки 16×16 и 32×32, ICO `sizes="any"` и
+Apple touch icon 180×180 через `{% static %}`. Поэтому production с
+`ManifestStaticFilesStorage` публикует в HTML hash-адреса файлов. Исходные
+static assets также включают web-app PNG 192×192 и 512×512; `favicon.ico`
+содержит 16×16, 32×32 и 48×48 варианты.
+
+Для требования Яндекс Вебмастера стабильно доступен неавторизованный
+`/favicon.ico`: Django выдаёт 200 `image/x-icon` независимо от `DEBUG` и
+задаёт `Cache-Control: public, max-age=86400`. Корневой URL преднамеренно
+остаётся короткоживущим, а HTML использует fingerprinted static URLs.
 
 ## JSON-LD (Structured Data)
 
@@ -65,7 +98,7 @@
 
 Поля detail: `headline`, `description`, `url`, `mainEntityOfPage`,
 `datePublished`, `dateModified`, `author`, `publisher`, `contentUrl` (для
-медиа), `image` (при наличии обложки). Автор и publisher ссылаются на
+медиа), `image` (выбранная social image: cover или fallback). Автор и publisher ссылаются на
 канонический `Person` `/about/`; неподтверждённые профили, должности,
 организации и `sameAs` не добавляются.
 
@@ -143,7 +176,8 @@ Perplexity, Google, Bing и Brave. Для кандидата логгер
   запросов с query
 - Detail: видимые ссылки автора ведут на `/about/`; реальные `created_at` и
   `updated_at` присутствуют в `<time datetime>`
-- OG/Twitter: meta tags на detail
+- OG/Twitter: полный de-duplicated набор image meta на home/about/series/detail,
+  fallback PNG 1200×630, cover precedence, JSON-LD equality и crawler User-Agent SSR
 - AI discovery: `blog/test_ai_discovery.py` проверяет Content-Type/Unicode,
   public-only 404, Markdown source, canonical `Link`, conditional GET,
   HTML relations, отсутствие `llms-full.txt` и sitemap consistency
