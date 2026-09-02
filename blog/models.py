@@ -449,7 +449,11 @@ class PostMedia(models.Model):
         related_name="media_files",
         verbose_name="Пост",
     )
-    file = models.FileField(upload_to=post_media_upload_to, verbose_name="Файл")
+    file = models.FileField(
+        upload_to=post_media_upload_to,
+        max_length=500,
+        verbose_name="Файл",
+    )
     original_filename = models.CharField(
         max_length=255,
         blank=True,
@@ -468,12 +472,14 @@ class PostMedia(models.Model):
     )
     thumbnail_og = models.FileField(
         upload_to="posts/thumbnails/",
+        max_length=500,
         blank=True,
         null=True,
         verbose_name="OG-превью (1200×630)",
     )
     thumbnail_card = models.FileField(
         upload_to="posts/thumbnails/",
+        max_length=500,
         blank=True,
         null=True,
         verbose_name="Карточное превью (400×300)",

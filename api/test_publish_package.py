@@ -223,6 +223,17 @@ def test_thumbnail_generation_does_not_call_storage_path(tmp_path, settings, mon
     assert thumbnail.size > 0
 
 
+def test_postmedia_fields_fit_deterministic_package_object_names():
+    """Production PostgreSQL must not reject package paths over 100 chars."""
+    slug = "predreliznaya-lobotomiya-openai"
+    package_key = "3d857242160f99459a75c946427bc6c460c4e738e1876323f5a7648dc4726539"
+    object_name = f"posts/{slug}/packages/{package_key}/a001.webp"
+
+    assert len(object_name) > 100
+    for field_name in ("file", "thumbnail_og", "thumbnail_card"):
+        assert PostMedia._meta.get_field(field_name).max_length >= len(object_name)
+
+
 @pytest.mark.django_db
 def test_stdlib_publisher_streams_local_image_package(tmp_path, settings, live_server):
     settings.MEDIA_ROOT = tmp_path / "media"
