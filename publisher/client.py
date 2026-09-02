@@ -64,12 +64,17 @@ class MultipartBody:
         self.boundary = "publisher-" + secrets.token_hex(16)
         self.manifest = json.dumps(manifest, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         self.files = files
+        content_types = {
+            asset.get("part"): asset.get("content_type")
+            for asset in manifest.get("assets", [])
+            if isinstance(asset, dict)
+        }
         self._manifest_prefix = self._part_header("manifest", content_type="application/json; charset=utf-8")
         self._file_headers = {
             part: self._part_header(
                 part,
                 filename=path.name,
-                content_type="application/octet-stream",
+                content_type=content_types.get(part) or "application/octet-stream",
             )
             for part, path in files.items()
         }

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from publisher.client import ApiError, publish_package
+from publisher.client import ApiError, MultipartBody, publish_package
 from publisher.package import build_publish_package
 from publisher.parser import parse_markdown_file
 
@@ -43,6 +43,27 @@ def test_discovers_body_image_and_cover_once(tmp_path):
     assert files[asset["part"]] == image.resolve()
     assert key == manifest["package_sha256"]
     assert str(tmp_path) not in json.dumps(manifest)
+
+
+def test_multipart_file_part_uses_manifest_content_type(tmp_path):
+    image = tmp_path / "diagram.png"
+    image.write_bytes(b"\x89PNG\r\n\x1a\nimage")
+    manifest = {
+        "protocol_version": 1,
+        "assets": [
+            {
+                "id": "a001",
+                "part": "asset_a001",
+                "content_type": "image/png",
+            }
+        ],
+    }
+
+    body = MultipartBody(manifest, {"asset_a001": image})
+    encoded = b"".join(body)
+
+    assert b"Content-Type: image/png\r\n" in encoded
+    assert b"Content-Type: application/octet-stream\r\n" not in encoded
 
 
 @pytest.mark.parametrize(
