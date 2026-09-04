@@ -56,9 +56,24 @@ Frontmatter-поля вроде `related` или `derived_from` не счита�
 
 `tests/assets/` используется только как ignored локальная папка для smoke-проверок. Эти файлы не коммитятся.
 
+## Obsidian callouts
+
+Markdown-файл и Publisher package не переписывают callout-исходник: маркер
+`[!type]` остаётся в `Post.content`, а серверный renderer создаёт public HTML.
+Распознаются case-insensitive официальные типы и aliases Obsidian: `note`;
+`abstract|summary|tldr`; `info|todo`; `tip|hint|important`;
+`success|check|done`; `question|help|faq`; `warning|caution|attention`;
+`failure|fail|missing`; `danger|error`; `bug`; `example`; `quote|cite`.
+
+У callout есть отдельные title и body. Заголовок по умолчанию строится из типа,
+после маркера можно написать свой. `+` создаёт раскрытый, а `-` — свёрнутый
+callout через нативные `details` / `summary`. В body сохраняются вложенные
+списки, код, ссылки и вложенные callout. Неизвестный тип безопасно получает
+оформление `note`, а обычная Markdown-цитата без маркера остаётся цитатой.
+
 ## Медиа
 
-`PostMedia` создаётся для найденных локальных файлов. Тип определяется по расширению:
+`PostMedia` создаётся для найденных локальных файлов. При рендере публичный `content_html` хранит только стабильные same-origin ссылки `/content-media/<id>/<variant>/`, а не storage/S3 URL. Сам маршрут проверяет, что post опубликован и не удалён, после чего читает нужный объект через Django Storage API. Тип определяется по расширению:
 
 - images: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`;
 - video: `.mp4`, `.webm`, `.mov`, `.avi`, `.mkv`;

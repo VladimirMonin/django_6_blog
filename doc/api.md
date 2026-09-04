@@ -149,7 +149,7 @@ Post сначала сохраняется как draft. Запрошенный 
 
 Разрешены JPEG, PNG, WebP, GIF, MP4, WebM, MP3, OGG/Opus, WAV, FLAC и M4A. Сервер сверяет расширение, MIME, magic bytes, размер и SHA-256. Абсолютные пути, `..`, undeclared parts, дубли имён и более одной cover/primary роли отклоняются. В manifest остаются только относительные логические ссылки — пути машины-источника не передаются.
 
-Storage вызывается через Django Storage API. Код не зависит от локального `file.path`, поэтому совместим с pathless S3-compatible backend. Имена новых объектов детерминированы пакетом; storage backend должен сохранить запрошенное имя без автоматического переименования.
+Storage вызывается через Django Storage API. Код не зависит от локального `file.path`, поэтому совместим с pathless S3-compatible backend. Имена новых объектов детерминированы пакетом; storage backend должен сохранить запрошенное имя без автоматического переименования. После успешной публикации public render обращается к media через stable same-origin `/content-media/<id>/<variant>/`; private storage URL и его подпись не становятся частью persisted HTML, social metadata или API publication contract.
 
 ### Идемпотентность и recovery
 

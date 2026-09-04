@@ -32,9 +32,9 @@ cover: cover.webp
 
 Если у video-поста нет cover, карточка показывает проектный video placeholder. Это нормальное состояние и его нужно проверять отдельно от карточек с обложкой.
 
-Publisher CLI загружает локальный `cover` из `--assets-dir` с ролью `cover`. Путь не может выйти за этот корень. Изображения и thumbnails читаются/пишутся через Django Storage API без `file.path`, поэтому тот же контракт работает с локальным filesystem и pathless S3-compatible storage. Генерация читает source один раз; при частичной ошибке удаляет только созданные этой попыткой derivatives, сохраняет pre-existing objects и допускает идемпотентный retry.
+Publisher CLI загружает локальный `cover` из `--assets-dir` с ролью `cover`. Путь не может выйти за этот корень. Изображения и thumbnails читаются/пишутся через Django Storage API без `file.path`, поэтому тот же контракт работает с локальным filesystem и pathless S3-compatible storage. Генерация читает source один раз; при частичной ошибке удаляет только созданные этой попыткой derivatives, сохраняет pre-existing objects и допускает идемпотентный retry. Private S3 остаётся private: public body images, card covers и social OG derivatives используют стабильный same-origin `/content-media/<id>/original|og|card/`, который проверяет public status владельца и stream-читает storage; signed URL не сохраняется в HTML или metadata.
 
-После смены storage URL policy сначала запусти `uv run python manage.py rebuild_content_html --dry-run`, затем отдельно одобренный реальный запуск. Команда сообщает `candidates/changed/skipped/errors`; повторный реальный запуск должен дать `changed=0`.
+После смены storage URL policy сначала запусти `uv run python manage.py rebuild_content_html --slug <slug> --dry-run`, затем отдельно одобренный реальный запуск той же команды без `--dry-run`. Команда не републикует запись и не меняет исходный Markdown: она сообщает `candidates/changed/skipped/errors`, обновляет `updated_at` и body cache только для изменённого HTML; повторный реальный запуск должен дать `changed=0`.
 
 ## Remote publication flow
 

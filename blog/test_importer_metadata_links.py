@@ -122,7 +122,8 @@ description: Короткое описание медиа урока.
 
     assert post.media_files.count() == 2
     assert "![[" not in post.content_html
-    assert post.content_html.count("/media/posts/media-lesson/") == 2
+    assert post.content_html.count("/content-media/") == 2
+    assert "/media/posts/media-lesson/" not in post.content_html
 
 
 def test_import_command_can_check_links_without_creating_post(tmp_path):

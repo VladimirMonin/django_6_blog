@@ -8,6 +8,7 @@
 import html as html_module
 
 import markdown
+import nh3
 
 from blog.services.markdown_media_preprocessor import MarkdownMediaPreprocessor
 from blog.services.markdown_processor import MarkdownProcessor
@@ -19,12 +20,127 @@ from blog.services.processors import (
 )
 
 
+SAFE_HTML_TAGS = frozenset(
+    {
+        "a",
+        "abbr",
+        "audio",
+        "aside",
+        "blockquote",
+        "br",
+        "button",
+        "code",
+        "del",
+        "details",
+        "div",
+        "dl",
+        "dt",
+        "dd",
+        "em",
+        "figure",
+        "figcaption",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "hr",
+        "i",
+        "img",
+        "input",
+        "li",
+        "ol",
+        "p",
+        "pre",
+        "s",
+        "span",
+        "strong",
+        "sub",
+        "source",
+        "summary",
+        "sup",
+        "table",
+        "tbody",
+        "td",
+        "tfoot",
+        "th",
+        "thead",
+        "tr",
+        "ul",
+        "video",
+    }
+)
+SAFE_HTML_ATTRIBUTES = {tag: {"class", "id", "title"} for tag in SAFE_HTML_TAGS}
+SAFE_HTML_ATTRIBUTES.update(
+    {
+        "a": {"class", "id", "title", "href", "target"},
+        "abbr": {"class", "id", "title"},
+        "audio": {"class", "id", "title", "src", "controls", "loop", "muted", "preload"},
+        "aside": {"class", "id", "title", "role"},
+        "button": {"class", "id", "title", "type", "disabled"},
+        "details": {"class", "id", "title", "open"},
+        "img": {
+            "class",
+            "id",
+            "title",
+            "src",
+            "alt",
+            "width",
+            "height",
+            "loading",
+            "decoding",
+        },
+        "input": {"class", "id", "title", "type", "checked", "disabled"},
+        "ol": {"class", "id", "title", "start", "reversed"},
+        "source": {"src", "type"},
+        "td": {"class", "id", "title", "colspan", "rowspan", "headers"},
+        "th": {"class", "id", "title", "colspan", "rowspan", "headers", "scope"},
+        "video": {
+            "class",
+            "id",
+            "title",
+            "src",
+            "controls",
+            "loop",
+            "muted",
+            "playsinline",
+            "poster",
+            "preload",
+        },
+    }
+)
+UNSAFE_CONTENT_TAGS = nh3.CLEAN_CONTENT_TAGS | {
+    "embed",
+    "iframe",
+    "math",
+    "object",
+    "script",
+    "style",
+    "svg",
+    "template",
+}
+
+
+def sanitize_html(html: str) -> str:
+    """Очищает HTML перед выводом через ``|safe`` по allowlist-контракту."""
+    return nh3.clean(
+        html,
+        tags=SAFE_HTML_TAGS,
+        clean_content_tags=UNSAFE_CONTENT_TAGS,
+        attributes=SAFE_HTML_ATTRIBUTES,
+        generic_attribute_prefixes={"aria-", "data-"},
+        url_schemes={"http", "https", "mailto", "tel"},
+    )
+
+
 def convert_markdown_to_html(markdown_text: str, post=None) -> str:
     """Конвертирует Markdown текст в HTML с обработкой процессорами.
 
-    Двухэтапный процесс:
+    Трёхэтапный процесс:
     1. Markdown → HTML (с использованием markdown библиотеки)
     2. HTML обработка (Beautiful Soup процессоры для Bootstrap классов)
+    3. allowlist-санитизация перед выводом через ``|safe``
 
     Используется гибридный подход: генерирует чистый HTML с классами для
     подсветки синтаксиса на фронтенде (Highlight.js), без встроенных
@@ -116,7 +232,7 @@ def convert_markdown_to_html(markdown_text: str, post=None) -> str:
         ]
 
         processor = MarkdownProcessor(processors)
-        html = processor.process_html(html)
+        html = sanitize_html(processor.process_html(html))
 
         return html
     except Exception as e:

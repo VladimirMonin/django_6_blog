@@ -1,168 +1,181 @@
 # blog/services/processors/blockquote_processor.py
-"""Процессор для обработки blockquote и Obsidian Callouts.
+"""Преобразовывает цитаты и Obsidian callout в безопасную HTML-структуру."""
 
-Обрабатывает все <blockquote> элементы в HTML:
-- Обычные цитаты → базовые Bootstrap классы
-- Obsidian Callouts ([!info], [!warning] и т.д.) → Bootstrap alerts
-"""
+import re
 
 from bs4 import BeautifulSoup
+from bs4.element import NavigableString, PageElement, Tag
 
 from blog.services.html_processor import HTMLProcessor
 
 
 class BlockquoteProcessor(HTMLProcessor):
-    """Процессор для обработки blockquote и Obsidian Callouts.
+    """Рендерит полный контракт Obsidian callout, не меняя обычные цитаты."""
 
-    Маппинг Obsidian Callouts на Bootstrap 5 Alert классы:
-    - [!info] → alert alert-info (синий)
-    - [!warning] → alert alert-warning (желтый)
-    - [!success] → alert alert-success (зеленый)
-    - [!error] / [!danger] → alert alert-danger (красный)
-    - [!tip] → alert alert-primary (основной цвет)
-    - [!note] → alert alert-secondary (серый)
-
-    Для обычных цитат (без маркера) добавляются классы:
-    - blockquote: базовый Bootstrap класс
-    - border-start: левая граница
-    - border-warning: цвет границы (желтый)
-    - ps-3: padding-left
-
-    Референс из doc/samples/assets/js/main.js:40-67
-
-    Bootstrap 5 Alerts Docs:
-        https://getbootstrap.com/docs/5.3/components/alerts/
-
-    Obsidian Callouts Docs:
-        https://help.obsidian.md/Editing+and+formatting/Callouts
-
-    Example:
-        >>> from bs4 import BeautifulSoup
-        >>> from blog.services.processors.blockquote_processor import BlockquoteProcessor
-        >>>
-        >>> # Obsidian Callout
-        >>> html = '<blockquote><p>[!warning]</p><p>Осторожно!</p></blockquote>'
-        >>> soup = BeautifulSoup(html, 'html.parser')
-        >>> processor = BlockquoteProcessor()
-        >>> processor.process(soup)
-        >>> 'alert alert-warning' in str(soup)
-        True
-        >>> '[!warning]' not in str(soup)  # Маркер удален
-        True
-        >>>
-        >>> # Обычная цитата
-        >>> html2 = '<blockquote><p>Простая цитата</p></blockquote>'
-        >>> soup2 = BeautifulSoup(html2, 'html.parser')
-        >>> processor.process(soup2)
-        >>> 'blockquote border-start' in str(soup2)
-        True
-    """
-
-    # Маппинг Obsidian типов на Bootstrap 5 Alert классы
-    CALLOUT_MAPPING = {
-        "[!info]": "alert alert-info",
-        "[!warning]": "alert alert-warning",
-        "[!success]": "alert alert-success",
-        "[!error]": "alert alert-danger",
-        "[!danger]": "alert alert-danger",
-        "[!tip]": "alert alert-primary",
-        "[!note]": "alert alert-secondary",
-        "[!important]": "alert alert-warning",
-        "[!summary]": "alert alert-info",
-    }
-
-    CALLOUT_ICONS = {
-        "[!info]": "bi-info-circle-fill",
-        "[!warning]": "bi-exclamation-triangle-fill",
-        "[!success]": "bi-check-circle-fill",
-        "[!error]": "bi-x-octagon-fill",
-        "[!danger]": "bi-x-octagon-fill",
-        "[!tip]": "bi-lightbulb-fill",
-        "[!note]": "bi-sticky-fill",
-        "[!important]": "bi-exclamation-circle-fill",
-        "[!summary]": "bi-list-check",
+    CALLOUT_PATTERN = re.compile(
+        r"^\s*\[!(?P<callout_type>[a-z0-9_-]+)\](?P<fold>[+-]?)(?P<space>[ \t]*)",
+        re.IGNORECASE,
+    )
+    CALLOUT_STYLES = {
+        "note": ("alert-secondary", "bi-sticky-fill"),
+        "abstract": ("alert-info", "bi-card-text"),
+        "summary": ("alert-info", "bi-card-text"),
+        "tldr": ("alert-info", "bi-card-text"),
+        "info": ("alert-info", "bi-info-circle-fill"),
+        "todo": ("alert-info", "bi-check2-square"),
+        "tip": ("alert-primary", "bi-lightbulb-fill"),
+        "hint": ("alert-primary", "bi-lightbulb-fill"),
+        "important": ("alert-warning", "bi-exclamation-circle-fill"),
+        "success": ("alert-success", "bi-check-circle-fill"),
+        "check": ("alert-success", "bi-check-circle-fill"),
+        "done": ("alert-success", "bi-check-circle-fill"),
+        "question": ("alert-warning", "bi-question-circle-fill"),
+        "help": ("alert-warning", "bi-question-circle-fill"),
+        "faq": ("alert-warning", "bi-question-circle-fill"),
+        "warning": ("alert-warning", "bi-exclamation-triangle-fill"),
+        "caution": ("alert-warning", "bi-exclamation-triangle-fill"),
+        "attention": ("alert-warning", "bi-exclamation-triangle-fill"),
+        "failure": ("alert-danger", "bi-x-octagon-fill"),
+        "fail": ("alert-danger", "bi-x-octagon-fill"),
+        "missing": ("alert-danger", "bi-x-octagon-fill"),
+        "danger": ("alert-danger", "bi-x-octagon-fill"),
+        "error": ("alert-danger", "bi-x-octagon-fill"),
+        "bug": ("alert-danger", "bi-bug-fill"),
+        "example": ("alert-primary", "bi-book-fill"),
+        "quote": ("alert-secondary", "bi-quote"),
+        "cite": ("alert-secondary", "bi-quote"),
     }
 
     def process(self, soup: BeautifulSoup) -> None:
-        """Обрабатывает blockquote элементы.
+        """Заменяет callout на semantic HTML и оставляет обычные цитаты цитатами."""
+        for blockquote in list(soup.find_all("blockquote")):
+            first_paragraph = blockquote.find("p", recursive=False)
+            if first_paragraph is None:
+                self._style_plain_blockquote(blockquote)
+                continue
+            marker_node = self._first_text_node(first_paragraph)
+            if marker_node is None:
+                self._style_plain_blockquote(blockquote)
+                continue
+            match = self.CALLOUT_PATTERN.match(str(marker_node))
 
-        Алгоритм:
-        1. Ищем все <blockquote> в документе
-        2. Проверяем первый <p> на наличие Obsidian маркера
-        3. Если маркер есть → добавляем alert классы, удаляем маркер
-        4. Если маркера нет → добавляем базовые blockquote классы
+            if match is None:
+                self._style_plain_blockquote(blockquote)
+                continue
 
-        Args:
-            soup: Объект BeautifulSoup с HTML документом.
+            self._render_callout(soup, blockquote, first_paragraph, marker_node, match)
 
-        Returns:
-            None. Модификации выполняются in-place.
+    @staticmethod
+    def _first_text_node(paragraph: Tag | None) -> NavigableString | None:
+        if paragraph is None:
+            return None
+        return next(
+            (
+                node
+                for node in paragraph.contents
+                if isinstance(node, NavigableString) and node.strip()
+            ),
+            None,
+        )
 
-        Note:
-            Маркер [!type] удаляется из контента через decompose().
-        """
-        for blockquote in soup.find_all("blockquote"):
-            # Ищем первый параграф
-            first_p = blockquote.find("p")
+    @staticmethod
+    def _style_plain_blockquote(blockquote: Tag) -> None:
+        if "class" not in blockquote.attrs:
+            blockquote["class"] = "blockquote border-start border-warning ps-3"
 
-            if first_p:
-                text = first_p.get_text().strip()
+    def _render_callout(
+        self,
+        soup: BeautifulSoup,
+        blockquote: Tag,
+        first_paragraph: Tag,
+        marker_node: NavigableString,
+        match: re.Match[str],
+    ) -> None:
+        source_type = match["callout_type"].casefold()
+        known_type = source_type in self.CALLOUT_STYLES
+        rendered_type = source_type if known_type else "note"
+        alert_class, icon_class = self.CALLOUT_STYLES.get(
+            source_type, self.CALLOUT_STYLES["note"]
+        )
+        remainder = str(marker_node)[match.end() :]
+        if remainder:
+            marker_node.replace_with(NavigableString(remainder))
+        else:
+            marker_node.extract()
 
-                marker = next(
-                    (
-                        marker
-                        for marker in self.CALLOUT_MAPPING
-                        if text == marker or text.startswith(marker)
-                    ),
-                    None,
-                )
+        paragraph_nodes = list(first_paragraph.contents)
+        first_break = next(
+            (
+                index
+                for index, node in enumerate(paragraph_nodes)
+                if getattr(node, "name", None) == "br"
+            ),
+            None,
+        )
+        title_nodes = (
+            paragraph_nodes[:first_break]
+            if first_break is not None
+            else paragraph_nodes
+        )
+        inline_body_nodes = (
+            paragraph_nodes[first_break + 1 :] if first_break is not None else []
+        )
+        title = self._build_title(
+            soup,
+            title_nodes,
+            icon_class,
+            source_type.replace("-", " ").title() if known_type else "Note",
+        )
+        body = soup.new_tag("div", attrs={"class": "callout-body"})
+        if inline_body_nodes:
+            inline_body = soup.new_tag("p")
+            for node in inline_body_nodes:
+                inline_body.append(node.extract())
+            body.append(inline_body)
 
-                # Проверяем, есть ли Obsidian Callout маркер
-                if marker:
-                    callout_type = marker[2:-1].lower()
-                    alert_classes = self.CALLOUT_MAPPING[marker].split()
-                    existing_classes_raw = blockquote.get("class")
-                    existing_classes = (
-                        existing_classes_raw
-                        if isinstance(existing_classes_raw, list)
-                        else []
-                    )
+        first_paragraph.extract()
+        for child in list(blockquote.contents):
+            body.append(child.extract())
 
-                    blockquote["class"] = existing_classes + alert_classes + [
-                        "callout",
-                        f"callout-{callout_type}",
-                    ]
-                    blockquote["data-callout"] = callout_type
+        is_folded = bool(match["fold"])
+        callout = soup.new_tag("details" if is_folded else "aside")
+        callout["class"] = " ".join(
+            ["alert", alert_class, "callout", f"callout-{rendered_type}"]
+        )
+        callout["data-callout"] = rendered_type
+        if is_folded:
+            if match["fold"] == "+":
+                callout["open"] = ""
+            summary = soup.new_tag("summary", attrs={"class": "callout-summary"})
+            summary.append(title)
+            callout.append(summary)
+        else:
+            callout["role"] = "note"
+            callout["aria-label"] = title.get_text(" ", strip=True)
+            callout.append(title)
+        callout.append(body)
+        blockquote.replace_with(callout)
 
-                    # Удаляем маркер. Если после него есть текст, делаем его
-                    # заголовком callout с Bootstrap Icons, иначе оставляем
-                    # только иконку как визуальный маркер типа.
-                    body_text = text.removeprefix(marker).strip()
-                    title = soup.new_tag("p")
-                    title["class"] = ["callout-title", "fw-semibold", "mb-2"]
-                    icon = soup.new_tag("i")
-                    icon["class"] = [
-                        "bi",
-                        self.CALLOUT_ICONS.get(marker, "bi-info-circle-fill"),
-                        "callout-icon",
-                    ]
-                    icon["aria-hidden"] = "true"
-                    title.append(icon)
-                    if body_text:
-                        title.append(f" {body_text}")
-                    first_p.replace_with(title)
-
-                    # Не добавляем базовые классы, если это Callout
-                    continue
-
-            # Если нет маркера, добавляем базовые классы для обычной цитаты
-            if "class" not in blockquote.attrs:
-                blockquote["class"] = [
-                    "blockquote",
-                    "border-start",
-                    "border-warning",
-                    "ps-3",
-                ]
+    @staticmethod
+    def _build_title(
+        soup: BeautifulSoup,
+        title_nodes: list[PageElement],
+        icon_class: str,
+        default_title: str,
+    ) -> Tag:
+        title = soup.new_tag(
+            "div", attrs={"class": "callout-title fw-semibold mb-2"}
+        )
+        icon = soup.new_tag("i", attrs={"class": f"bi {icon_class} callout-icon"})
+        icon["aria-hidden"] = "true"
+        title.append(icon)
+        if title_nodes:
+            title.append(" ")
+            for node in title_nodes:
+                title.append(node.extract())
+        else:
+            title.append(f" {default_title}")
+        return title
 
     def get_name(self) -> str:
         """Возвращает имя процессора для логирования.

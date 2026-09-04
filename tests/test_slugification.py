@@ -82,7 +82,9 @@ def test_obsidian_import_auto_slug_and_media_for_lm_studio_like_article(tmp_path
     assert post.media_files.filter(media_type=PostMedia.MediaType.IMAGE).count() == 1
     assert post.media_files.filter(media_type=PostMedia.MediaType.AUDIO).count() == 1
     assert "cover-01.webp" in post.content_html
-    assert "01-kak-neyroseti-prevrashchayut-slova-v-geometriyu.opus" in post.content_html
+    audio_media = post.media_files.get(media_type=PostMedia.MediaType.AUDIO)
+    assert audio_media.public_url() in post.content_html
+    assert audio_media.file.url not in post.content_html
 
     for media in post.media_files.all():
         default_storage.delete(media.file.name)

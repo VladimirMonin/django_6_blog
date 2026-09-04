@@ -506,7 +506,16 @@ class PostMedia(models.Model):
 
     @property
     def markdown_link(self):
-        return f"![{self.original_filename}]({self.file.url})"
+        return f"![{self.original_filename}]({self.public_url()})"
+
+    def public_url(self, variant="original"):
+        """Return the stable public route for one allowed media variant."""
+        if variant not in {"original", "og", "card"}:
+            raise ValueError(f"Unsupported public media variant: {variant}")
+        return reverse(
+            "post_media",
+            kwargs={"media_id": self.pk, "variant": variant},
+        )
 
     def detect_media_type(self):
         extension = PurePath(self.file_slug or self.file.name).suffix.lower()
@@ -522,17 +531,13 @@ class PostMedia(models.Model):
 
     @property
     def thumbnail_og_url(self):
-        """Return OG thumbnail URL if available, falling back to original file."""
-        if self.thumbnail_og:
-            return self.thumbnail_og.url
-        return self.file.url
+        """Return the stable public URL for the OG derivative or original."""
+        return self.public_url("og")
 
     @property
     def thumbnail_card_url(self):
-        """Return card thumbnail URL if available, falling back to original file."""
-        if self.thumbnail_card:
-            return self.thumbnail_card.url
-        return self.file.url
+        """Return the stable public URL for the card derivative or original."""
+        return self.public_url("card")
 
     @staticmethod
     def _thumbnail_bytes(image, size, quality=85):

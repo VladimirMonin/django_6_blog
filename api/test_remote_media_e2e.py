@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 from django.test import Client, override_settings
+from django.urls import reverse
 from PIL import Image
 
 from api.models import ApiKey, PublishPackage
@@ -118,7 +119,8 @@ def test_cli_live_http_article_assets_idempotency_and_secure_social_contract(
     ]
     assert post.cover_media.original_filename == "cover.png"
     assert post.media_files.count() == 3
-    assert post.content_html.count("/media/") == 2
+    assert post.content_html.count("/content-media/") == 2
+    assert "/media/" not in post.content_html
     assert "![[diagram.png]]" not in post.content_html
     assert "(second.png)" not in post.content_html
     assert all(item.file.storage.exists(item.file.name) for item in media)
@@ -148,7 +150,7 @@ def test_cli_live_http_article_assets_idempotency_and_secure_social_contract(
         structured = json.loads(JSON_LD_RE.search(document).group(1))
         assert canonical == f"https://blog.example{post.get_absolute_url()}"
         assert meta["og:url"] == canonical
-        assert meta["og:image"].startswith("https://blog.example/media/")
+        assert meta["og:image"].startswith("https://blog.example/content-media/")
         assert meta["twitter:image"] == meta["og:image"]
         assert structured["url"] == canonical
         assert structured["image"] == meta["og:image"]
@@ -253,7 +255,7 @@ def test_cli_live_http_local_media_cover_timecodes_and_single_player(
 
 
 @pytest.mark.django_db
-def test_social_image_preserves_absolute_storage_url(tmp_path, settings, monkeypatch):
+def test_social_image_uses_stable_same_origin_url_for_private_storage(tmp_path, settings, monkeypatch):
     settings.MEDIA_ROOT = tmp_path / "media"
     post = Post.objects.create(
         title="Absolute storage cover",
@@ -283,5 +285,9 @@ def test_social_image_preserves_absolute_storage_url(tmp_path, settings, monkeyp
     document = response.content.decode()
     meta = _meta(document)
     assert response.status_code == 200
-    assert meta["og:image"].startswith("https://cdn.example/")
-    assert "blog.examplehttps://" not in document
+    assert meta["og:image"] == (
+        "https://blog.example"
+        f"{reverse('post_media', kwargs={'media_id': cover.pk, 'variant': 'og'})}"
+    )
+    assert "cdn.example" not in document
+    assert "X-Amz-" not in document

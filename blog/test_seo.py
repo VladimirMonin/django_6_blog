@@ -14,6 +14,7 @@ from django.contrib.staticfiles import finders
 from django.core.files.base import ContentFile
 from django.templatetags.static import static
 from django.test import Client, override_settings
+from django.urls import reverse
 
 from api.models import ApiKey
 from blog.models import Post, PostMedia, Series
@@ -669,7 +670,10 @@ def test_detail_social_image_prefers_its_cover_and_matches_json_ld(client):
     assert media.thumbnail_og
 
     response = client.get(post.get_absolute_url(), secure=True, HTTP_HOST="exception-blog.ru")
-    cover_url = f"https://exception-blog.ru{media.thumbnail_og_url}"
+    cover_url = (
+        "https://exception-blog.ru"
+        f"{reverse('post_media', kwargs={'media_id': media.pk, 'variant': 'og'})}"
+    )
     cover_alt = f"Обложка статьи {post.title}"
 
     assert response.status_code == 200
@@ -683,6 +687,18 @@ def test_detail_social_image_prefers_its_cover_and_matches_json_ld(client):
     article = _graph_node(detail_data, "Article")
     assert article["image"] == detail_data["image"] == cover_url
     assert "exception-blog.ruhttps://" not in cover_url
+    assert "X-Amz-" not in cover_url
+    assert "?" not in cover_url
+
+    image_response = client.get(
+        reverse("post_media", kwargs={"media_id": media.pk, "variant": "og"}),
+        secure=True,
+        HTTP_HOST="exception-blog.ru",
+        HTTP_USER_AGENT="TelegramBot",
+    )
+    assert image_response.status_code == 200
+    assert image_response["Content-Type"] == "image/jpeg"
+    assert "Location" not in image_response
 
 
 @pytest.mark.django_db

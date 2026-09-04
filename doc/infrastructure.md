@@ -75,6 +75,18 @@ See `.env.example` for local values and production placeholders. `.env.productio
 
 Production settings validate configuration without opening a network connection. Real secrets belong out of band in `/etc/django-6-blog/django-6-blog.env`, not GitHub or repository files.
 
+## Public media delivery with private S3
+
+`MEDIA_S3_SIGNED_URLS=true` keeps objects private. `FieldFile.url` is therefore a
+short-lived storage transport detail and must not be persisted in `Post.content_html`
+or published as OG/Twitter/JSON-LD metadata. Public HTML uses stable same-origin
+`/content-media/<id>/original|og|card/`: it verifies the owner post is
+`published` and not soft-deleted, then streams the requested original or available
+derivative through Django Storage API. The response supports GET/HEAD with
+`Cache-Control: public, max-age=3600, must-revalidate`; its ETag/Last-Modified are
+derived from the same post update state as the detail page, so a targeted HTML
+rebuild invalidates both representations without caching an expired signature.
+
 ## Makefile
 
 | Target | Action |

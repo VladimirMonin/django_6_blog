@@ -66,7 +66,7 @@ class MarkdownMediaPreprocessor:
     def _resolve_media_url(self, target):
         media = self._resolve_media(target)
         if media:
-            return media.file.url
+            return media.public_url()
         return None
 
     def _resolve_media(self, target):
@@ -75,7 +75,7 @@ class MarkdownMediaPreprocessor:
 
     @staticmethod
     def _render_media_embed(media, alt_text):
-        url = media.file.url
+        url = media.public_url()
         escaped_alt = escape(alt_text, quote=True)
         escaped_url = escape(url, quote=True)
         if media.media_type == "image":

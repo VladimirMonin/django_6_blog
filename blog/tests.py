@@ -6,6 +6,7 @@ import pytest
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import clear_url_caches, reverse
@@ -231,8 +232,14 @@ def test_markdown_media_preprocessor_resolves_obsidian_and_markdown_local_links(
 
     converted = MarkdownMediaPreprocessor(post).process(markdown)
 
-    assert f"![Architecture diagram]({image.file.url})" in converted
-    assert f"![Demo clip]({video.file.url})" in converted
+    assert (
+        f"![Architecture diagram]("
+        f"{reverse('post_media', kwargs={'media_id': image.pk, 'variant': 'original'})})"
+    ) in converted
+    assert (
+        f"![Demo clip]("
+        f"{reverse('post_media', kwargs={'media_id': video.pk, 'variant': 'original'})})"
+    ) in converted
     assert "![External](https://example.com/external.png)" in converted
     assert "![Missing](missing.png)" in converted
 
@@ -250,7 +257,11 @@ def test_post_save_converts_media_links_to_rendered_html(settings, tmp_path):
     post.save()
 
     post.refresh_from_db()
-    assert f'src="{media.file.url}"' in post.content_html
+    assert (
+        f'src="{reverse("post_media", kwargs={"media_id": media.pk, "variant": "original"})}"'
+        in post.content_html
+    )
+    assert media.file.url not in post.content_html
     assert 'alt="Hero image"' in post.content_html
 
 
@@ -353,8 +364,11 @@ def test_rendered_post_media_sources_are_served_in_debug_mode(client, settings, 
     soup = BeautifulSoup(response.content, "html.parser")
     media_sources = [img["src"] for img in soup.select("img[src]")]
 
-    assert media.file.url in media_sources
-    media_response = client.get(media.file.url)
+    public_media_url = reverse(
+        "post_media", kwargs={"media_id": media.pk, "variant": "original"}
+    )
+    assert public_media_url in media_sources
+    media_response = client.get(public_media_url)
     assert media_response.status_code == 200
     assert b"image-bytes" in b"".join(media_response.streaming_content)
 
@@ -370,6 +384,7 @@ def test_obsidian_lm_studio_lesson_fixture_imports_and_renders_media(client, set
         pytest.skip("local Obsidian LM Studio fixture is not available")
 
     settings.MEDIA_ROOT = tmp_path
+    cache.clear()
     clear_url_caches()
     import config.urls
     importlib.reload(config.urls)
@@ -390,9 +405,12 @@ def test_obsidian_lm_studio_lesson_fixture_imports_and_renders_media(client, set
 
     assert len(image_sources) >= 8
     assert len(audio_sources) == 1
-    assert audio_sources[0].endswith(".opus")
+    audio_media = PostMedia.objects.get(post=post, media_type=PostMedia.MediaType.AUDIO)
+    assert audio_sources[0] == reverse(
+        "post_media", kwargs={"media_id": audio_media.pk, "variant": "original"}
+    )
     assert not soup.select('img[src$=".opus"]')
 
     for media in PostMedia.objects.filter(post=post):
-        media_response = client.get(media.file.url)
-        assert media_response.status_code == 200, media.file.url
+        media_response = client.get(media.public_url())
+        assert media_response.status_code == 200, media.public_url()

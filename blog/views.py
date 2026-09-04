@@ -1,5 +1,7 @@
 import hashlib
+import logging
 import re
+from mimetypes import guess_type
 
 from django.contrib.staticfiles import finders
 from django.core.paginator import Paginator
@@ -10,7 +12,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.http import condition, require_safe
 from django.views.generic import DetailView, ListView, TemplateView, View
 
-from .models import Category, Post, Series, Tag
+from .models import Category, Post, PostMedia, Series, Tag
 from .seo import (
     build_about_json_ld,
     build_home_json_ld,
@@ -21,9 +23,12 @@ from .seo import (
 from .session_interactions import SessionInteractionMixin
 
 
-POST_DETAIL_RENDER_VERSION = "social-image-v8"
+logger = logging.getLogger("blog.views")
+
+POST_DETAIL_RENDER_VERSION = "social-image-v9"
 FAVICON_STATIC_PATH = "images/favicon.ico"
 FAVICON_CACHE_CONTROL = "public, max-age=86400"
+PUBLIC_MEDIA_CACHE_CONTROL = "public, max-age=3600, must-revalidate"
 
 YANDEX_WEBMASTER_VERIFICATION = """<html>
     <head>
@@ -80,6 +85,86 @@ def _post_detail_etag(request, *args, **kwargs):
     pk, updated_at = row
     raw = f"post:{pk}:{updated_at.isoformat()}:{POST_DETAIL_RENDER_VERSION}"
     return hashlib.md5(raw.encode()).hexdigest()
+
+
+def _public_post_media_queryset():
+    """Return media whose owning post is eligible for public visibility."""
+    return PostMedia.objects.select_related("post").filter(
+        post__status=Post.Status.PUBLISHED,
+        post__deleted_at__isnull=True,
+    )
+
+
+def _post_media_probe(request, media_id, variant):
+    """Read the public media validator state once per request."""
+    if variant not in {"original", "og", "card"}:
+        return None
+    cache_attr = f"_post_media_probe_{media_id}_{variant}"
+    if not hasattr(request, cache_attr):
+        row = _public_post_media_queryset().filter(pk=media_id).values_list(
+            "post_id", "post__updated_at"
+        ).first()
+        setattr(request, cache_attr, row)
+    return getattr(request, cache_attr)
+
+
+def _post_media_last_modified(request, *args, **kwargs):
+    """Return the owning post's last public-media representation update."""
+    media_id = kwargs.get("media_id")
+    variant = kwargs.get("variant")
+    if media_id is None or not variant:
+        return None
+    row = _post_media_probe(request, media_id, variant)
+    return row[1] if row else None
+
+
+def _post_media_etag(request, *args, **kwargs):
+    """Return a variant-specific validator aligned with its owning post."""
+    media_id = kwargs.get("media_id")
+    variant = kwargs.get("variant")
+    if media_id is None or not variant:
+        return None
+    row = _post_media_probe(request, media_id, variant)
+    if row is None:
+        return None
+    post_id, updated_at = row
+    raw = f"public-media:{post_id}:{media_id}:{variant}:{updated_at.isoformat()}"
+    return hashlib.md5(raw.encode()).hexdigest()
+
+
+@require_safe
+@condition(
+    last_modified_func=_post_media_last_modified,
+    etag_func=_post_media_etag,
+)
+def post_media(request, media_id, variant):
+    """Stream one public media variant without exposing a storage URL."""
+    if variant not in {"original", "og", "card"}:
+        raise Http404("Media variant is unavailable.")
+
+    media = get_object_or_404(_public_post_media_queryset(), pk=media_id)
+    if variant == "original":
+        media_file = media.file
+    elif variant == "og":
+        media_file = media.thumbnail_og or media.file
+    else:
+        media_file = media.thumbnail_card or media.file
+
+    if not media_file:
+        raise Http404("Media is unavailable.")
+    try:
+        source_file = media_file.open("rb")
+    except Exception as exc:  # Storage backends do not share one error base class.
+        logger.warning(
+            "public_media.open_failed",
+            extra={"media_id": media.pk, "variant": variant},
+        )
+        raise Http404("Media is unavailable.") from exc
+
+    content_type = guess_type(media_file.name)[0] or "application/octet-stream"
+    response = FileResponse(source_file, content_type=content_type)
+    response["Cache-Control"] = PUBLIC_MEDIA_CACHE_CONTROL
+    return response
 
 
 def _needs_python_casefold(value):

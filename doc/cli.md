@@ -68,6 +68,18 @@ uv run python manage.py cleanup_publish_packages --older-than-hours 24
 
 Минимальный возраст — 1 час, default — 24 часа. Команда не сканирует и не удаляет произвольные storage prefixes: граница владения задаётся `PublishPackage.storage_names`.
 
+### `rebuild_content_html`
+
+Пересобирает сохранённый `Post.content_html` по действующему renderer policy. Это нужно после перехода на стабильные public media routes: команда сохраняет same-origin `/content-media/<id>/<variant>/` вместо истекающих private-storage URL.
+
+```bash
+uv run python manage.py rebuild_content_html --slug predreliznaya-lobotomiya-openai --dry-run
+uv run python manage.py rebuild_content_html --slug predreliznaya-lobotomiya-openai
+uv run python manage.py rebuild_content_html --slug predreliznaya-lobotomiya-openai --dry-run
+```
+
+`--slug` выбирает ровно одну существующую запись; неизвестный slug завершается ошибкой. `--dry-run` не пишет в БД. Реальный запуск не републикует запись и не меняет исходный Markdown: обновляется только изменившийся HTML, `updated_at` и body cache. После него повторный dry-run должен показать `changed=0`.
+
 ## `collect_note_assets`
 
 Собирает Obsidian/Markdown-заметку и все локальные файлы, на которые она ссылается, в одну плоскую папку assets. Это удобно перед импортом статьи в Django.

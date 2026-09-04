@@ -75,6 +75,7 @@ Detail page отвечает за:
 - related posts
 - series navigation (`prev` / `next` / position), если пост входит в серию
 - back link к списку
+- detail-only return-to-top anchor с SSR fallback на `#post-start`
 
 `draft`, `archived` и soft-deleted записи публично не открываются. Это правило
 также действует для лайков, публичной карты/счётчиков тегов и навигации внутри
@@ -96,6 +97,24 @@ flowchart LR
     H --> J[Lightbox]
     H --> K[Read-depth tracking]
 ```
+
+## Callout и безопасный HTML
+
+В `.markdown-content` Obsidian callout рендерится как семантический `aside` с
+отдельными `.callout-title` и `.callout-body`; складные callout используют
+нативные `details` / `summary`. Маркер `[!type]` не выводится пользователю.
+Поддерживаются case-insensitive official Obsidian types/aliases, custom title,
+вложенный Markdown и безопасный fallback `note` для неизвестного типа. Обычные
+blockquote не превращаются в callout.
+
+Перед `body_html|safe` готовый HTML проходит allowlist-санитизацию. Она удаляет
+исполняемые теги, `on*`-атрибуты и опасные URL-схемы, но сохраняет разрешённую
+Markdown-разметку, Mermaid, HTML5 audio/video body embeds и служебные
+классы/ARIA/data-атрибуты компонентов.
+
+Стили callout изолированы `.markdown-content .callout`-селекторами. Для
+свёрнутого summary обязателен клавиатурный фокус; проверка detail page включает
+отсутствие горизонтального overflow на целевых viewport.
 
 ## Навигация и discovery
 
@@ -128,7 +147,26 @@ Detail page должен отдавать OpenGraph/Twitter metadata для кр
 тёмных кнопок `44×44`: copy-link слева, переход к статье или назад к списку —
 справа. Текст на mobile скрыт, но сохраняется через `aria-label`; на desktop
 подписи остаются видимыми. Состояния успешного копирования и ошибки меняют только
-семантический цвет copy-link, не геометрию пары.
+семантический цвет copy-link, не геометрию пары. Hover, focus и active также не
+меняют размер, вертикальную позицию или центр иконок; оба элемента получают
+видимый geometry-neutral focus ring.
+
+## Breadcrumbs и возврат к началу
+
+На mobile (`<=576px`) breadcrumbs не sticky: это одна строка высотой не менее
+`44px` с визуальными `Главная / категория`. Полный current title остаётся
+visually hidden с `aria-current="page"`, поэтому читатель с assistive technology
+сохраняет полный путь; горизонтальный overflow недопустим. На desktop trail
+sticky непосредственно под реальной шапкой: Home, категория и сокращённый current
+title остаются в одну строку, а section trail продолжает отражать раздел статьи.
+
+Только detail page выводит ровно один тёмный anchor `44×44` без видимого текста,
+с белой стрелкой вверх и `aria-label="Вернуться к началу статьи"`. Без JavaScript
+это обычная flow-ссылка справа после нижних действий на `#post-start`. При наличии
+JavaScript control появляется после одного viewport scroll и становится fixed:
+на mobile — `right: 16px`, `bottom: 84px` плюс safe-area; на desktop — `24px/24px`;
+`z-index: 1010`. Он скрывается при пересечении с нижними actions и на active/closing
+lightbox, учитывает reduced motion, а после возврата фокусируется H1.
 
 ## HTMX partials
 

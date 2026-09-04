@@ -41,6 +41,7 @@ When search behavior changes, test Cyrillic queries separately. SQLite `icontain
 - Cards use `Post.description`, cover/placeholder, type badge, category and tag links. Do not leak raw Markdown, frontmatter or service blocks into cards.
 - Cards and detail pages expose a copy-link control with an absolute detail URL; link sharing is universal, not tied to network-specific buttons.
 - At viewports `<=576px`, card/detail bottom actions are a right-aligned pair of equal dark 44×44 icon-only controls: copy-link on the left and the directional navigation action on the right. They share the same non-pill shape, border, padding, shadow and vertical alignment; labels remain available through `aria-label` and return on desktop.
+- In every mobile interaction state (hover, focus, active, copied and copy-error), the two action controls retain identical 44×44 geometry and vertical alignment. Mobile transitions may affect semantic colors and shadows, but not `transform` or `scale`; both controls expose a geometry-neutral focus-visible ring.
 - Card filtering must preserve the list as SSR output even when HTMX enhances the interaction.
 
 ## Detail page
@@ -59,8 +60,40 @@ Detail page includes:
 - reading progress
 - image lightbox
 - read-depth tracking hook
+- one detail-only return-to-top anchor with an SSR `#post-start` fallback
 
 Avoid duplicate H1 in body. Do not render duplicate primary media players below the body.
+
+## Detail navigation controls
+
+- At `<=576px`, breadcrumbs are a non-sticky, single 44px row that visually
+  contains Home and the category. The full current title remains in the
+  accessibility tree as `aria-current="page"`, and the row must not cause
+  horizontal scrolling.
+- Above 576px, breadcrumbs remain sticky immediately below the site header;
+  Home, category and a truncated current title stay in one row while the
+  in-article section trail remains functional.
+- Return-to-top exists only on detail pages as one accessible 44×44 dark anchor
+  with a white up arrow and no visible text. Without JavaScript it remains a
+  normal right-aligned flow link to `#post-start`.
+- JavaScript may progressively make this anchor fixed only after one viewport
+  of scrolling. It must respect reduced motion, avoid the mobile browser safe
+  area, hide while it geometrically intersects bottom actions or while a
+  lightbox is active/closing, and return keyboard focus to the H1 after use.
+
+## Callouts and rendered HTML
+
+- A public Obsidian callout has separate `.callout-title` and `.callout-body`
+  nodes; inline Markdown and nested rich Markdown belong to their respective
+  title/body nodes.
+- `+` and `-` callouts use native `details` / `summary`: `+` is open initially,
+  `-` closed initially. The summary keeps its keyboard-accessible native
+  behavior and a visible focus state. Non-folded callouts are semantic `aside`
+  notes; ordinary blockquotes stay blockquotes.
+- `body_html|safe` is protected by a final allowlist sanitizer. It removes
+  executable tags, event attributes and unsafe URL schemes while preserving the
+  supported Markdown, Mermaid, HTML5 audio/video body embeds and project
+  component markup.
 
 ## Series and discovery
 

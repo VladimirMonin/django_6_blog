@@ -12,12 +12,14 @@ from .views import (
     PostLikeToggleView,
     PostListView,
     SeriesDetailView,
+    post_media,
 )
 
 urlpatterns = [
     path("", PostListView.as_view(), name="post_list"),
     path("post/<slug:slug>/", PostDetailView.as_view(), name="post_detail"),
     path("post/<slug:slug>/like/", PostLikeToggleView.as_view(), name="post_like_toggle"),
+    path("content-media/<int:media_id>/<str:variant>/", post_media, name="post_media"),
     path("series/<slug:slug>/", SeriesDetailView.as_view(), name="series_detail"),
     path("about/", AboutView.as_view(), name="about"),
 ]

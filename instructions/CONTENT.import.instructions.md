@@ -26,6 +26,19 @@ Content import logic lives in `blog/content_import/`. Management commands should
 - `--check-links` is the dry gate for local Markdown/Obsidian links.
 - `tests/assets/` is local ignored smoke data and must not be committed.
 
+## Obsidian callouts
+
+- Markdown transport preserves callout source verbatim: the first logical blockquote
+  line may be `[!type]`, with optional `+` or `-` and a custom title.
+- Public rendering recognizes the official Obsidian types and aliases
+  case-insensitively: `note`; `abstract|summary|tldr`; `info|todo`;
+  `tip|hint|important`; `success|check|done`; `question|help|faq`;
+  `warning|caution|attention`; `failure|fail|missing`; `danger|error`; `bug`;
+  `example`; `quote|cite`. An unknown type safely falls back to `note` without
+  exposing the raw marker.
+- Callout bodies may contain nested Markdown. Ordinary blockquotes without a
+  callout marker remain ordinary quotes.
+
 ## Media creation
 
 - Create `PostMedia` rows for found local files.

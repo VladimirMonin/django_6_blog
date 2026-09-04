@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load component_tags %}
+{% load static %}
 
 {% block title %}{{ post.title }} — Django 6 Blog{% endblock %}
 
@@ -67,7 +68,7 @@
                         </a>
                         {% endfor %}
                     </div>
-                    <h1 class="post-detail-title display-5 fw-bold mb-2">{{ post.title }}</h1>
+                    <h1 id="post-start" class="post-detail-title display-5 fw-bold mb-2" tabindex="-1">{{ post.title }}</h1>
                     <div class="post-detail-meta post-detail-actions d-flex flex-wrap align-items-center gap-2 text-muted">
                         <span class="post-detail-meta-item post-detail-author">
                             <i class="bi bi-person"></i> Автор: <a class="text-reset" href="{{ author_url }}" aria-label="Автор: {{ site_author }}">{{ site_author }}</a>
@@ -201,7 +202,12 @@
                 {% component "share_link" url=canonical_url label="Скопировать ссылку" aria_label="Скопировать ссылку на пост "|add:post.title variant="detail" / %}
                 {% component "button" text="Назад к списку" url="post_list" icon="arrow-left" mobile_icon_only=True / %}
             </div>
+            <a class="post-back-to-top" data-back-to-top href="#post-start" aria-label="Вернуться к началу статьи"><i class="bi bi-arrow-up" aria-hidden="true"></i></a>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/back-to-top.js' %}"></script>
 {% endblock %}

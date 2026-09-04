@@ -2,6 +2,7 @@ from django.core.files.base import ContentFile
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import resolve, reverse
+from django.utils import timezone
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -413,7 +414,9 @@ def test_detail_page_exposes_open_graph_metadata_for_link_previews(client):
     assert page.select_one('meta[property="og:title"]')["content"] == post.title
     assert page.select_one('meta[property="og:description"]')["content"] == post.description
     assert page.select_one('meta[property="og:url"]')["content"] == f"http://testserver{post.get_absolute_url()}"
-    assert page.select_one('meta[property="og:image"]')["content"].startswith("http://testserver/media/posts/")
+    assert page.select_one('meta[property="og:image"]')["content"].startswith(
+        "http://testserver/content-media/"
+    )
     assert page.select_one('meta[name="twitter:card"]')["content"] == "summary_large_image"
 
 
@@ -635,16 +638,20 @@ def test_image_media_generates_thumbnails():
 
 
 @pytest.mark.django_db
-def test_thumbnail_urls_fallback_to_original():
-    """Non-image PostMedia thumbnail_url properties fall back to file.url."""
+def test_thumbnail_urls_fallback_to_stable_original_route():
+    """Non-image thumbnails retain their variant URLs but stream the original."""
     post = create_post("Пост с документом", content="Текст")
     media = PostMedia(post=post, original_filename="notes.pdf")
     media.file.save("notes.pdf", ContentFile(b"%PDF-1.4 fake"), save=True)
 
     media.refresh_from_db()
     assert media.media_type == PostMedia.MediaType.DOCUMENT
-    assert media.thumbnail_og_url == media.file.url
-    assert media.thumbnail_card_url == media.file.url
+    assert media.thumbnail_og_url == reverse(
+        "post_media", kwargs={"media_id": media.pk, "variant": "og"}
+    )
+    assert media.thumbnail_card_url == reverse(
+        "post_media", kwargs={"media_id": media.pk, "variant": "card"}
+    )
     assert not media.thumbnail_og
     assert not media.thumbnail_card
 
@@ -664,12 +671,72 @@ def test_detail_og_image_uses_thumbnail(client):
     page = soup(response)
     og_image_url = page.select_one('meta[property="og:image"]')["content"]
 
-    # Derivatives are isolated under the owning post key.
-    assert f"/media/posts/{post.slug}/thumbnails/" in og_image_url
-    assert og_image_url.endswith(".jpg")
-    assert "og-cover" in og_image_url
-    # It must NOT be the original file URL.
-    assert og_image_url != f"http://testserver{media.file.url}"
+    assert og_image_url == f"http://testserver{reverse('post_media', kwargs={'media_id': media.pk, 'variant': 'og'})}"
+    assert "X-Amz-" not in og_image_url
+    assert "?" not in og_image_url
+
+
+@pytest.mark.django_db
+def test_public_media_route_streams_stable_original_and_og_variants(client):
+    """Published media is same-origin, cacheable, conditional, and storage-agnostic."""
+    post = create_post("Стабильное публичное медиа", content="Текст")
+    media = PostMedia(post=post, original_filename="cover.png")
+    media.file.save("cover.png", _make_real_png(800, 600), save=True)
+    media.refresh_from_db()
+
+    original_url = reverse("post_media", kwargs={"media_id": media.pk, "variant": "original"})
+    og_url = reverse("post_media", kwargs={"media_id": media.pk, "variant": "og"})
+
+    original = client.get(original_url, HTTP_USER_AGENT="TelegramBot")
+    assert original.status_code == 200
+    assert original["Content-Type"] == "image/png"
+    assert original["Cache-Control"] == "public, max-age=3600, must-revalidate"
+    assert original["ETag"]
+    assert original["Last-Modified"]
+    assert "Location" not in original
+    assert b"".join(original.streaming_content).startswith(b"\x89PNG")
+
+    og = client.get(og_url, HTTP_USER_AGENT="TelegramBot")
+    assert og.status_code == 200
+    assert og["Content-Type"] == "image/jpeg"
+    assert "Location" not in og
+
+    head = client.head(og_url, HTTP_USER_AGENT="TelegramBot")
+    assert head.status_code == 200
+    assert head["Content-Type"] == "image/jpeg"
+
+    conditional = client.get(original_url, HTTP_IF_NONE_MATCH=original["ETag"])
+    assert conditional.status_code == 304
+
+
+@pytest.mark.django_db
+def test_public_media_route_hides_nonpublic_parent_and_never_crosses_post_ownership(client):
+    """A media ID is public only through its own published, non-deleted post."""
+    visible = create_post("Видимый media owner", content="Текст")
+    visible_media = PostMedia.objects.create(
+        post=visible,
+        file=ContentFile(b"visible", name="visible.webp"),
+    )
+    assert client.get(
+        reverse("post_media", kwargs={"media_id": visible_media.pk, "variant": "original"})
+    ).status_code == 200
+
+    hidden_posts = [
+        create_post("Черновик media", status=Post.Status.DRAFT),
+        create_post("Архив media", status=Post.Status.ARCHIVED),
+        create_post("Удалённый media"),
+    ]
+    Post.objects.filter(pk=hidden_posts[-1].pk).update(deleted_at=timezone.now())
+
+    for index, hidden_post in enumerate(hidden_posts):
+        hidden_media = PostMedia.objects.create(
+            post=hidden_post,
+            file=ContentFile(b"hidden", name=f"hidden-{index}.webp"),
+        )
+        response = client.get(
+            reverse("post_media", kwargs={"media_id": hidden_media.pk, "variant": "original"})
+        )
+        assert response.status_code == 404
 
 
 # --- Cache tests ---------------------------------------------------------------

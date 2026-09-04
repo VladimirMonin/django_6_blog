@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
+from bs4 import BeautifulSoup
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
 from PIL import Image
@@ -81,7 +82,8 @@ def test_publish_package_attaches_cover_body_image_and_is_idempotent(tmp_path, s
     assert created.status == Post.Status.PUBLISHED
     assert created.media_files.count() == 1
     assert created.cover_media.original_filename == "cover.png"
-    assert "/media/" in created.content_html
+    assert created.cover_media.public_url() in created.content_html
+    assert "/media/" not in created.content_html
     assert AuditLog.objects.filter(post=created, api_key=key).exists()
 
     replay = post_package(
@@ -259,6 +261,71 @@ def test_stdlib_publisher_streams_local_image_package(tmp_path, settings, live_s
     assert post.status == Post.Status.PUBLISHED
     assert post.cover_media is not None
     assert Client().get(f"/post/{post.slug}/").status_code == 200
+
+
+@pytest.mark.django_db
+def test_stdlib_publisher_package_preserves_all_article_callouts_to_public_html(
+    tmp_path, settings, live_server
+):
+    settings.MEDIA_ROOT = tmp_path / "media"
+    key = ApiKey.objects.create(name="Callout Package Agent")
+    note = tmp_path / "callouts.md"
+    (tmp_path / "picture.png").write_bytes(png_bytes())
+    article_callouts = [
+        ("abstract", "Короткий вердикт", "Тело abstract"),
+        ("note", "Контрсигнал", "Тело note"),
+        ("important", "Что доказано", "Тело important 1"),
+        ("failure", "Почему переход не сработал", "Тело failure"),
+        ("quote", "Почти буквальная кнопка", "Тело quote"),
+        ("important", "Узкий твёрдый вывод", "Тело important 2"),
+        ("important", "Один ярлык", "Тело important 3"),
+        ("warning", "Квантизация", "Тело warning"),
+        ("tip", "Самый честный объект оценки", "Тело tip"),
+    ]
+    source = "\n\nТекст между выносками.\n\n".join(
+        f"> [!{callout_type}] {title}\n> {body}"
+        for callout_type, title, body in article_callouts
+    )
+    note.write_text(
+        "---\ntitle: Callout package\ndescription: article callouts\ncover: picture.png\n---\n"
+        f"{source}\n\n![[picture.png]]\n",
+        encoding="utf-8",
+    )
+
+    payload = parse_markdown_file(note)
+    assert payload["content"].count("[!") == len(article_callouts)
+    manifest, files, default_key = build_publish_package(note, payload)
+    assert files
+    result = client_publish_package(
+        url=live_server.url,
+        api_key=key.token,
+        manifest=manifest,
+        files=files,
+        idempotency_key=default_key,
+    )
+
+    post = Post.objects.get(slug=result["slug"])
+    assert post.content.count("[!") == len(article_callouts)
+    stored_html = BeautifulSoup(post.content_html, "html.parser")
+    assert len(stored_html.select("aside.callout")) == len(article_callouts)
+    assert "[!" not in post.content_html
+
+    response = Client().get(f"/post/{post.slug}/")
+    assert response.status_code == 200
+    page = BeautifulSoup(response.content, "html.parser")
+    public_callouts = page.select(".post-content aside.callout")
+    assert len(public_callouts) == len(article_callouts)
+    assert [callout["data-callout"] for callout in public_callouts] == [
+        callout_type for callout_type, _, _ in article_callouts
+    ]
+    assert "[!" not in response.content.decode()
+    for callout, (_, title, body) in zip(public_callouts, article_callouts, strict=True):
+        title_node = callout.select_one(".callout-title")
+        body_node = callout.select_one(".callout-body")
+        assert title_node is not None
+        assert body_node is not None
+        assert title_node.get_text(" ", strip=True) == title
+        assert body_node.get_text(" ", strip=True) == body
 
 
 @pytest.mark.django_db(transaction=True)

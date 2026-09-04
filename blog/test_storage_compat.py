@@ -6,6 +6,7 @@ import pytest
 from django.core.files.base import ContentFile, File
 from django.core.files.storage import Storage
 from django.db import models
+from django.urls import reverse
 from PIL import Image
 
 from blog.models import Post, PostMedia
@@ -165,3 +166,19 @@ def test_post_scoped_thumbnail_names_isolate_duplicate_filenames():
     assert first.thumbnail_card.name != second.thumbnail_card.name
     assert storage.exists(first.thumbnail_og.name)
     assert storage.exists(second.thumbnail_og.name)
+
+
+@pytest.mark.django_db
+def test_pathless_storage_streams_through_stable_public_media_route(client):
+    """The public route uses Storage.open instead of a filesystem path or URL."""
+    storage = PathlessStorage()
+    media, source_name = create_image_media(storage, post_slug="pathless-public")
+    Post.objects.filter(pk=media.post_id).update(status=Post.Status.PUBLISHED)
+
+    response = client.get(
+        reverse("post_media", kwargs={"media_id": media.pk, "variant": "original"})
+    )
+
+    assert response.status_code == 200
+    assert response["Content-Type"] == "image/png"
+    assert b"".join(response.streaming_content) == storage.files[source_name]

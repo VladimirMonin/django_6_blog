@@ -79,13 +79,55 @@ def test_markdown_renderer_outputs_expected_article_html_without_raw_obsidian_ma
     page = BeautifulSoup(html, "html.parser")
 
     assert page.select_one("h1").get_text(strip=True) == "Заголовок"
-    assert page.select_one("blockquote.alert") is not None
+    assert page.select_one("aside.callout.alert") is not None
     assert "[!important]" not in html
     assert page.select_one("table.table") is not None
     assert page.select_one("code.language-python") is not None
     assert page.select_one(".mermaid") is not None
     assert "graph TD" in page.select_one(".mermaid").get_text()
     assert page.select_one("input[type='checkbox'][checked]") is not None
+
+
+def test_markdown_renderer_sanitizes_untrusted_html_without_breaking_project_markup():
+    html = convert_markdown_to_html(
+        textwrap.dedent(
+            """
+            <script>alert('xss')</script>
+            <style>body { display: none; }</style>
+            <iframe src="https://attacker.example"></iframe>
+            <p onclick="alert('xss')">Текст</p>
+            <a href="javascript:alert('xss')" onmouseover="alert('xss')">Плохая ссылка</a>
+            <img src="data:text/html;base64,PHNjcmlwdD4=" onerror="alert('xss')" alt="Плохая картинка">
+
+            <a href="https://example.com" title="Безопасная ссылка">Безопасная ссылка</a>
+            ![Безопасная картинка](/media/posts/demo/safe.png)
+            <audio controls src="/content-media/11/original/">Аудио</audio>
+            <video controls src="/content-media/12/original/">Видео</video>
+            <video controls><source src="/content-media/13/original/" type="video/mp4"></video>
+
+            ```mermaid
+            graph TD
+              A-->B
+            ```
+            """
+        )
+    )
+    page = BeautifulSoup(html, "html.parser")
+
+    assert page.select_one("script, style, iframe") is None
+    assert page.select_one("a[href='https://example.com']") is not None
+    assert page.select_one("img.post-content-image[src='/media/posts/demo/safe.png']") is not None
+    assert page.select_one("audio[controls][src='/content-media/11/original/']") is not None
+    assert page.select_one("video[controls][src='/content-media/12/original/']") is not None
+    assert page.select_one("video[controls] source[src='/content-media/13/original/'][type='video/mp4']") is not None
+    mermaid = page.select_one(".mermaid-panzoom-shell .mermaid")
+    assert mermaid is not None
+    assert "graph TD" in mermaid.get_text()
+    for element in page.find_all(True):
+        assert all(not attribute.casefold().startswith("on") for attribute in element.attrs)
+        for attribute in ("href", "src"):
+            if value := element.get(attribute):
+                assert not str(value).casefold().lstrip().startswith(("javascript:", "data:"))
 
 
 def test_post_card_excerpt_strips_markdown_table_syntax():
@@ -221,6 +263,14 @@ def inline_css():
         """
         body { margin: 0; padding: 24px; background: #f3f4f6; font-family: system-ui, sans-serif; }
         .snapshot-frame { max-width: 920px; margin: 0 auto; }
+        .markdown-content { color: #212529; }
+        .alert { position: relative; padding: 1rem; margin-bottom: 1rem; border: 1px solid transparent; border-radius: 0.375rem; animation: none; }
+        .alert-primary { color: #084298; background: #cfe2ff; border-color: #b6d4fe; }
+        .alert-secondary { color: #41464b; background: #e2e3e5; border-color: #d3d6d8; }
+        .alert-success { color: #0f5132; background: #d1e7dd; border-color: #badbcc; }
+        .alert-info { color: #055160; background: #cff4fc; border-color: #b6effb; }
+        .alert-warning { color: #664d03; background: #fff3cd; border-color: #ffecb5; }
+        .alert-danger { color: #842029; background: #f8d7da; border-color: #f5c2c7; }
         .row { display: block; }
         .col { max-width: 520px; }
         .card { background: white; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; }
@@ -262,7 +312,7 @@ def write_element_html(source_html, selector, name):
     return html_file
 
 
-def take_firefox_screenshot(html_file, name):
+def take_firefox_screenshot(html_file, name, window_size=(920, 720)):
     firefox = shutil.which("firefox")
     if not firefox:
         pytest.skip("firefox is not installed; visual element snapshots are skipped")
@@ -278,7 +328,7 @@ def take_firefox_screenshot(html_file, name):
             "--profile",
             str(profile_dir),
             "--window-size",
-            "920,720",
+            f"{window_size[0]},{window_size[1]}",
             "--screenshot",
             str(output),
             html_file.resolve().as_uri(),
@@ -337,5 +387,42 @@ def test_visual_element_screenshots_are_generated_from_rendered_templates_withou
         "paginator.png",
         "post-card.png",
         "post-reactions.png",
+    ]
+    assert not list(SNAPSHOT_DIR.glob("*.html"))
+
+
+def test_callout_rendered_detail_has_browser_snapshots_at_target_viewports(client):
+    article_callouts = [
+        ("abstract", "Короткий вердикт"),
+        ("note", "Контрсигнал"),
+        ("important", "Что доказано"),
+        ("failure", "Почему переход не сработал"),
+        ("quote", "Почти буквальная кнопка"),
+        ("important", "Узкий твёрдый вывод"),
+        ("important", "Один ярлык"),
+        ("warning", "Квантизация"),
+        ("tip", "Самый честный объект оценки"),
+    ]
+    content = "\n\nТекст между выносками.\n\n".join(
+        f"> [!{callout_type}] {title}\n> Отдельное тело {index}."
+        for index, (callout_type, title) in enumerate(article_callouts, start=1)
+    )
+    post = create_post("Callout browser proof", content=content)
+    response = client.get(post.get_absolute_url())
+    assert response.status_code == 200
+    page = soup(response)
+    assert len(page.select(".post-content aside.callout")) == len(article_callouts)
+
+    reset_snapshot_dir()
+    snapshots = []
+    for width, height in ((360, 800), (390, 844), (1440, 900)):
+        name = f"callout-detail-{width}x{height}"
+        html_file = write_element_html(response.content, ".markdown-content", name)
+        snapshots.append(take_firefox_screenshot(html_file, name, (width, height)))
+
+    assert [path.name for path in snapshots] == [
+        "callout-detail-360x800.png",
+        "callout-detail-390x844.png",
+        "callout-detail-1440x900.png",
     ]
     assert not list(SNAPSHOT_DIR.glob("*.html"))

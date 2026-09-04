@@ -53,15 +53,18 @@
 карточка — raster PNG `static/images/django-6-blog-social.png` размером
 1200×630 с alt `Exception Blog — Владимир Монин`; она используется на главной,
 `/about/`, сериях и detail без cover.
-Detail с cover использует `cover_media.thumbnail_og_url`; его JPEG derivative
-получает `og:image:type=image/jpeg`. Выбранный URL и для cover, и для fallback
-также попадает в JSON-LD detail как `image`.
+Detail с cover использует `cover_media.thumbnail_og_url`: это стабильный
+same-origin `/content-media/<id>/og/`, который stream-читает JPEG derivative
+через Django Storage API. Его `og:image:type=image/jpeg`. Выбранный URL и для
+cover, и для fallback также попадает в JSON-LD detail как `image`.
 
 `og:image`, `twitter:image` и JSON-LD `image` используют абсолютный URL через
-текущий request. Относительный `/media/...` или `/static/...` получает текущий
-host; уже абсолютный S3/CDN URL сохраняется как есть и не получает host второй
-раз. Карточка не требует авторизации; production-раздачу static обеспечивает
-обычный static-hosting слой, а локально её можно проверить через `runserver`.
+текущий request. Для cover это same-origin stable route без query-параметров,
+подписи или имени storage object; он доступен только когда media принадлежит
+опубликованной и не удалённой записи. Карточка не требует авторизации; private
+S3 URL остаётся внутренней деталью чтения. Static fallback получает текущий host
+через `{% static %}`; production-раздачу static обеспечивает обычный
+static-hosting слой, а локально её можно проверить через `runserver`.
 
 ## Favicon
 

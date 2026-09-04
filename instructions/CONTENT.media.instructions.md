@@ -31,7 +31,8 @@ The same rule applies to remote multipart publication: a local primary asset bec
 - Thumbnail generation opens the source once and compensates partial derivative writes: delete only objects created by the failed attempt, keep pre-existing objects, log a sanitized warning, and allow an idempotent retry.
 - No-cover media cards should use the project placeholder style.
 
-When storage URL policy changes, rebuild persisted `Post.content_html` with `rebuild_content_html`. Use `--dry-run` first; the command reports candidates/changed/skipped/errors and a second real run must be idempotent.
+- Persisted public HTML must use `PostMedia.public_url()` (`original`, `og`, `card`), never `FieldFile.url`: the same-origin route streams through Django Storage only for media owned by a published, non-deleted post. Signed storage URLs remain private transport details and must not enter `content_html`.
+- When storage URL policy changes, rebuild persisted `Post.content_html` with `rebuild_content_html`. Use `--slug` for one existing post and `--dry-run` first; the command reports candidates/changed/skipped/errors, preserves source Markdown, updates public validators only when HTML changes, and a second real run must be idempotent.
 
 ## Timecodes
 

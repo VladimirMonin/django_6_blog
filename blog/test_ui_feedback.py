@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from bs4 import BeautifulSoup
 
-from blog.models import Post
+from blog.models import Category, Post
 from blog.services import convert_markdown_to_html
 
 
@@ -208,26 +208,230 @@ def test_mobile_share_and_navigation_actions_are_right_aligned_and_accessible(cl
 @pytest.mark.parametrize(
     ("callout_type", "icon_class"),
     [
-        ("info", "bi-info-circle-fill"),
-        ("warning", "bi-exclamation-triangle-fill"),
-        ("success", "bi-check-circle-fill"),
-        ("error", "bi-x-octagon-fill"),
-        ("danger", "bi-x-octagon-fill"),
-        ("tip", "bi-lightbulb-fill"),
         ("note", "bi-sticky-fill"),
+        ("AbStRaCt", "bi-card-text"),
+        ("summary", "bi-card-text"),
+        ("tldr", "bi-card-text"),
+        ("info", "bi-info-circle-fill"),
+        ("todo", "bi-check2-square"),
+        ("tip", "bi-lightbulb-fill"),
+        ("hint", "bi-lightbulb-fill"),
         ("important", "bi-exclamation-circle-fill"),
-        ("summary", "bi-list-check"),
+        ("success", "bi-check-circle-fill"),
+        ("check", "bi-check-circle-fill"),
+        ("done", "bi-check-circle-fill"),
+        ("question", "bi-question-circle-fill"),
+        ("help", "bi-question-circle-fill"),
+        ("faq", "bi-question-circle-fill"),
+        ("warning", "bi-exclamation-triangle-fill"),
+        ("caution", "bi-exclamation-triangle-fill"),
+        ("attention", "bi-exclamation-triangle-fill"),
+        ("failure", "bi-x-octagon-fill"),
+        ("fail", "bi-x-octagon-fill"),
+        ("missing", "bi-x-octagon-fill"),
+        ("danger", "bi-x-octagon-fill"),
+        ("error", "bi-x-octagon-fill"),
+        ("bug", "bi-bug-fill"),
+        ("example", "bi-book-fill"),
+        ("quote", "bi-quote"),
+        ("cite", "bi-quote"),
     ],
 )
-def test_obsidian_callouts_render_bootstrap_icons_per_type(callout_type, icon_class):
+def test_obsidian_callouts_render_official_types_with_semantic_title_and_body(
+    callout_type, icon_class
+):
     page = BeautifulSoup(
         convert_markdown_to_html(
-            f"> [!{callout_type}] Заголовок\n"
-            "> Текст выноски"
+            f"> [!{callout_type}] **Заголовок**\n"
+            "> Текст выноски с `кодом` и [ссылкой](https://example.com)."
         ),
         "html.parser",
     )
 
-    callout = page.select_one(f"blockquote.callout-{callout_type}")
+    callout = page.select_one(f"aside.callout.callout-{callout_type.casefold()}")
     assert callout is not None
-    assert callout.select_one(f"i.{icon_class}.callout-icon") is not None
+    assert callout["data-callout"] == callout_type.casefold()
+    title = callout.select_one(".callout-title")
+    body = callout.select_one(".callout-body")
+    assert title is not None
+    assert body is not None
+    assert title.get_text(" ", strip=True) == "Заголовок"
+    assert title.select_one("strong") is not None
+    assert title.select_one(f"i.{icon_class}.callout-icon") is not None
+    code = body.select_one("code")
+    link = body.select_one("a")
+    assert code is not None
+    assert link is not None
+    assert code.get_text(strip=True) == "кодом"
+    assert link["href"] == "https://example.com"
+    assert "[!" not in callout.get_text()
+
+
+def test_obsidian_callout_unknown_type_uses_safe_note_fallback():
+    page = BeautifulSoup(
+        convert_markdown_to_html(
+            "> [!CUSTOM-ALERT] Пользовательский заголовок\n> Безопасный текст"
+        ),
+        "html.parser",
+    )
+
+    callout = page.select_one("aside.callout.callout-note")
+    assert callout is not None
+    assert callout["data-callout"] == "note"
+    title = callout.select_one(".callout-title")
+    body = callout.select_one(".callout-body")
+    assert title is not None
+    assert body is not None
+    assert title.get_text(" ", strip=True) == "Пользовательский заголовок"
+    assert body.get_text(" ", strip=True) == "Безопасный текст"
+    assert "[!" not in callout.get_text()
+
+
+@pytest.mark.parametrize(("fold", "is_open"), [("+", True), ("-", False)])
+def test_obsidian_folded_callouts_use_native_accessible_details(fold, is_open):
+    page = BeautifulSoup(
+        convert_markdown_to_html(
+            f"> [!NOTE]{fold} **Складной заголовок**\n> Складное тело"
+        ),
+        "html.parser",
+    )
+
+    callout = page.select_one("details.callout.callout-note")
+    assert callout is not None
+    assert callout.has_attr("open") is is_open
+    title = callout.select_one("summary .callout-title")
+    body = callout.select_one(".callout-body")
+    assert title is not None
+    assert body is not None
+    assert title.get_text(" ", strip=True) == "Складной заголовок"
+    assert body.get_text(" ", strip=True) == "Складное тело"
+
+
+def test_obsidian_callout_preserves_rich_and_nested_markdown_body():
+    page = BeautifulSoup(
+        convert_markdown_to_html(
+            "> [!warning] **Внешний заголовок**\n"
+            "> Текст со [ссылкой](https://example.com) и `кодом`.\n"
+            ">\n"
+            "> - Первый пункт\n"
+            "> - Второй пункт\n"
+            ">\n"
+            "> > [!tip] Вложенный заголовок\n"
+            "> > Вложенное тело"
+        ),
+        "html.parser",
+    )
+
+    outer = page.select_one("aside.callout-warning")
+    assert outer is not None
+    first_item = outer.select_one(".callout-body ul li")
+    code = outer.select_one(".callout-body code")
+    assert first_item is not None
+    assert code is not None
+    assert first_item.get_text(strip=True) == "Первый пункт"
+    assert code.get_text(strip=True) == "кодом"
+    nested = outer.select_one("aside.callout-tip")
+    assert nested is not None
+    nested_title = nested.select_one(".callout-title")
+    nested_body = nested.select_one(".callout-body")
+    assert nested_title is not None
+    assert nested_body is not None
+    assert nested_title.get_text(" ", strip=True) == "Вложенный заголовок"
+    assert nested_body.get_text(" ", strip=True) == "Вложенное тело"
+
+
+def test_plain_blockquotes_remain_blockquotes_and_callout_css_is_scoped():
+    page = BeautifulSoup(convert_markdown_to_html("> Обычная цитата"), "html.parser")
+    css = (PROJECT_ROOT / "static/css/style.css").read_text(encoding="utf-8")
+
+    quote = page.select_one("blockquote.blockquote")
+    assert quote is not None
+    assert quote.get_text(strip=True) == "Обычная цитата"
+    assert page.select_one("aside.callout, details.callout") is None
+    assert ".markdown-content details.callout > .callout-summary" in css
+    assert ".markdown-content details.callout > .callout-summary:focus-visible" in css
+
+
+def test_detail_back_to_top_is_detail_only_ssr_anchor_with_progressive_script(client):
+    post = create_post()
+
+    detail_page = soup(client.get(post.get_absolute_url()))
+    start = detail_page.select("h1#post-start[tabindex='-1']")
+    controls = detail_page.select("a.post-back-to-top[data-back-to-top]")
+
+    assert len(start) == 1
+    assert len(controls) == 1
+    control = controls[0]
+    assert control["href"] == "#post-start"
+    assert control["aria-label"] == "Вернуться к началу статьи"
+    assert control.get_text(strip=True) == ""
+    icon = control.select_one("i.bi-arrow-up[aria-hidden='true']")
+    assert icon is not None
+    assert "back-to-top.js" in str(detail_page)
+
+    index_page = soup(client.get("/"))
+    assert index_page.select("[data-back-to-top]") == []
+    assert "back-to-top.js" not in str(index_page)
+
+    js = (PROJECT_ROOT / "static/js/back-to-top.js").read_text(encoding="utf-8")
+    assert "window.scrollY >= window.innerHeight" in js
+    assert "getBoundingClientRect" in js
+    assert "MutationObserver" in js
+    assert "lightbox-overlay" in js
+    assert "aria-hidden" in js
+    assert "tabindex" in js
+    assert "target.focus" in js
+    assert "scrollIntoView" in js
+    assert "role=\"button\"" not in js
+
+
+def test_detail_mobile_action_pair_has_geometry_neutral_interaction_contract():
+    css = (PROJECT_ROOT / "static/css/style.css").read_text(encoding="utf-8")
+    contract = css.split("/* Mobile action-pair geometry contract */", 1)[1]
+
+    assert "transition: background-color 0.2s ease, border-color 0.2s ease" in contract
+    assert "transform: none;" in contract
+    assert ".post-detail-bottom-actions .btn:focus-visible" in contract
+    assert ".post-detail-bottom-actions .share-link-button-detail:focus-visible" in contract
+    assert "outline-offset: 3px;" in contract
+
+
+def test_detail_breadcrumbs_keep_mobile_current_accessible_and_desktop_truncated(client):
+    category = Category.objects.create(name="Доступность", slug="accessibility")
+    post = create_post(title="Очень длинный заголовок для проверки хлебных крошек",)
+    post.category = category
+    post.save(update_fields=["category"])
+
+    page = soup(client.get(post.get_absolute_url()))
+    breadcrumb = page.select_one("nav.breadcrumbs-dynamic")
+    assert breadcrumb is not None
+    roots = breadcrumb.select(".breadcrumbs-root")
+    assert [root.get_text(strip=True) for root in roots] == ["Главная", "Доступность"]
+    current = breadcrumb.select(".breadcrumbs-current[aria-current='page']")
+    assert len(current) == 1
+    assert current[0].get_text(strip=True) == post.title
+
+    css = (PROJECT_ROOT / "static/css/style.css").read_text(encoding="utf-8")
+    contract = css.split("/* Detail breadcrumb responsive contract */", 1)[1]
+    assert "@media (max-width: 576px)" in contract
+    assert "position: static;" in contract
+    assert "min-height: 44px;" in contract
+    assert "clip: rect(0, 0, 0, 0);" in contract
+    assert ".breadcrumbs-section {\n    display: none;" in contract
+    assert "@media (min-width: 577px)" in contract
+    assert "text-overflow: ellipsis;" in contract
+
+
+def test_back_to_top_css_keeps_ssr_fallback_and_reduced_motion_contract():
+    css = (PROJECT_ROOT / "static/css/style.css").read_text(encoding="utf-8")
+    contract = css.split("/* Detail return-to-top */", 1)[1]
+
+    assert "width: 44px;" in contract
+    assert "height: 44px;" in contract
+    assert "z-index: 1010;" in contract
+    assert "right: calc(1rem + env(safe-area-inset-right, 0px));" in contract
+    assert "bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));" in contract
+    assert "right: calc(1.5rem + env(safe-area-inset-right, 0px));" in contract
+    assert "bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));" in contract
+    assert "@media (prefers-reduced-motion: reduce)" in contract
+    assert "scroll-behavior: auto;" in contract

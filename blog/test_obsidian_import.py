@@ -43,7 +43,10 @@ def test_real_obsidian_lm_studio_lesson_import_renders_media_and_mermaid(client)
     assert len(soup.select(".markdown-content img[src]")) == image_media_count
     assert len(soup.select(".markdown-content audio[src]")) == audio_media_count
     assert len(soup.select(".mermaid")) >= 1
-    assert len(soup.select("blockquote.alert")) >= 1
+    callouts = soup.select("aside.callout.alert")
+    assert callouts
+    assert all(callout.select_one(".callout-title") for callout in callouts)
+    assert all(callout.select_one(".callout-body") for callout in callouts)
     assert not soup.select('img[src$=".opus"]')
     assert "![[" not in post.content_html
     assert "[!" not in post.content_html
