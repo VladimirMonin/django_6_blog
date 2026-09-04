@@ -222,6 +222,7 @@ def _assert_social_image_contract(response, *, image_url, image_type, image_alt)
 
     page = BeautifulSoup(response.content, "html.parser")
     expected = {
+        ("property", "og:site_name"): "Exception Blog",
         ("property", "og:image"): image_url,
         ("property", "og:image:secure_url"): image_url,
         ("property", "og:image:type"): image_type,

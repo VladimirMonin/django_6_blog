@@ -35,6 +35,7 @@
 
 ```html
 <meta property="og:title" content="...">
+<meta property="og:site_name" content="Exception Blog">
 <meta property="og:description" content="...">
 <meta property="og:url" content="...">
 <meta property="og:type" content="article">
@@ -65,6 +66,10 @@ cover, и для fallback также попадает в JSON-LD detail как `
 S3 URL остаётся внутренней деталью чтения. Static fallback получает текущий host
 через `{% static %}`; production-раздачу static обеспечивает обычный
 static-hosting слой, а локально её можно проверить через `runserver`.
+
+Публичное имя в Open Graph и JSON-LD — `Exception Blog`. После изменения уже
+закешированного Telegram-preview канонический URL нужно заново передать
+`@WebpageBot`; существующие сообщения при этом не перерисовываются.
 
 ## Favicon
 

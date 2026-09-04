@@ -25,7 +25,7 @@ from .session_interactions import SessionInteractionMixin
 
 logger = logging.getLogger("blog.views")
 
-POST_DETAIL_RENDER_VERSION = "social-image-v9"
+POST_DETAIL_RENDER_VERSION = "telegram-preview-v10"
 FAVICON_STATIC_PATH = "images/favicon.ico"
 FAVICON_CACHE_CONTROL = "public, max-age=86400"
 PUBLIC_MEDIA_CACHE_CONTROL = "public, max-age=3600, must-revalidate"

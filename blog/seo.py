@@ -12,7 +12,7 @@ from django.utils.safestring import mark_safe
 
 
 SCHEMA_CONTEXT = "https://schema.org"
-SITE_NAME = "Django 6 Blog"
+SITE_NAME = "Exception Blog"
 SOCIAL_IMAGE_PATH = "images/django-6-blog-social.png"
 SOCIAL_IMAGE_ALT = "Exception Blog — Владимир Монин"
 SOCIAL_IMAGE_WIDTH = 1200
