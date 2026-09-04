@@ -42,7 +42,8 @@ def test_rebuild_content_html_slug_replaces_expired_media_urls_without_republish
     original_updated_at = post.updated_at
     old_detail_etag = client.get(post.get_absolute_url())["ETag"]
     old_media_etag = client.get(stable_url)["ETag"]
-    cache.set(f"post:{post.pk}:body_html", post.content_html, timeout=3600)
+    stale_cache_key = post.body_content_cache_key
+    cache.set(stale_cache_key, post.content_html, timeout=3600)
 
     dry_run_output = StringIO()
     call_command(
@@ -60,6 +61,8 @@ def test_rebuild_content_html_slug_replaces_expired_media_urls_without_republish
     assert stable_url in post.content_html
     assert "X-Amz-" not in post.content_html
     assert post.updated_at > original_updated_at
+    assert post.body_content_cache_key != stale_cache_key
+    assert "X-Amz-" in cache.get(stale_cache_key)
     assert stable_url in post.body_content_html
 
     detail = client.get(post.get_absolute_url(), HTTP_IF_NONE_MATCH=old_detail_etag)

@@ -347,17 +347,27 @@ class Post(models.Model):
     def body_content_html(self):
         """Return rendered HTML without duplicate title or raw service media embeds.
 
-        The result is cached per-post for 1 hour. The cache is invalidated
-        in ``save()`` so stale HTML is never served after content changes.
+        The result is cached per post revision for 1 hour. Including
+        ``updated_at`` in the key makes invalidation work across process-local
+        cache instances used by multiple Gunicorn workers.
         """
         if not self.pk:
             return ""
-        cache_key = f"post:{self.pk}:body_html"
         return cache.get_or_set(
-            cache_key,
+            self.body_content_cache_key,
             lambda: self._compute_body_content_html(),
             timeout=3600,
         )
+
+    @property
+    def body_content_cache_key(self):
+        """Return a cache key tied to the current persisted post revision."""
+        revision = (
+            self.updated_at.isoformat(timespec="microseconds")
+            if self.updated_at
+            else "none"
+        )
+        return f"post:{self.pk}:body_html:{revision}"
 
     def _compute_body_content_html(self):
         """Compute body_content_html from ``content_html`` (uncached)."""
@@ -422,10 +432,10 @@ class Post(models.Model):
         self.clean()
         super().save(*args, **kwargs)
 
-        # Invalidate cached body_content_html so stale HTML is never served
-        # after content changes.
+        # Delete the current-process entry eagerly. Other process-local caches
+        # cannot serve their old entry because updated_at changes the key.
         if self.pk:
-            cache.delete(f"post:{self.pk}:body_html")
+            cache.delete(self.body_content_cache_key)
 
 
 class PostMedia(models.Model):

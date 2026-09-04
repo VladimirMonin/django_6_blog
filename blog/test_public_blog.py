@@ -799,6 +799,25 @@ def test_cache_invalidated_on_save():
     assert "Старый контент" not in updated_html
 
 
+@pytest.mark.django_db
+def test_body_content_cache_key_changes_with_post_revision():
+    """A stale process-local entry cannot survive a persisted post update."""
+    from django.core.cache import cache
+
+    cache.clear()
+    post = create_post("Версионный ключ кэша", content="Старый контент")
+    stale_key = post.body_content_cache_key
+    cache.set(stale_key, post.body_content_html, timeout=3600)
+
+    post.content = "Новый контент"
+    post.save()
+    fresh_key = post.body_content_cache_key
+
+    assert fresh_key != stale_key
+    assert "Старый контент" in cache.get(stale_key)
+    assert "Новый контент" in post.body_content_html
+
+
 # --- ETag / Last-Modified conditional rendering for PostDetailView --------------
 
 

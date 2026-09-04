@@ -1,4 +1,3 @@
-from django.core.cache import cache
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
@@ -35,7 +34,6 @@ class Command(BaseCommand):
                         content_html=rendered,
                         updated_at=timezone.now(),
                     )
-                    cache.delete(f"post:{post.pk}:body_html")
             except Exception:
                 errors += 1
         self.stdout.write(
